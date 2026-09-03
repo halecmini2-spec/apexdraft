@@ -20,6 +20,21 @@ It's a single self-contained file. Drop `index.html` onto any static host
 
 three.js is loaded from a CDN, so the page needs an internet connection.
 
+### Deploying to Render
+
+`render.yaml` in this repo declares the site as a Render **static site**, so
+there's nothing to configure by hand:
+
+1. On [Render](https://dashboard.render.com), choose **New → Blueprint**.
+2. Connect this repository. Render reads `render.yaml` and creates the site.
+3. Click **Apply**. It's live in well under a minute.
+
+Every push to `main` redeploys automatically.
+
+There's deliberately no Dockerfile. A container would mean running an nginx web
+service to hand over one HTML file — on Render that gives up the static tier's
+CDN and never-sleeping free plan in exchange for cold starts.
+
 ## Built with
 
 Vanilla JS + three.js (WebGL). Everything else — the tarmac texture, the sky,
