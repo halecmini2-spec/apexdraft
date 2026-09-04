@@ -423,7 +423,12 @@ body.touchcap .touchonly{display:block}
 
         <div class="grp">
           <h2>Car</h2>
-          <div class="swatches" id="colors">
+          <div class="chips" id="cars">
+            <button class="chip" data-car="gt" aria-pressed="true">GT</button>
+            <button class="chip" data-car="formula">Formula</button>
+            <button class="chip" data-car="yaris">Yaris</button>
+          </div>
+          <div class="swatches" id="colors" style="margin-top:9px">
             <button class="sw" data-color="#E2482B" style="background:#E2482B" aria-pressed="true" title="Rosso"></button>
             <button class="sw" data-color="#F2C230" style="background:#F2C230" title="Giallo"></button>
             <button class="sw" data-color="#2E7BE8" style="background:#2E7BE8" title="Blu"></button>
@@ -1562,91 +1567,254 @@ function loft(stations,seg){
   g.setIndex(idx); g.computeVertexNormals();
   return g;
 }
+/* ---- the cars ----
+   Three bodies over one chassis. The wheels hang off the car group itself and
+   everything else lives in a child group, so a body can move on its springs
+   without lifting the tyres off the road — which is what the Yaris needs. */
+const CAR_MODELS=[
+  {id:"gt",     label:"GT"},
+  {id:"formula",label:"Formula"},
+  {id:"yaris",  label:"Yaris"}
+];
 
-/* ---- the car ---- */
-function buildCar(bodyColor){
-  const g=new THREE.Group();
-  const paint=new THREE.MeshStandardMaterial({
-    color:SRGB(bodyColor),metalness:0.5,roughness:0.26,envMapIntensity:1.15});
-  const glass=new THREE.MeshStandardMaterial({
-    color:SRGB(0x0E1418),metalness:0.4,roughness:0.05,envMapIntensity:1.6});
+function carMats(bodyColor){
+  return {
+    paint:new THREE.MeshStandardMaterial({
+      color:SRGB(bodyColor),metalness:0.5,roughness:0.26,envMapIntensity:1.15}),
+    glass:new THREE.MeshStandardMaterial({
+      color:SRGB(0x0E1418),metalness:0.4,roughness:0.05,envMapIntensity:1.6}),
+    rubber:new THREE.MeshStandardMaterial({color:SRGB(0x121517),roughness:0.95,metalness:0}),
+    metal:new THREE.MeshStandardMaterial({color:SRGB(0xC6CCCF),roughness:0.26,metalness:0.92})
+  };
+}
 
-  /* body — widest over the axles, tapering to the nose and tail */
-  const body=new THREE.Mesh(loft([
-    {z: 2.16,w:0.60,y0:0.25,y1:0.46,n:3.2},
-    {z: 1.86,w:0.86,y0:0.17,y1:0.60,n:3.6},
-    {z: 1.28,w:0.94,y0:0.15,y1:0.70,n:4.2},
-    {z: 0.45,w:0.97,y0:0.14,y1:0.78,n:5.0},
-    {z:-0.40,w:0.97,y0:0.14,y1:0.78,n:5.0},
-    {z:-1.25,w:0.95,y0:0.15,y1:0.74,n:4.4},
-    {z:-1.90,w:0.86,y0:0.19,y1:0.64,n:3.6},
-    {z:-2.18,w:0.64,y0:0.27,y1:0.56,n:3.2}
-  ],20),paint);
-  body.castShadow=true; g.add(body);
+/* collects boxes and tubes into one merged, vertex-coloured trim mesh */
+function trimKit(){
+  const parts=[];
+  return {
+    box(w,h,d,x,y,z,c,rx){
+      const m=new THREE.Matrix4().makeTranslation(x,y,z);
+      if(rx) m.multiply(new THREE.Matrix4().makeRotationX(rx));
+      parts.push({geo:new THREE.BoxGeometry(w,h,d),color:c,matrix:m});
+    },
+    mesh(){
+      const m=new THREE.Mesh(mergeGeos(parts),
+        new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.55,metalness:0.25}));
+      m.castShadow=true; return m;
+    }
+  };
+}
 
-  /* greenhouse — a real roofline: raked screen, peak behind the driver */
-  const cabin=new THREE.Mesh(loft([
-    {z: 0.94,w:0.48,y0:0.70,y1:0.80,n:3.0},
-    {z: 0.45,w:0.72,y0:0.70,y1:1.06,n:3.4},
-    {z:-0.32,w:0.76,y0:0.70,y1:1.14,n:3.8},
-    {z:-1.05,w:0.70,y0:0.70,y1:1.02,n:3.4},
-    {z:-1.44,w:0.54,y0:0.70,y1:0.84,n:3.0}
-  ],18),glass);
-  cabin.castShadow=true; g.add(cabin);
-
-  /* dark trim: splitter, diffuser, wing, mirrors */
-  const dark=0x15191B, parts=[];
-  const B=(w,h,d,x,y,z,c)=>parts.push({geo:new THREE.BoxGeometry(w,h,d),color:c,
-      matrix:new THREE.Matrix4().makeTranslation(x,y,z)});
-  B(1.66,0.11,0.52,0,0.17,2.02,dark);        // front splitter
-  B(1.80,0.20,0.40,0,0.22,-2.10,dark);       // rear diffuser
-  B(1.68,0.07,0.34,0,1.02,-2.02,dark);       // wing plane
-  B(0.10,0.30,0.30,-0.72,0.87,-2.02,dark);   // wing endplates
-  B(0.10,0.30,0.30, 0.72,0.87,-2.02,dark);
-  B(0.20,0.09,0.11,-1.02,0.82,0.72,dark);    // mirrors
-  B(0.20,0.09,0.11, 1.02,0.82,0.72,dark);
-  const trim=new THREE.Mesh(mergeGeos(parts),
-    new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.55,metalness:0.25}));
-  trim.castShadow=true; g.add(trim);
-
-  /* lamps */
-  const headMat=new THREE.MeshStandardMaterial({
-    color:SRGB(0xFFF6E2),emissive:SRGB(0xFFEBC4),emissiveIntensity:0.85,
-    roughness:0.12,metalness:0.1});
-  const headGeo=new THREE.BoxGeometry(0.40,0.11,0.07);
-  for(const sx of [-0.52,0.52]){
-    const l=new THREE.Mesh(headGeo,headMat); l.position.set(sx,0.50,2.10); g.add(l);
+/* headlights are optional — a formula car has none — but every car keeps a red
+   lamp so the brake light still has something to drive */
+function addLamps(body,front,rear){
+  if(front){
+    const hm=new THREE.MeshStandardMaterial({
+      color:SRGB(0xFFF6E2),emissive:SRGB(0xFFEBC4),emissiveIntensity:0.85,
+      roughness:0.12,metalness:0.1});
+    const hg=new THREE.BoxGeometry(front.w,front.h,0.07);
+    for(const sx of front.x){
+      const l=new THREE.Mesh(hg,hm); l.position.set(sx,front.y,front.z); body.add(l);
+    }
   }
-  const tailMats=[];
-  const tailGeo=new THREE.BoxGeometry(0.44,0.10,0.07);
-  for(const sx of [-0.58,0.58]){
+  const tailMats=[], tg=new THREE.BoxGeometry(rear.w,rear.h,0.07);
+  for(const sx of rear.x){
     const mm=new THREE.MeshStandardMaterial({
       color:SRGB(0x4A0E0A),emissive:SRGB(0x2A0704),emissiveIntensity:1,
       roughness:0.2,metalness:0.1});
-    const l=new THREE.Mesh(tailGeo,mm); l.position.set(sx,0.52,-2.16);
-    g.add(l); tailMats.push(mm);
+    const l=new THREE.Mesh(tg,mm); l.position.set(sx,rear.y,rear.z);
+    body.add(l); tailMats.push(mm);
   }
-  g.userData.tailMats=tailMats;
+  return tailMats;
+}
 
-  /* wheels: matte tyre, machined rim, five spokes */
-  const rubber=new THREE.MeshStandardMaterial({color:SRGB(0x121517),roughness:0.95,metalness:0.0});
-  const metal=new THREE.MeshStandardMaterial({color:SRGB(0xC6CCCF),roughness:0.26,metalness:0.92});
-  const tg=new THREE.CylinderGeometry(0.355,0.355,0.27,22); tg.rotateZ(Math.PI/2);
-  const rg=new THREE.CylinderGeometry(0.215,0.215,0.285,18); rg.rotateZ(Math.PI/2);
-  const spokeGeo=new THREE.BoxGeometry(0.30,0.05,0.15);
+/* wheels go on the car group, never the body group, so they stay planted */
+function buildWheels(g,M,spec){
+  const tg=new THREE.CylinderGeometry(spec.r,spec.r,spec.tw,22); tg.rotateZ(Math.PI/2);
+  const rr=spec.r*0.6;
+  const rg=new THREE.CylinderGeometry(rr,rr,spec.tw*1.06,18); rg.rotateZ(Math.PI/2);
+  const sg=new THREE.BoxGeometry(spec.tw*1.1,0.05,rr*0.72);
   const wheels=[];
-  const wp=[[-0.86,0.355,1.38],[0.86,0.355,1.38],[-0.90,0.355,-1.40],[0.90,0.355,-1.40]];
-  for(const p of wp){
-    const wgrp=new THREE.Group();
-    const tyre=new THREE.Mesh(tg,rubber); tyre.castShadow=true; wgrp.add(tyre);
-    wgrp.add(new THREE.Mesh(rg,metal));
+  for(const p of spec.pos){
+    const w=new THREE.Group();
+    const tyre=new THREE.Mesh(tg,M.rubber); tyre.castShadow=true; w.add(tyre);
+    w.add(new THREE.Mesh(rg,M.metal));
     for(let i=0;i<5;i++){
-      const sp=new THREE.Mesh(spokeGeo,metal); sp.rotation.x=i/5*TAU; wgrp.add(sp);
+      const sp=new THREE.Mesh(sg,M.metal); sp.rotation.x=i/5*TAU; w.add(sp);
     }
-    wgrp.position.set(p[0],p[1],p[2]);
-    g.add(wgrp); wheels.push(wgrp);
+    w.position.set(p[0],spec.r,p[1]);
+    g.add(w); wheels.push(w);
   }
-  g.userData.wheels=wheels;
+  return wheels;
+}
+
+/* ---- GT: low and wide, on a swan-neck wing ---- */
+function bodyGT(b,M){
+  const shell=new THREE.Mesh(loft([
+    {z: 2.26,w:0.68,y0:0.19,y1:0.40,n:3.2},
+    {z: 1.94,w:0.96,y0:0.13,y1:0.54,n:3.8},
+    {z: 1.30,w:1.06,y0:0.11,y1:0.63,n:4.6},
+    {z: 0.45,w:1.10,y0:0.10,y1:0.70,n:5.4},
+    {z:-0.42,w:1.10,y0:0.10,y1:0.70,n:5.4},
+    {z:-1.30,w:1.07,y0:0.11,y1:0.66,n:4.8},
+    {z:-1.96,w:0.95,y0:0.15,y1:0.56,n:3.8},
+    {z:-2.28,w:0.72,y0:0.21,y1:0.46,n:3.2}
+  ],20),M.paint);
+  shell.castShadow=true; b.add(shell);
+
+  const cabin=new THREE.Mesh(loft([
+    {z: 0.92,w:0.50,y0:0.62,y1:0.75,n:3.0},
+    {z: 0.42,w:0.74,y0:0.62,y1:0.99,n:3.4},
+    {z:-0.34,w:0.78,y0:0.62,y1:1.05,n:3.8},
+    {z:-1.06,w:0.72,y0:0.62,y1:0.95,n:3.4},
+    {z:-1.46,w:0.56,y0:0.62,y1:0.78,n:3.0}
+  ],18),M.glass);
+  cabin.castShadow=true; b.add(cabin);
+
+  const carbon=0x0E1112, dark=0x15191B;
+  const k=trimKit();
+  k.box(1.98,0.09,0.62,0,0.12,2.04,carbon);            // splitter
+  k.box(0.34,0.05,0.30,-1.02,0.30,1.82,carbon,-0.38);  // dive planes
+  k.box(0.34,0.05,0.30, 1.02,0.30,1.82,carbon,-0.38);
+  k.box(0.14,0.13,2.10,-1.08,0.19,0.05,carbon);        // side skirts
+  k.box(0.14,0.13,2.10, 1.08,0.19,0.05,carbon);
+  k.box(1.94,0.24,0.46,0,0.20,-2.16,carbon);           // diffuser
+  for(let i=-2;i<=2;i++) k.box(0.05,0.24,0.48,i*0.35,0.21,-2.16,dark);
+  k.box(0.09,0.44,0.22,-0.80,0.88,-1.98,carbon);       // swan-neck struts
+  k.box(0.09,0.44,0.22, 0.80,0.88,-1.98,carbon);
+  k.box(1.90,0.06,0.44,0,1.14,-2.04,carbon);           // wing plane
+  k.box(0.05,0.36,0.50,-0.95,1.04,-2.04,dark);         // endplates
+  k.box(0.05,0.36,0.50, 0.95,1.04,-2.04,dark);
+  k.box(0.62,0.05,0.34,0,0.70,1.28,dark);              // bonnet vent
+  k.box(0.30,0.05,0.24,-0.68,0.60,0.20,dark);          // door vents
+  k.box(0.30,0.05,0.24, 0.68,0.60,0.20,dark);
+  k.box(0.22,0.09,0.11,-1.12,0.76,0.64,dark);          // mirrors
+  k.box(0.22,0.09,0.11, 1.12,0.76,0.64,dark);
+  b.add(k.mesh());
+
+  const tailMats=addLamps(b,
+    {w:0.44,h:0.11,y:0.45,z:2.20,x:[-0.56,0.56]},
+    {w:0.46,h:0.10,y:0.47,z:-2.26,x:[-0.60,0.60]});
+  return {tailMats,
+    wheels:{r:0.355,tw:0.30,pos:[[-0.96,1.40],[0.96,1.40],[-1.00,-1.42],[1.00,-1.42]]}};
+}
+
+/* ---- Formula: narrow tub, exposed wheels, wings at both ends ---- */
+function bodyFormula(b,M){
+  const tub=new THREE.Mesh(loft([
+    {z: 2.98,w:0.15,y0:0.22,y1:0.34,n:3.0},
+    {z: 2.35,w:0.21,y0:0.19,y1:0.42,n:3.2},
+    {z: 1.60,w:0.32,y0:0.15,y1:0.50,n:3.6},
+    {z: 0.80,w:0.44,y0:0.13,y1:0.60,n:4.0},
+    {z: 0.10,w:0.50,y0:0.12,y1:0.64,n:4.2},
+    {z:-0.62,w:0.54,y0:0.12,y1:0.94,n:4.4},
+    {z:-1.40,w:0.46,y0:0.13,y1:0.74,n:4.0},
+    {z:-2.25,w:0.32,y0:0.15,y1:0.54,n:3.4},
+    {z:-2.75,w:0.20,y0:0.17,y1:0.42,n:3.0}
+  ],20),M.paint);
+  tub.castShadow=true; b.add(tub);
+
+  for(const sx of [-1,1]){                              // sidepods
+    const pod=new THREE.Mesh(loft([
+      {z: 0.98,w:0.18,y0:0.16,y1:0.48,n:3.2},
+      {z: 0.25,w:0.32,y0:0.14,y1:0.62,n:4.2},
+      {z:-0.62,w:0.32,y0:0.14,y1:0.58,n:4.2},
+      {z:-1.35,w:0.20,y0:0.14,y1:0.42,n:3.2}
+    ],14),M.paint);
+    pod.position.x=sx*0.64; pod.castShadow=true; b.add(pod);
+  }
+
+  const carbon=0x0E1112, dark=0x15191B;
+  const k=trimKit();
+  k.box(1.50,0.05,3.70,0,0.09,0.05,carbon);            // floor
+  k.box(2.08,0.05,0.44,0,0.12,2.86,carbon);            // front wing
+  k.box(1.92,0.04,0.26,0,0.23,2.70,carbon,-0.24);
+  k.box(0.05,0.36,0.54,-1.05,0.26,2.84,dark);
+  k.box(0.05,0.36,0.54, 1.05,0.26,2.84,dark);
+  k.box(0.12,0.48,0.28,0,0.92,-2.50,carbon);           // rear wing pylon
+  k.box(1.44,0.06,0.46,0,1.21,-2.54,carbon);
+  k.box(1.32,0.05,0.28,0,1.35,-2.42,carbon,-0.32);
+  k.box(0.05,0.44,0.62,-0.72,1.19,-2.50,dark);
+  k.box(0.05,0.44,0.62, 0.72,1.19,-2.50,dark);
+  k.box(0.46,0.05,0.70,0,0.62,0.34,0x080A0B);          // cockpit opening
+  k.box(0.34,0.22,0.34,0,0.86,-0.30,dark);             // headrest
+  k.box(0.28,0.26,0.40,0,1.02,-0.68,dark);             // airbox
+  k.box(0.07,0.30,0.07,0,0.78,0.90,dark);              // halo front post
+  k.box(0.76,0.06,0.07,0,0.93,0.90,dark);              // halo hoop
+  k.box(0.06,0.06,1.12,-0.35,0.94,0.36,dark);          // halo rails
+  k.box(0.06,0.06,1.12, 0.35,0.94,0.36,dark);
+  for(const sz of [1.62,-1.58]){                        // suspension wishbones
+    for(const sx of [-1,1]){
+      k.box(0.64,0.045,0.06,sx*0.72,0.32,sz+0.20,dark);
+      k.box(0.64,0.045,0.06,sx*0.72,0.22,sz-0.20,dark);
+    }
+  }
+  b.add(k.mesh());
+
+  const tailMats=addLamps(b,null,{w:0.13,h:0.13,y:0.60,z:-2.78,x:[0]});
+  return {tailMats,
+    wheels:{r:0.36,tw:0.38,pos:[[-1.06,1.62],[1.06,1.62],[-1.06,-1.58],[1.06,-1.58]]}};
+}
+
+/* ---- Yaris: tall, upright, and permanently excited ---- */
+function bodyYaris(b,M){
+  /* high n keeps the sections square: a hatchback is a box with the corners
+     taken off, not the rounded tube a sports car is */
+  const shell=new THREE.Mesh(loft([
+    {z: 1.94,w:0.76,y0:0.30,y1:0.72,n:4.0},
+    {z: 1.66,w:0.86,y0:0.24,y1:0.86,n:5.0},
+    {z: 0.90,w:0.90,y0:0.21,y1:0.92,n:6.0},
+    {z: 0.00,w:0.92,y0:0.20,y1:0.94,n:6.4},
+    {z:-0.94,w:0.91,y0:0.21,y1:0.94,n:6.0},
+    {z:-1.66,w:0.87,y0:0.24,y1:0.92,n:5.2},
+    {z:-1.98,w:0.80,y0:0.30,y1:0.84,n:4.2}
+  ],20),M.paint);
+  shell.castShadow=true; b.add(shell);
+
+  /* upright greenhouse, set in from the shoulders so there is a beltline */
+  const cabin=new THREE.Mesh(loft([
+    {z: 1.06,w:0.54,y0:0.90,y1:1.06,n:3.6},
+    {z: 0.62,w:0.70,y0:0.90,y1:1.40,n:5.0},
+    {z:-0.30,w:0.75,y0:0.90,y1:1.47,n:5.6},
+    {z:-1.16,w:0.71,y0:0.90,y1:1.44,n:5.2},
+    {z:-1.56,w:0.58,y0:0.90,y1:1.18,n:3.8}
+  ],18),M.glass);
+  cabin.castShadow=true; b.add(cabin);
+
+  const dark=0x15191B, chrome=0x9AA3A6;
+  const k=trimKit();
+  k.box(1.60,0.18,0.26,0,0.25,1.92,dark);              // bumpers
+  k.box(1.60,0.18,0.26,0,0.25,-1.96,dark);
+  k.box(0.86,0.11,0.13,0,0.46,1.97,chrome);            // grille
+  k.box(0.11,0.09,2.00,-0.90,0.32,0.00,dark);          // side mouldings
+  k.box(0.11,0.09,2.00, 0.90,0.32,0.00,dark);
+  k.box(0.84,0.07,0.24,0,1.51,-1.42,dark);             // roof spoiler
+  k.box(0.20,0.09,0.11,-0.96,1.00,0.88,dark);          // mirrors
+  k.box(0.20,0.09,0.11, 0.96,1.00,0.88,dark);
+  b.add(k.mesh());
+
+  const tailMats=addLamps(b,
+    {w:0.30,h:0.11,y:0.60,z:1.95,x:[-0.56,0.56]},
+    {w:0.17,h:0.30,y:0.82,z:-2.00,x:[-0.68,0.68]});
+  return {tailMats,
+    wheels:{r:0.30,tw:0.24,pos:[[-0.82,1.16],[0.82,1.16],[-0.82,-1.22],[0.82,-1.22]]},
+    bop:{amp:0.17,freq:8.4}};
+}
+
+function buildCar(bodyColor,kind){
+  const g=new THREE.Group();
+  const b=new THREE.Group();
+  g.add(b);
+  const M=carMats(bodyColor);
+  const make=kind==="formula"?bodyFormula:kind==="yaris"?bodyYaris:bodyGT;
+  const spec=make(b,M);
+  g.userData.body=b;
+  g.userData.wheels=buildWheels(g,M,spec.wheels);
+  g.userData.tailMats=spec.tailMats;
+  g.userData.bop=spec.bop||null;
+  /* wheelSpin is integrated against a 0.36 m reference, so a car on smaller
+     wheels has to turn them faster to look like it is rolling, not skating */
+  g.userData.spin=0.36/spec.wheels.r;
   return g;
 }
 /* =====================================================================
@@ -1745,7 +1913,7 @@ function buildWorld(T){
   const sl=buildStartLine(T,TH); scene.add(sl);
   scene.add(buildScatter(T,TH));
 
-  const car=buildCar(T.opts.color);
+  const car=buildCar(T.opts.color,T.opts.car);
   scene.add(car);
   const blob=buildContactShadow();
   scene.add(blob);
@@ -2174,10 +2342,21 @@ function updateCarMesh(){
   c.rotation.z=lerp(c.rotation.z,roll,0.25);
   const w=c.userData.wheels;
   const st=-CAR.steer*0.44;      // +rotation.y turns the wheel left
+  const spin=c.userData.spin||1; // smaller wheels have to turn faster
   for(let i=0;i<4;i++){
     w[i].rotation.order="YXZ";
     w[i].rotation.y=i<2?st:0;
-    w[i].rotation.x=CAR.wheelSpin;
+    w[i].rotation.x=CAR.wheelSpin*spin;
+  }
+  /* The Yaris never settles. Only the body group hops — the wheels belong to
+     the car group, so they stay planted while it bounces on its springs. */
+  const bp=c.userData.bop, bd=c.userData.body;
+  if(bp&&bd){
+    const t=performance.now()/1000;
+    const amp=bp.amp*(0.6+0.4*clamp(Math.hypot(CAR.vx,CAR.vz)/24,0,1));
+    bd.position.y=Math.abs(Math.sin(t*bp.freq))*amp;
+    bd.rotation.z=Math.sin(t*bp.freq*0.5)*0.045;
+    bd.rotation.x=Math.sin(t*bp.freq*0.77+1.1)*0.03;
   }
   const braking=(keys.KeyS||keys.ArrowDown||touch.brake||keys.Space)?1:0;
   for(const m of c.userData.tailMats){
@@ -2432,7 +2611,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden&&G.running
 const ED={
   raw:null, track:null, drawing:false, pending:null, prevRaw:null, history:[],
   sel:null, cornerPts:[],
-  opts:store.get("ad.opts",{width:12,hills:45,smooth:45,theme:"alpine",
+  opts:store.get("ad.opts",{width:12,hills:45,smooth:45,theme:"alpine",car:"gt",
                             color:"#E2482B",seed:7,banks:[]})
 };
 const pad=$("pad"), pctx=pad.getContext("2d");
@@ -2759,6 +2938,11 @@ $("colors").addEventListener("click",e=>{
   ED.opts.color=b.dataset.color; pressGroup($("colors"),"color",ED.opts.color);
   store.set("ad.opts",ED.opts); rebuild();
 });
+$("cars").addEventListener("click",e=>{
+  const b=e.target.closest("[data-car]"); if(!b)return;
+  ED.opts.car=b.dataset.car; pressGroup($("cars"),"car",ED.opts.car);
+  store.set("ad.opts",ED.opts); rebuild();
+});
 const HILL=["Flat","Gentle","Rolling","Hilly","Mountainous"];
 const SMOOTH=["Raw","Loose","Normal","Flowing","Silky"];
 function syncSliders(){
@@ -2852,8 +3036,11 @@ $("pBack").addEventListener("click",()=>{
   applyTouchUI();
   $("soundState").textContent=SOUND?"On":"Off";
   $("soundState").className="s "+(SOUND?"on":"off");
+  /* options stored before the car setting existed come back without it */
+  if(!CAR_MODELS.some(m=>m.id===ED.opts.car)) ED.opts.car="gt";
   pressGroup($("themes"),"theme",ED.opts.theme);
   pressGroup($("colors"),"color",ED.opts.color);
+  pressGroup($("cars"),"car",ED.opts.car);
   syncSliders();
   const saved=store.get("ad.raw",null);
   ED.raw = (saved&&saved.length>8) ? saved : shapeLoop(DEFAULT_SHAPE);

@@ -10,6 +10,8 @@ Open `index.html` in any modern browser, or host it as-is.
 - **Draw** a loop on the board, or load a preset. The direction you draw is the
   racing direction, and where you start becomes the start/finish line.
 - **Bank a corner** by clicking its number on the map, then using the slider.
+- **Pick a car** — a GT racer, a Formula single-seater, or a Yaris that never
+  quite settles on its springs.
 - **Drive it** — `WASD`/arrows, `Space` handbrake, `R` recover, `C` camera,
   `M` sound, `Esc` menu. On a phone, on-screen controls appear automatically.
 
