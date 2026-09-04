@@ -2110,6 +2110,9 @@ const DRIVE={
   overdrive:1.08,
   latAccel:16.8,      // cornering grip ceiling (m/s^2)
   gripRate:8.5,       // how fast sideways velocity is killed, 1/s
+  frontBias:0.45,     // share of lateral grip from the front axle, which a
+                      // drift does not take away — it is what keeps the nose
+                      // pointed and stops a slide turning into washing wide
   driftGrip:3.0,      // ...once a slide has started
   driftYaw:0.32,      // extra rotation allowed while sliding
   maxSlip:0.55,       // |vLat| <= maxSlip*|vLong| + 3  — the anti-spin clamp
@@ -2234,9 +2237,16 @@ function step(dt){
      into the same state as hauling the lever */
   const target=hand?Math.max(base,hb):base;
   CAR.drift+=(target-CAR.drift)*Math.min(1,dt*(target>CAR.drift?6:2.2));
-  const gripRate=lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)
-                 *S.grip*P.grip*(brake?1.12:1)          // braking loads the front
-                 *(1-0.30*hb);                          // rear locked; the front still bites
+  /* Lateral grip is really two axles, and collapsing it as one number was
+     what made the nose give up along with the tail: at full drift the whole
+     car fell to driftGrip, so the front stopped pulling the velocity toward
+     the nose and the car washed wide. The rear is what lets go in a drift —
+     that is the drift — while the front stays loaded and keeps steering. Only
+     the rear term follows CAR.drift and the handbrake now. */
+  const rearG =lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)*(1-0.30*hb);
+  const frontG=DRIVE.gripRate*(1-0.16*hb);              // the lever barely touches it
+  const gripRate=(frontG*DRIVE.frontBias+rearG*(1-DRIVE.frontBias))
+                 *S.grip*P.grip*(brake?1.12:1);         // braking loads the front
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hbE);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
   /* steer is + to the right and yaw is negative to the right, so subtracting
@@ -2262,7 +2272,7 @@ function step(dt){
      feel of an ordinary drift is untouched. */
   if(hb){
     const over=yawRate-clamp(yawRate,-yawCap,yawCap);
-    vLat+=over*Math.abs(vLong)*dt*3.0*hbE;
+    vLat+=over*Math.abs(vLong)*dt*4.3*hbE;
   }
   vLat*=Math.exp(-gripRate*dt);
   /* the anti-spin clamp opens up while the rear is locked, so a handbrake
