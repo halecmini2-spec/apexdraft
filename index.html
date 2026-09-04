@@ -2103,9 +2103,11 @@ const DRIVE={
   maxSteer:0.62,      // rad — the physical steering rack limit (~35 deg)
   /* How much of the available grip full lock asks for. Above 1.0 the surplus
      is understeer — you're asking for more than the tyres can give and the car
-     pushes wide. Trimming it from 1.25 means far more of the wheel's travel
-     does real work, which is what "direct" feels like. */
-  overdrive:1.13,
+     pushes wide. Trimming it (1.25, then 1.13, now this) means more of the
+     wheel's travel does real work, which is what "direct" feels like. The
+     drift window in section 3 is calibrated to this number: it has to reach
+     1.0 at full lock, so the two move together. */
+  overdrive:1.08,
   latAccel:16.8,      // cornering grip ceiling (m/s^2)
   gripRate:8.5,       // how fast sideways velocity is killed, 1/s
   driftGrip:3.0,      // ...once a slide has started
@@ -2149,7 +2151,9 @@ function step(dt){
   const P=G.perf||CAR_PERF.gt;
   const vmax=DRIVE.topSpeed*P.top*S.power;
   let a=0;
-  if(gas){
+  /* a locked rear axle puts no drive down, so the handbrake cuts the throttle:
+     without this you could hold the handbrake and still accelerate */
+  if(gas&&!hand){
     const t=clamp(Math.abs(vLong)/vmax,0,1);
     a+=DRIVE.power*P.power*S.power*(1-t*t*0.90);
   }
@@ -2163,7 +2167,11 @@ function step(dt){
       if(CAR.brakeHold>0.35) a-=DRIVE.reverse*S.power;
     }
   } else CAR.brakeHold=0;
-  if(hand) a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*6,15);
+  /* The handbrake locks the rear axle, which carries maybe 40% of the weight,
+     so it should not stop the car like the brake pedal does — it should slow
+     it a little and take the back end away. The retardation is a third of
+     what it was; the grip it removes is handled in section 3. */
+  if(hand) a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*2.0,5.5);
   if(!gas&&!brake&&!hand)
     a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*2.4,DRIVE.engineBrake);
   a-=vLong*Math.abs(vLong)*0.00040;                  // aero drag
@@ -2178,7 +2186,7 @@ function step(dt){
      whether you're in a hairpin at 30 km/h or a sweeper at 200. Below about
      35 km/h that formula exceeds the physical steering rack, so it clamps and
      you get the full ~35 degrees and a 6 m turning circle. */
-  const srate=steerIn?9.5:12.0;      // quicker to take a set on turn-in
+  const srate=steerIn?11.5:14.0;     // quicker to take a set on turn-in
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
   const latCap=DRIVE.latAccel*P.grip*S.mu;            // grip available for cornering
   const vv=Math.max(Math.abs(vLong),4);
@@ -2196,18 +2204,30 @@ function step(dt){
      below that is planted, so the car feels fair rather than skittish. It also
      bleeds off on its own, so a slide always ends. */
   const demand=Math.abs(yawWant)/Math.max(yawCap,0.001);   // 1.0 = at the limit
-  const target=hand?1:clamp((demand-1.02)/0.11,0,1)      // retuned for the new overdrive
+  const target=hand?1:clamp((demand-1.00)/0.08,0,1)      // tracks DRIVE.overdrive
                       *(gas?1:0.55)
                       *clamp((Math.abs(vLong)-12)/10,0,1); // no drifting at walking pace
   CAR.drift+=(target-CAR.drift)*Math.min(1,dt*(target>CAR.drift?6:2.2));
 
+  /* A locked rear axle has no lateral grip left to give, so the tail comes
+     round on its own. yawRate was clamped to yawWant, which is zero with no
+     steering input — that is why the handbrake used to just slow the car
+     down. Now it strips most of the rear grip, opens the yaw ceiling, and
+     contributes rotation of its own toward whatever lock is held. It fades
+     out at walking pace, so it parks the car rather than spinning it. */
+  const hb=hand?clamp((Math.abs(vLong)-2.5)/7,0,1):0;
   const gripRate=lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)
-                 *S.grip*P.grip*(brake?1.12:1);         // braking loads the front
-  const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift);
+                 *S.grip*P.grip*(brake?1.12:1)          // braking loads the front
+                 *(1-0.58*hb);                          // rear locked: grip goes
+  const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hb);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
+  /* steer is + to the right and yaw is negative to the right, so subtracting
+     swings the tail the way the wheel is pointed */
+  if(hb) yawRate-=CAR.steer*hb*0.70*clamp(Math.abs(vLong)/26,0.3,1);
   /* self-aligning torque: the nose eases back toward the way the car is
-     actually travelling, so a slide catches itself instead of snapping */
-  yawRate-=vLat*0.008;                  // eased off: it was resisting turn-in
+     actually travelling, so a slide catches itself instead of snapping —
+     held off while the rear is locked, or it would undo the slide */
+  yawRate-=vLat*0.008*(1-0.72*hb);
   CAR.yaw+=yawRate*dt;
 
   /* ---------- 4. GRIP ----------
@@ -2215,11 +2235,27 @@ function step(dt){
      where it points; low grip (drifting) = it slides, but the hard slip clamp
      below means it can NEVER rotate past a fixed angle. This is the line that
      makes spinning out impossible. */
+  /* Rotating the car rotates its velocity with it — vLong and vLat are
+     re-projected onto the new heading below — so yaw alone never produces a
+     slip angle, and vLat is otherwise only ever decayed. That is why a locked
+     rear axle could not slide the car however much grip was taken away: there
+     was nothing to slide with. Feed the rotation the tyres cannot support
+     back in as real lateral velocity. Scoped to the handbrake so the tuned
+     feel of an ordinary drift is untouched. */
+  if(hb){
+    const over=yawRate-clamp(yawRate,-yawCap,yawCap);
+    vLat+=over*Math.abs(vLong)*dt*2.0;
+  }
   vLat*=Math.exp(-gripRate*dt);
-  const slipMax=DRIVE.maxSlip*Math.abs(vLong)+3.0;
+  /* the anti-spin clamp opens up while the rear is locked, so a handbrake
+     turn can reach an angle a normal slide is never allowed */
+  const slipMax=(DRIVE.maxSlip+0.10*hb)*Math.abs(vLong)+3.0;
   vLat=clamp(vLat,-slipMax,slipMax);
   /* sliding scrubs speed, so drifting everywhere is slower than driving well */
-  vLong-=Math.sign(vLong)*Math.min(Math.abs(vLat)*DRIVE.scrub,7)*dt;
+  /* eased while the rear is locked: at full scrub a handbrake turn bled all
+     its speed, which shrank the slip clamp, which killed the slide — the car
+     spiralled to a stop instead of coming round and driving away */
+  vLong-=Math.sign(vLong)*Math.min(Math.abs(vLat)*DRIVE.scrub*(1-0.70*hb),7)*dt;
 
   /* Lateral acceleration in the car's right-positive frame. Body-frame
      kinematics give a_right = w_dot - u*r, so in steady cornering it is
