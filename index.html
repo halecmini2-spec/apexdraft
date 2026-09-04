@@ -1,3 +1,8 @@
+<meta charset="utf-8">
+<!-- Without this a phone lays the page out at a ~980px virtual viewport and
+     scales the result down, shrinking every control to roughly 40% and taking
+     the desktop branch of the layout media queries with it. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Apex Draft</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -81,6 +86,10 @@ button{font-family:inherit;color:inherit}
 .slider .val{font-family:var(--mono);font-size:12px;color:var(--amber);font-variant-numeric:tabular-nums}
 input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0;
+  /* The rail scrolls vertically, so without this a drag on the slider is
+     claimed by the scroll container and the thumb never moves. pan-y keeps
+     vertical scrolling working while handing sideways drags to the slider. */
+  touch-action:pan-y;
 }
 input[type=range]::-webkit-slider-runnable-track{height:2px;background:var(--line);border-radius:2px}
 input[type=range]::-moz-range-track{height:2px;background:var(--line);border-radius:2px}
@@ -89,6 +98,14 @@ input[type=range]::-webkit-slider-thumb{
   background:var(--amber);border:0;
 }
 input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radius:50%;background:var(--amber)}
+/* A 14px thumb is a fingernail target. On touch, grow the whole control. */
+@media (pointer:coarse){
+  input[type=range]{height:40px}
+  input[type=range]::-webkit-slider-runnable-track{height:3px}
+  input[type=range]::-moz-range-track{height:3px}
+  input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-9.5px}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px}
+}
 
 .rail-foot{border-top:1px solid var(--line);padding:14px 20px 18px;background:var(--panel)}
 .go{
@@ -438,7 +455,6 @@ body.touchcap .touchonly{display:block}
         <div class="btns">
           <button class="pbtn primary" id="pResume">Resume <span class="s">Esc</span></button>
           <button class="pbtn" id="pReset">Recover car <span class="s">R</span></button>
-          <button class="pbtn" id="pAssist">Driving assist <span class="s on" id="assistState">On</span></button>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
           <button class="pbtn" id="pTouch">On-screen controls <span class="s on" id="touchState">On</span></button>
           <button class="pbtn" id="pBack">Back to the drawing board</button>
@@ -1604,9 +1620,9 @@ const CAR={
   grounded:true,vyS:0,prevSurf:0,
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
   sectors:[null,null,null], bestSectors:[null,null,null], secStart:0, secIdx:0,
-  wrong:0, state:"count", countT:0, slip:0, wheelSpin:0, rumble:0
+  wrong:0, state:"count", countT:0, slip:0, wheelSpin:0, rumble:0,
+  brakeHold:0
 };
-let ASSIST=store.get("ad.assist",true);
 let SOUND=store.get("ad.sound",true);
 
 const keys=Object.create(null);
@@ -1710,6 +1726,7 @@ function resetCar(toStart){
   CAR.yaw=Math.atan2(T.TX[i],T.TZ[i]);
   CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
+  CAR.brakeHold=0;
   if(G.skid)resetSkids();
   CAR.y=heightAt(T,CAR.x,CAR.z); CAR.prevSurf=CAR.y;
   if(toStart){
@@ -1738,13 +1755,40 @@ addEventListener("keydown",e=>{
   if(e.code==="KeyM")setSound(!SOUND);
 });
 addEventListener("keyup",e=>{keys[e.code]=0;});
-addEventListener("blur",()=>{for(const k in keys)keys[k]=0;});
+/* Drop every held control at once. Losing focus used to clear the keyboard
+   but not the on-screen pedals, so a brake still held as the page went away
+   came back latched on. */
+function releaseAllInput(){
+  for(const k in keys)keys[k]=0;
+  touch.l=touch.r=touch.gas=touch.brake=touch.hand=0;
+}
+addEventListener("blur",releaseAllInput);
+addEventListener("pagehide",releaseAllInput);
+document.addEventListener("visibilitychange",()=>{ if(document.hidden)releaseAllInput(); });
+/* A held control is a latch, so anything that loses the release event leaves
+   it stuck down — and a stuck brake reverses the car on its own. Remember
+   which pointer pressed the button, release the capture on the way out, and
+   listen for lostpointercapture as well, which fires even when the OS takes
+   the gesture away mid-press (app switch, edge swipe, notification). */
 function bindTouch(id,prop){
   const el=document.getElementById(id);
-  const on=e=>{e.preventDefault();touch[prop]=1;el.setPointerCapture&&el.setPointerCapture(e.pointerId);};
-  const off=e=>{touch[prop]=0;};
-  el.addEventListener("pointerdown",on); el.addEventListener("pointerup",off);
-  el.addEventListener("pointercancel",off); el.addEventListener("pointerleave",off);
+  let pid=null;
+  const on=e=>{
+    e.preventDefault();
+    pid=e.pointerId; touch[prop]=1;
+    try{ el.setPointerCapture(e.pointerId); }catch(err){}
+  };
+  const off=e=>{
+    if(e&&pid!=null&&e.pointerId!=null&&e.pointerId!==pid)return;  // another finger
+    touch[prop]=0;
+    if(pid!=null){ try{ el.releasePointerCapture(pid); }catch(err){} pid=null; }
+  };
+  el.addEventListener("pointerdown",on);
+  el.addEventListener("pointerup",off);
+  el.addEventListener("pointercancel",off);
+  el.addEventListener("pointerleave",off);
+  el.addEventListener("lostpointercapture",off);
+  el.addEventListener("contextmenu",e=>e.preventDefault());
 }
 
 /* ---------- physics step ----------
@@ -1842,9 +1886,15 @@ function step(dt){
     a+=DRIVE.power*S.power*(1-t*t*0.90);
   }
   if(brake){
-    if(vLong>0.6)      a-=DRIVE.brake*S.brake;       // strong, immediate stopping power
-    else if(vLong>-14) a-=DRIVE.reverse*S.power;     // held at a stop, this reverses
-  }
+    if(vLong>0.6){ a-=DRIVE.brake*S.brake; CAR.brakeHold=0; }   // strong, immediate stopping power
+    else if(vLong>-14){
+      /* Reverse asks for a deliberate hold. Engaging it the instant the car
+         stopped meant a brief tap of the brake — or a single dropped touch
+         release — walked the car backwards on its own. */
+      CAR.brakeHold+=dt;
+      if(CAR.brakeHold>0.35) a-=DRIVE.reverse*S.power;
+    }
+  } else CAR.brakeHold=0;
   if(hand) a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*6,15);
   if(!gas&&!brake&&!hand)
     a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*2.4,DRIVE.engineBrake);
@@ -1862,7 +1912,7 @@ function step(dt){
      you get the full ~35 degrees and a 6 m turning circle. */
   const srate=steerIn?9.5:12.0;      // quicker to take a set on turn-in
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
-  const latCap=DRIVE.latAccel*S.mu*(ASSIST?1.15:1);   // grip available for cornering
+  const latCap=DRIVE.latAccel*S.mu;                   // grip available for cornering
   const vv=Math.max(Math.abs(vLong),4);
   const lock=Math.min(DRIVE.maxSteer,
                       Math.atan(DRIVE.overdrive*latCap*DRIVE.wheelbase/(vv*vv)));
@@ -1884,12 +1934,12 @@ function step(dt){
   CAR.drift+=(target-CAR.drift)*Math.min(1,dt*(target>CAR.drift?6:2.2));
 
   const gripRate=lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)
-                 *S.grip*(ASSIST?1.3:1)*(brake?1.12:1);  // braking loads the front
+                 *S.grip*(brake?1.12:1);                // braking loads the front
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
   /* self-aligning torque: the nose eases back toward the way the car is
      actually travelling, so a slide catches itself instead of snapping */
-  yawRate-=vLat*(ASSIST?0.014:0.008);   // eased off: it was resisting turn-in
+  yawRate-=vLat*0.008;                  // eased off: it was resisting turn-in
   CAR.yaw+=yawRate*dt;
 
   /* ---------- 4. GRIP ----------
@@ -2374,7 +2424,10 @@ let drawId=null;
 function hitCorner(cx,cy){
   if(!ED.track||!ED.cornerPts||!ED.cornerPts.length)return false;
   const p=toPad(cx,cy);
-  let best=-1,bd=20*20;
+  /* toPad returns pad units, so a fixed 20 shrank with the board: at the
+     scale a phone uses it was a ~4px target. Quote it in CSS pixels. */
+  const R=Math.max(18,26/PADT.s);
+  let best=-1,bd=R*R;
   for(const q of ED.cornerPts){
     const d=(q.x-p.x)*(q.x-p.x)+(q.y-p.y)*(q.y-p.y);
     if(d<bd){bd=d;best=q.k;}
@@ -2584,21 +2637,27 @@ function drawCircuitMap(ctx,T){
     const i=c.pi, a=P[(i-4+n)%n], b=P[(i+4)%n], p=P[i];
     let ox=(a.x+b.x)/2-p.x, oy=(a.y+b.y)/2-p.y;
     const m=Math.hypot(ox,oy)||1; ox/=m; oy/=m;
-    const d=wPad/2+15;
+    /* The canvas is scaled by PADT.s, so a radius quoted in pad units shrinks
+       with the board — on a phone the old 11-unit disc rendered about 2px
+       across. Quote every size in CSS pixels and divide by the scale so the
+       markers stay a real touch target however small the board gets. */
+    const u=1/PADT.s;                       // one CSS pixel, in pad units
+    const deg=+banks[k]||0, on=ED.sel===k;
+    const R=(on?15:13)*u;
+    const d=wPad/2+Math.max(15,14*u);
     const X=p.x-ox*d, Y=p.y-oy*d;
     ED.cornerPts.push({x:X,y:Y,k});
-    const deg=+banks[k]||0, on=ED.sel===k;
     ctx.fillStyle=deg?"#3A2A08":"#0D1415";
-    ctx.beginPath(); ctx.arc(X,Y,on?13:11,0,TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(X,Y,R,0,TAU); ctx.fill();
     ctx.strokeStyle=on?"#FFB020":(deg?"#B87A0E":"#3B4B49");
-    ctx.lineWidth=on?2.4:1.3; ctx.stroke();
-    ctx.font="600 13px 'IBM Plex Mono',monospace";
+    ctx.lineWidth=(on?2.4:1.3)*u; ctx.stroke();
+    ctx.font="600 "+(13*u).toFixed(2)+"px 'IBM Plex Mono',monospace";
     ctx.fillStyle=deg?"#FFB020":"#B9C7C4";
-    ctx.fillText(String(k+1),X,Y+0.5);
+    ctx.fillText(String(k+1),X,Y+0.5*u);
     if(deg){
-      ctx.font="600 10px 'IBM Plex Mono',monospace";
+      ctx.font="600 "+(10*u).toFixed(2)+"px 'IBM Plex Mono',monospace";
       ctx.fillStyle="#FFB020";
-      ctx.fillText(deg+"°",X,Y+19);
+      ctx.fillText(deg+"°",X,Y+R+8*u);
     }
   });
   ctx.restore();
@@ -2750,11 +2809,6 @@ $("btnDrive").addEventListener("click",()=>{
 });
 $("pResume").addEventListener("click",()=>togglePause(false));
 $("pReset").addEventListener("click",()=>{ resetCar(false); togglePause(false); });
-$("pAssist").addEventListener("click",()=>{
-  ASSIST=!ASSIST; store.set("ad.assist",ASSIST);
-  $("assistState").textContent=ASSIST?"On":"Off";
-  $("assistState").className="s "+(ASSIST?"on":"off");
-});
 $("pSound").addEventListener("click",()=>setSound(!SOUND));
 $("pTouch").addEventListener("click",()=>{
   TOUCHUI=!touchUIOn(); store.set("ad.touchui",TOUCHUI); applyTouchUI();
@@ -2776,8 +2830,6 @@ $("pBack").addEventListener("click",()=>{
   $("tMenu").addEventListener("click",e=>{e.preventDefault();togglePause(true);});
   if(IS_TOUCH)document.body.classList.add("touchcap");
   applyTouchUI();
-  $("assistState").textContent=ASSIST?"On":"Off";
-  $("assistState").className="s "+(ASSIST?"on":"off");
   $("soundState").textContent=SOUND?"On":"Off";
   $("soundState").className="s "+(SOUND?"on":"off");
   pressGroup($("themes"),"theme",ED.opts.theme);
