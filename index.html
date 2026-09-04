@@ -402,7 +402,7 @@ body.touchcap .touchonly{display:block}
           <div id="bankCtl" hidden>
             <div class="slider">
               <div class="lab"><span id="bankWho">Corner 1</span><span class="val" id="vBank">0°</span></div>
-              <input type="range" id="sBank" min="0" max="14" step="1" value="0">
+              <input type="range" id="sBank" min="0" max="20" step="1" value="0">
             </div>
             <div class="chips">
               <button class="chip" id="bankPrev">‹</button>
@@ -1503,7 +1503,7 @@ function puffSmoke(x,y,z,strength){
   p.s.material.color.setRGB(1,1,1);
   p.s.position.set(x+(Math.random()-.5)*0.7,y+0.25,z+(Math.random()-.5)*0.7);
   p.s.scale.setScalar(0.72+Math.random()*0.42);
-  p.s.material.opacity=0.14*strength;
+  p.s.material.opacity=0.12*strength;
 }
 /* steel on steel — short-lived, gravity-fed, and they die fast */
 function puffSpark(x,y,z,strength){
@@ -2318,7 +2318,12 @@ function updateCamera(dt){
     camLook.set(CAR.x+fx*40,CAR.y+1.5,CAR.z+fz*40);
     cam.position.copy(camPos); cam.lookAt(camLook);
   } else {
-    const back=G.camMode===0?9.2:6.4, up=G.camMode===0?3.5:2.6;
+    /* A phone screen is a fraction of the size, so the same chase distance
+       leaves the car too small to read. Sit closer, and drop the aim point
+       nearer the car so it holds more of the frame. */
+    const mob=touchUIOn();
+    const back=(G.camMode===0?9.2:6.4)*(mob?0.72:1);
+    const up  =(G.camMode===0?3.5:2.6)*(mob?0.80:1);
     const tx=CAR.x-fx*back, tz=CAR.z-fz*back;
     const ty=Math.max(heightAt(G.T,tx,tz)+1.2,CAR.y+up);
     if(!camInit){ cam.position.set(tx,ty,tz); camInit=true; }
@@ -2326,7 +2331,8 @@ function updateCamera(dt){
     cam.position.x+=(tx-cam.position.x)*k;
     cam.position.y+=(ty-cam.position.y)*k*0.8;
     cam.position.z+=(tz-cam.position.z)*k;
-    camLook.set(CAR.x+fx*9,CAR.y+1.5,CAR.z+fz*9);
+    const ahead=mob?6.8:9;
+    camLook.set(CAR.x+fx*ahead,CAR.y+1.5,CAR.z+fz*ahead);
     cam.lookAt(camLook);
   }
   if(G.shake>0.001){
@@ -2413,10 +2419,12 @@ function updateCarMesh(){
         addSkidQuad(sd.prev.lx,sd.prev.ly,sd.prev.lz,lx,ly,lz,rx,rz,0.17);
         addSkidQuad(sd.prev.wx,sd.prev.wy,sd.prev.wz,wx,wy,wz,rx,rz,0.17);
         sd.prev={lx,ly,lz,wx,wy,wz};
-        /* no constant haze: the +0.3 floor meant even a tidy lap smoked, so
-           this asks for a real slide before anything comes off the tyres */
-        const puff=clamp(CAR.drift*0.85-0.12,0,1);
-        if(puff>0.04){ puffSmoke(lx,ly,lz,puff); puffSmoke(wx,wy,wz,puff); }
+        /* Smoke is gated separately from the rubber, and much harder: marks
+           are left by any slide worth seeing, but the tyres only smoke when
+           they are genuinely being worked. Both terms have to be high, so a
+           lazy drift leaves a line without hazing the screen. */
+        const hard=clamp((CAR.drift-0.44)/0.40,0,1)*clamp((CAR.slip-0.70)/0.60,0,1);
+        if(hard>0.06){ puffSmoke(lx,ly,lz,hard); puffSmoke(wx,wy,wz,hard); }
       }
     } else sd.prev=null;
   }
