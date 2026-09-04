@@ -982,6 +982,35 @@ function buildEnvironment(TH){
   return env;
 }
 
+/* three r128 has no InstancedMesh.computeBoundingSphere, so the renderer culls
+   an instanced mesh against its *geometry's* sphere sitting at the object
+   origin — one tree's worth, about 1.8 m. Everything here is scattered over
+   the whole circuit from an origin in the middle of it, so the moment the
+   frustum left the centre of the map the entire forest, every armco post and
+   every tyre wall blinked out. Measure where the instances actually are and
+   set the sphere to match. */
+function fitInstancedBounds(inst){
+  const n=inst.count;
+  if(!n)return;
+  const m=new THREE.Matrix4(), p=new THREE.Vector3(),
+        q=new THREE.Quaternion(), s=new THREE.Vector3();
+  let cx=0,cy=0,cz=0,maxS=1;
+  for(let i=0;i<n;i++){
+    inst.getMatrixAt(i,m); m.decompose(p,q,s);
+    cx+=p.x; cy+=p.y; cz+=p.z;
+    maxS=Math.max(maxS,s.x,s.y,s.z);
+  }
+  cx/=n; cy/=n; cz/=n;
+  let r=0;
+  for(let i=0;i<n;i++){
+    inst.getMatrixAt(i,m);
+    r=Math.max(r,Math.hypot(m.elements[12]-cx,m.elements[13]-cy,m.elements[14]-cz));
+  }
+  const g=inst.geometry;
+  if(!g.boundingSphere)g.computeBoundingSphere();
+  g.boundingSphere=new THREE.Sphere(new THREE.Vector3(cx,cy,cz),
+                                    r+g.boundingSphere.radius*maxS+2);
+}
 function mergeGeos(parts){
   let vc=0, ic=0;
   for(const p of parts){ vc+=p.geo.attributes.position.count; ic+=p.geo.index?p.geo.index.count:p.geo.attributes.position.count; }
@@ -1227,6 +1256,7 @@ function buildBarriers(T,TH){
       pm.setMatrixAt(n++,m);
     }
     pm.instanceMatrix.needsUpdate=true;
+    fitInstancedBounds(pm);
     grp.add(pm);
   }
 
@@ -1255,6 +1285,7 @@ function buildBarriers(T,TH){
       im.setMatrixAt(n++,m);
     }
     im.instanceMatrix.needsUpdate=true;
+    fitInstancedBounds(im);
     grp.add(im);
   }
   return grp;
@@ -1391,6 +1422,7 @@ function buildScatter(T,TH){
     }
     inst.count=placed;
     inst.instanceMatrix.needsUpdate=true;
+    fitInstancedBounds(inst);
     if(vary&&inst.instanceColor)inst.instanceColor.needsUpdate=true;
     inst.frustumCulled=true;
     return placed?inst:null;
@@ -2366,8 +2398,11 @@ function updateCarMesh(){
   /* Dive, squat and lean are all trimmed back: the body was rolling far
      enough out of a corner to look soft, and the ceilings let terrain and
      cornering stack into a noticeable rock. */
-  const pitch=-Math.atan2(hF-hB,3.0)-clamp(CAR.ax*0.0026,-0.055,0.055);
-  const roll=Math.atan2(hL-hR,1.8)-clamp(CAR.ay*0.0030,-0.046,0.046);
+  const pitch=-Math.atan2(hF-hB,3.0)-clamp(CAR.ax*0.0020,-0.042,0.042);
+  /* Lean is now barely there — a hint of weight transfer rather than a car
+     falling onto its outside springs. The terrain term is untouched: that is
+     the car following the camber, which is what makes banking read. */
+  const roll=Math.atan2(hL-hR,1.8)-clamp(CAR.ay*0.0011,-0.017,0.017);
   c.position.set(CAR.x,CAR.y,CAR.z);   // wheel contact patch is the model's y=0
   c.rotation.order="YXZ";
   c.rotation.y=CAR.yaw;
