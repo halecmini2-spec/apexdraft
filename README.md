@@ -10,8 +10,9 @@ Open `index.html` in any modern browser, or host it as-is.
 - **Draw** a loop on the board. The direction you draw is the racing
   direction, and where you start becomes the start/finish line.
 - **Bank a corner** by clicking its number on the map, then using the slider.
-- **Pick a car** — a GT racer, a Formula single-seater, or a Yaris that never
-  quite settles on its springs.
+- **Pick a car** — a GT racer, a Formula single-seater, a kart with no top
+  end and enormous grip, or a Yaris that never quite settles on its springs.
+  Each keeps its own best lap, since they don't lap at the same pace.
 - **Drive it** — `WASD`/arrows, `R` recover, `C` camera, `M` sound, `Esc`
   menu. On a phone, on-screen controls appear automatically.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it

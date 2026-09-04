@@ -425,6 +425,7 @@ body.touchcap .touchonly{display:block}
             <button class="chip" data-car="gt" aria-pressed="true">GT</button>
             <button class="chip" data-car="formula">Formula</button>
             <button class="chip" data-car="yaris">Yaris</button>
+            <button class="chip" data-car="kart">Kart</button>
           </div>
           <div class="swatches" id="colors" style="margin-top:9px">
             <button class="sw" data-color="#E2482B" style="background:#E2482B" aria-pressed="true" title="Rosso"></button>
@@ -1608,7 +1609,8 @@ function loft(stations,seg){
 const CAR_MODELS=[
   {id:"gt",     label:"GT"},
   {id:"formula",label:"Formula"},
-  {id:"yaris",  label:"Yaris"}
+  {id:"yaris",  label:"Yaris"},
+  {id:"kart",   label:"Kart"}
 ];
 /* Multipliers on the shared physics constants. Because these change lap
    times, the car is part of the best-lap key — a Formula lap and a Yaris lap
@@ -1616,7 +1618,10 @@ const CAR_MODELS=[
 const CAR_PERF={
   gt:     {power:1.00, top:1.00, grip:1.00},
   formula:{power:1.26, top:1.20, grip:1.22},
-  yaris:  {power:0.72, top:0.74, grip:0.84}
+  yaris:  {power:0.72, top:0.74, grip:0.84},
+  /* a kart has almost no top end but corners on rails: slow down the
+     straights, quickest thing here through anything tight */
+  kart:   {power:0.94, top:0.58, grip:1.34}
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -1673,21 +1678,28 @@ function addLamps(body,front,rear){
 
 /* wheels go on the car group, never the body group, so they stay planted */
 function buildWheels(g,M,spec){
-  const tg=new THREE.CylinderGeometry(spec.r,spec.r,spec.tw,22); tg.rotateZ(Math.PI/2);
-  const rr=spec.r*0.6;
-  const rg=new THREE.CylinderGeometry(rr,rr,spec.tw*1.06,18); rg.rotateZ(Math.PI/2);
-  const sg=new THREE.BoxGeometry(spec.tw*1.1,0.05,rr*0.72);
+  /* spec.twR and spec.rR let an axle run wider or taller rubber than the
+     front, which is most of what makes a kart look like a kart */
+  const set=(r,tw)=>{
+    const tg=new THREE.CylinderGeometry(r,r,tw,22); tg.rotateZ(Math.PI/2);
+    const rr=r*0.6;
+    const rg=new THREE.CylinderGeometry(rr,rr,tw*1.06,18); rg.rotateZ(Math.PI/2);
+    return {tg,rg,sg:new THREE.BoxGeometry(tw*1.1,0.05,rr*0.72),r};
+  };
+  const F=set(spec.r,spec.tw);
+  const R=(spec.twR||spec.rR)?set(spec.rR||spec.r,spec.twR||spec.tw):F;
   const wheels=[];
-  for(const p of spec.pos){
+  spec.pos.forEach((p,i)=>{
+    const k=i<2?F:R;
     const w=new THREE.Group();
-    const tyre=new THREE.Mesh(tg,M.rubber); tyre.castShadow=true; w.add(tyre);
-    w.add(new THREE.Mesh(rg,M.metal));
-    for(let i=0;i<5;i++){
-      const sp=new THREE.Mesh(sg,M.metal); sp.rotation.x=i/5*TAU; w.add(sp);
+    const tyre=new THREE.Mesh(k.tg,M.rubber); tyre.castShadow=true; w.add(tyre);
+    w.add(new THREE.Mesh(k.rg,M.metal));
+    for(let s=0;s<5;s++){
+      const sp=new THREE.Mesh(k.sg,M.metal); sp.rotation.x=s/5*TAU; w.add(sp);
     }
-    w.position.set(p[0],spec.r,p[1]);
+    w.position.set(p[0],k.r,p[1]);
     g.add(w); wheels.push(w);
-  }
+  });
   return wheels;
 }
 
@@ -1852,12 +1864,59 @@ function bodyYaris(b,M){
     bop:{sy:0.22,sx:0.12,freq:8.6}};
 }
 
+/* ---- Kart: no bodywork to hide behind, and hardly any of it ---- */
+function bodyKart(b,M){
+  /* a flat pan rather than a shell — a kart is a floor, a seat and an axle */
+  const pan=new THREE.Mesh(loft([
+    {z: 1.02,w:0.26,y0:0.07,y1:0.15,n:4.0},
+    {z: 0.60,w:0.44,y0:0.06,y1:0.15,n:6.0},
+    {z: 0.00,w:0.50,y0:0.05,y1:0.16,n:7.0},
+    {z:-0.60,w:0.50,y0:0.05,y1:0.17,n:7.0},
+    {z:-0.98,w:0.42,y0:0.06,y1:0.18,n:5.5}
+  ],18),M.paint);
+  pan.castShadow=true; b.add(pan);
+
+  /* the seat is the only thing with any height to it */
+  const seat=new THREE.Mesh(loft([
+    {z:-0.10,w:0.30,y0:0.16,y1:0.30,n:4.0},
+    {z:-0.36,w:0.32,y0:0.16,y1:0.52,n:4.4},
+    {z:-0.62,w:0.30,y0:0.16,y1:0.56,n:4.0}
+  ],14),M.paint);
+  seat.castShadow=true; b.add(seat);
+
+  const dark=0x15191B, tube=0x8A9295, carbon=0x0E1112;
+  const k=trimKit();
+  k.box(0.92,0.10,0.20,0,0.17,1.16,carbon);            // nose fairing
+  k.box(0.07,0.06,0.30,-0.20,0.13,1.02,tube);          // fairing stays
+  k.box(0.07,0.06,0.30, 0.20,0.13,1.02,tube);
+  k.box(0.30,0.16,0.52,-0.52,0.15,0.20,carbon);        // side pods
+  k.box(0.30,0.16,0.52, 0.52,0.15,0.20,carbon);
+  k.box(0.06,0.06,1.90,-0.40,0.09,0.02,tube);          // frame rails
+  k.box(0.06,0.06,1.90, 0.40,0.09,0.02,tube);
+  k.box(1.06,0.06,0.06,0,0.09,0.92,tube);              // front crossmember
+  k.box(0.05,0.30,0.05,0,0.34,0.46,tube,0.55);         // steering column
+  k.box(0.34,0.05,0.09,0,0.50,0.34,dark);              // wheel
+  k.box(0.26,0.24,0.30,0.42,0.28,-0.66,dark);          // engine, offset right
+  k.box(0.10,0.16,0.10,0.42,0.46,-0.52,tube);          // exhaust stub
+  k.box(0.05,0.20,0.05,-0.44,0.24,-0.62,tube);         // sprocket guard
+  k.box(1.32,0.05,0.05,0,0.20,-0.80,tube);             // rear axle
+  k.box(0.86,0.06,0.16,0,0.30,-1.02,carbon);           // rear bumper
+  b.add(k.mesh());
+
+  const tailMats=addLamps(b,null,{w:0.10,h:0.10,y:0.34,z:-1.06,x:[0]});
+  return {tailMats,
+    wheels:{r:0.20,tw:0.15,rR:0.23,twR:0.26,
+            pos:[[-0.60,0.84],[0.60,0.84],[-0.64,-0.80],[0.64,-0.80]]}};
+}
+
 function buildCar(bodyColor,kind){
   const g=new THREE.Group();
   const b=new THREE.Group();
   g.add(b);
   const M=carMats(bodyColor);
-  const make=kind==="formula"?bodyFormula:kind==="yaris"?bodyYaris:bodyGT;
+  const make=kind==="formula"?bodyFormula
+            :kind==="yaris"  ?bodyYaris
+            :kind==="kart"   ?bodyKart:bodyGT;
   const spec=make(b,M);
   g.userData.body=b;
   g.userData.wheels=buildWheels(g,M,spec.wheels);
