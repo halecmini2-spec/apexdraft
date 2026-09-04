@@ -1716,15 +1716,19 @@ function bodyGT(b,M){
 /* ---- Formula: narrow tub, exposed wheels, wings at both ends ---- */
 function bodyFormula(b,M){
   const tub=new THREE.Mesh(loft([
-    {z: 2.98,w:0.15,y0:0.22,y1:0.34,n:3.0},
-    {z: 2.35,w:0.21,y0:0.19,y1:0.42,n:3.2},
+    /* blunt tip: a modern nose stops square above the wing, it is not a spike */
+    {z: 2.84,w:0.20,y0:0.25,y1:0.40,n:3.6},
+    {z: 2.34,w:0.25,y0:0.20,y1:0.45,n:3.4},
     {z: 1.60,w:0.32,y0:0.15,y1:0.50,n:3.6},
     {z: 0.80,w:0.44,y0:0.13,y1:0.60,n:4.0},
     {z: 0.10,w:0.50,y0:0.12,y1:0.64,n:4.2},
     {z:-0.62,w:0.54,y0:0.12,y1:0.94,n:4.4},
-    {z:-1.40,w:0.46,y0:0.13,y1:0.74,n:4.0},
-    {z:-2.25,w:0.32,y0:0.15,y1:0.54,n:3.4},
-    {z:-2.75,w:0.20,y0:0.17,y1:0.42,n:3.0}
+    {z:-1.40,w:0.44,y0:0.13,y1:0.72,n:4.0},
+    /* The engine cover stops just behind the rear axle and ends bluntly at a
+       crash structure. It used to taper on to z=-2.75, past the rear wing,
+       which read as a tail hanging off the back of the car. */
+    {z:-1.92,w:0.34,y0:0.14,y1:0.56,n:3.8},
+    {z:-2.12,w:0.24,y0:0.15,y1:0.44,n:3.4}
   ],20),M.paint);
   tub.castShadow=true; b.add(tub);
 
@@ -1745,11 +1749,15 @@ function bodyFormula(b,M){
   k.box(1.92,0.04,0.26,0,0.23,2.70,carbon,-0.24);
   k.box(0.05,0.36,0.54,-1.05,0.26,2.84,dark);
   k.box(0.05,0.36,0.54, 1.05,0.26,2.84,dark);
-  k.box(0.12,0.48,0.28,0,0.92,-2.50,carbon);           // rear wing pylon
-  k.box(1.44,0.06,0.46,0,1.21,-2.54,carbon);
-  k.box(1.32,0.05,0.28,0,1.35,-2.42,carbon,-0.32);
-  k.box(0.05,0.44,0.62,-0.72,1.19,-2.50,dark);
-  k.box(0.05,0.44,0.62, 0.72,1.19,-2.50,dark);
+  /* The pylon has to reach down to the bodywork. Shortening the engine cover
+     left the whole wing assembly hanging in the air behind the car. */
+  k.box(0.13,0.64,0.26,0,0.72,-2.02,carbon);           // rear wing pylon
+  k.box(1.44,0.06,0.46,0,1.08,-2.16,carbon);
+  k.box(1.32,0.05,0.28,0,1.22,-2.04,carbon,-0.32);
+  k.box(0.05,0.44,0.62,-0.72,1.06,-2.16,dark);
+  k.box(0.05,0.44,0.62, 0.72,1.06,-2.16,dark);
+  k.box(0.26,0.14,0.22,0,0.33,-2.20,carbon);           // rear crash structure
+  k.box(0.98,0.05,0.34,0,0.19,-2.02,carbon);           // diffuser lip
   k.box(0.46,0.05,0.70,0,0.62,0.34,0x080A0B);          // cockpit opening
   k.box(0.34,0.22,0.34,0,0.86,-0.30,dark);             // headrest
   k.box(0.28,0.26,0.40,0,1.02,-0.68,dark);             // airbox
@@ -1765,7 +1773,7 @@ function bodyFormula(b,M){
   }
   b.add(k.mesh());
 
-  const tailMats=addLamps(b,null,{w:0.13,h:0.13,y:0.60,z:-2.78,x:[0]});
+  const tailMats=addLamps(b,null,{w:0.13,h:0.13,y:0.50,z:-2.22,x:[0]});
   return {tailMats,
     wheels:{r:0.36,tw:0.38,pos:[[-1.06,1.62],[1.06,1.62],[-1.06,-1.58],[1.06,-1.58]]}};
 }
@@ -2355,13 +2363,18 @@ function updateCarMesh(){
   const hL=heightAt(T,CAR.x-rx*0.9,CAR.z-rz*0.9);
   /* terrain attitude plus the body moving on its springs: it dives under braking,
      squats under power, and leans on the outside wheels through a corner */
-  const pitch=-Math.atan2(hF-hB,3.0)-clamp(CAR.ax*0.004,-0.09,0.09);
-  const roll=Math.atan2(hL-hR,1.8)-clamp(CAR.ay*0.005,-0.09,0.09);
+  /* Dive, squat and lean are all trimmed back: the body was rolling far
+     enough out of a corner to look soft, and the ceilings let terrain and
+     cornering stack into a noticeable rock. */
+  const pitch=-Math.atan2(hF-hB,3.0)-clamp(CAR.ax*0.0026,-0.055,0.055);
+  const roll=Math.atan2(hL-hR,1.8)-clamp(CAR.ay*0.0030,-0.046,0.046);
   c.position.set(CAR.x,CAR.y,CAR.z);   // wheel contact patch is the model's y=0
   c.rotation.order="YXZ";
   c.rotation.y=CAR.yaw;
-  c.rotation.x=lerp(c.rotation.x,pitch,0.25);
-  c.rotation.z=lerp(c.rotation.z,roll,0.25);
+  /* eased in more slowly too, so the body settles onto an attitude instead
+     of chasing every bump the wheels find */
+  c.rotation.x=lerp(c.rotation.x,pitch,0.14);
+  c.rotation.z=lerp(c.rotation.z,roll,0.14);
   const w=c.userData.wheels;
   const st=-CAR.steer*0.44;      // +rotation.y turns the wheel left
   const spin=c.userData.spin||1; // smaller wheels have to turn faster
