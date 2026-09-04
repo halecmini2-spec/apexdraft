@@ -550,7 +550,12 @@ const store={
 /* =====================================================================
    1. CIRCUIT GEOMETRY  (pad space -> world centreline)
    ===================================================================== */
-const PAD_W=1600, PAD_H=1000;          // logical drawing space
+/* The logical board takes the shape of the space it is given, at constant
+   area, so a tall phone gets a tall board rather than a letterboxed strip of
+   a landscape one. SCALE is metres per pad unit and never changes, so
+   reshaping the board does not resize the circuit drawn on it. */
+let PAD_W=1600, PAD_H=1000;            // logical drawing space
+const PAD_AREA=PAD_W*PAD_H;
 const SCALE=1.30;                      // metres per pad unit
 
 function plen(p){let L=0;for(let i=0;i<p.length;i++){const q=p[(i+1)%p.length];L+=Math.hypot(q.x-p[i].x,q.y-p[i].y);}return L;}
@@ -1497,8 +1502,8 @@ function puffSmoke(x,y,z,strength){
   p.s.visible=true;
   p.s.material.color.setRGB(1,1,1);
   p.s.position.set(x+(Math.random()-.5)*0.7,y+0.25,z+(Math.random()-.5)*0.7);
-  p.s.scale.setScalar(1.0+Math.random()*0.6);
-  p.s.material.opacity=0.30*strength;
+  p.s.scale.setScalar(0.72+Math.random()*0.42);
+  p.s.material.opacity=0.14*strength;
 }
 /* steel on steel — short-lived, gravity-fed, and they die fast */
 function puffSpark(x,y,z,strength){
@@ -1576,6 +1581,15 @@ const CAR_MODELS=[
   {id:"formula",label:"Formula"},
   {id:"yaris",  label:"Yaris"}
 ];
+/* Multipliers on the shared physics constants. Because these change lap
+   times, the car is part of the best-lap key — a Formula lap and a Yaris lap
+   around the same circuit are not the same record. */
+const CAR_PERF={
+  gt:     {power:1.00, top:1.00, grip:1.00},
+  formula:{power:1.26, top:1.20, grip:1.22},
+  yaris:  {power:0.72, top:0.74, grip:0.84}
+};
+const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
 function carMats(bodyColor){
   return {
@@ -1798,7 +1812,7 @@ function bodyYaris(b,M){
     {w:0.17,h:0.30,y:0.82,z:-2.00,x:[-0.68,0.68]});
   return {tailMats,
     wheels:{r:0.30,tw:0.24,pos:[[-0.82,1.16],[0.82,1.16],[-0.82,-1.22],[0.82,-1.22]]},
-    bop:{amp:0.17,freq:8.4}};
+    bop:{sy:0.22,sx:0.12,freq:8.6}};
 }
 
 function buildCar(bodyColor,kind){
@@ -1921,6 +1935,7 @@ function buildWorld(T){
   const smoke=buildSmoke(); scene.add(smoke);
 
   G.scene=scene; G.sun=sun; G.T=T; G.TH=TH; G.car=car; G.blob=blob;
+  G.perf=carPerf(T.opts.car);          // the car the world was built with
   G.skid=skid; G.smoke=smoke;
   G.startLights=sl.userData.lights;
   resetCar(true);
@@ -1952,7 +1967,7 @@ function resetCar(toStart){
 function trackKey(T){
   let h=0;
   for(let i=0;i<T.N;i+=7){ h=(h*31+Math.round(T.X[i]*3)+Math.round(T.Z[i]*7))|0; }
-  return (h>>>0).toString(36)+"_"+Math.round(T.len)+"_"+T.opts.width;
+  return (h>>>0).toString(36)+"_"+Math.round(T.len)+"_"+T.opts.width+"_"+(T.opts.car||"gt");
 }
 
 /* ---------- input ---------- */
@@ -2091,11 +2106,12 @@ function step(dt){
      Torque curve tapers to zero at top speed, so acceleration is smooth and
      the car settles at a speed instead of pinning against a cap. Every other
      term opposes motion, so the car can never gain speed without input. */
-  const vmax=DRIVE.topSpeed*S.power;
+  const P=G.perf||CAR_PERF.gt;
+  const vmax=DRIVE.topSpeed*P.top*S.power;
   let a=0;
   if(gas){
     const t=clamp(Math.abs(vLong)/vmax,0,1);
-    a+=DRIVE.power*S.power*(1-t*t*0.90);
+    a+=DRIVE.power*P.power*S.power*(1-t*t*0.90);
   }
   if(brake){
     if(vLong>0.6){ a-=DRIVE.brake*S.brake; CAR.brakeHold=0; }   // strong, immediate stopping power
@@ -2124,7 +2140,7 @@ function step(dt){
      you get the full ~35 degrees and a 6 m turning circle. */
   const srate=steerIn?9.5:12.0;      // quicker to take a set on turn-in
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
-  const latCap=DRIVE.latAccel*S.mu;                   // grip available for cornering
+  const latCap=DRIVE.latAccel*P.grip*S.mu;            // grip available for cornering
   const vv=Math.max(Math.abs(vLong),4);
   const lock=Math.min(DRIVE.maxSteer,
                       Math.atan(DRIVE.overdrive*latCap*DRIVE.wheelbase/(vv*vv)));
@@ -2146,7 +2162,7 @@ function step(dt){
   CAR.drift+=(target-CAR.drift)*Math.min(1,dt*(target>CAR.drift?6:2.2));
 
   const gripRate=lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)
-                 *S.grip*(brake?1.12:1);                // braking loads the front
+                 *S.grip*P.grip*(brake?1.12:1);         // braking loads the front
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
   /* self-aligning torque: the nose eases back toward the way the car is
@@ -2348,15 +2364,16 @@ function updateCarMesh(){
     w[i].rotation.y=i<2?st:0;
     w[i].rotation.x=CAR.wheelSpin*spin;
   }
-  /* The Yaris never settles. Only the body group hops — the wheels belong to
-     the car group, so they stay planted while it bounces on its springs. */
+  /* The Yaris never settles — but it squashes rather than hops: it snaps
+     between narrow-and-tall and short-and-wide without leaving the road.
+     tanh flattens the sine towards its extremes, so it holds each shape and
+     flicks between them instead of easing sinusoidally. Scaling is about the
+     body group's origin, which sits at the contact patch, so it grows upward
+     off the ground rather than floating. */
   const bp=c.userData.bop, bd=c.userData.body;
   if(bp&&bd){
-    const t=performance.now()/1000;
-    const amp=bp.amp*(0.6+0.4*clamp(Math.hypot(CAR.vx,CAR.vz)/24,0,1));
-    bd.position.y=Math.abs(Math.sin(t*bp.freq))*amp;
-    bd.rotation.z=Math.sin(t*bp.freq*0.5)*0.045;
-    bd.rotation.x=Math.sin(t*bp.freq*0.77+1.1)*0.03;
+    const q=Math.tanh(Math.sin(performance.now()/1000*bp.freq)*2.8);
+    bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx);
   }
   const braking=(keys.KeyS||keys.ArrowDown||touch.brake||keys.Space)?1:0;
   for(const m of c.userData.tailMats){
@@ -2396,8 +2413,10 @@ function updateCarMesh(){
         addSkidQuad(sd.prev.lx,sd.prev.ly,sd.prev.lz,lx,ly,lz,rx,rz,0.17);
         addSkidQuad(sd.prev.wx,sd.prev.wy,sd.prev.wz,wx,wy,wz,rx,rz,0.17);
         sd.prev={lx,ly,lz,wx,wy,wz};
-        const puff=clamp(CAR.drift+0.3,0,1);
-        puffSmoke(lx,ly,lz,puff); puffSmoke(wx,wy,wz,puff);
+        /* no constant haze: the +0.3 floor meant even a tidy lap smoked, so
+           this asks for a real slide before anything comes off the tyres */
+        const puff=clamp(CAR.drift*0.85-0.12,0,1);
+        if(puff>0.04){ puffSmoke(lx,ly,lz,puff); puffSmoke(wx,wy,wz,puff); }
       }
     } else sd.prev=null;
   }
@@ -2609,7 +2628,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden&&G.running
    4. THE DRAWING BOARD
    ===================================================================== */
 const ED={
-  raw:null, track:null, drawing:false, pending:null, prevRaw:null, history:[],
+  raw:null, track:null, drawing:false, pending:null, prevRaw:null, history:[], fit:1,
   sel:null, cornerPts:[],
   opts:store.get("ad.opts",{width:12,hills:45,smooth:45,theme:"alpine",car:"gt",
                             color:"#E2482B",seed:7,banks:[]})
@@ -2618,6 +2637,36 @@ const pad=$("pad"), pctx=pad.getContext("2d");
 let PADT={s:1,ox:0,oy:0};
 
 let fitTries=0;
+/* Reshape the logical board, carrying whatever is drawn on it across. The
+   circuit is re-centred, not rescaled, so its length in metres survives the
+   move; it is only shrunk if the new shape cannot otherwise hold it. */
+function setPadDims(w,h){
+  if(Math.abs(w-PAD_W)<2&&Math.abs(h-PAD_H)<2) return false;
+  const ox=PAD_W/2, oy=PAD_H/2, nx=w/2, ny=h/2;
+  PAD_W=w; PAD_H=h;
+  const raw=(typeof ED!=="undefined"&&ED)?ED.raw:null;
+  if(raw&&raw.length){
+    /* Undo whatever shrink an earlier shape forced before measuring, so a
+       circuit squeezed into a narrow board grows back to the size it was
+       drawn at once there is room again. Without this every rotation of the
+       phone would ratchet it smaller and never give the metres back. */
+    const undo=1/(ED.fit||1);
+    let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+    for(const p of raw){
+      p.x=nx+(p.x-ox)*undo;
+      p.y=ny+(p.y-oy)*undo;
+      if(p.x<x0)x0=p.x; if(p.x>x1)x1=p.x;
+      if(p.y<y0)y0=p.y; if(p.y>y1)y1=p.y;
+    }
+    /* the corner numbers sit outside the track, so the circuit has to stop
+       well short of the edge or they get clipped by the canvas */
+    const m=Math.max(70,Math.min(w,h)*0.09);
+    const k=Math.min(1,(w-m*2)/Math.max(1,x1-x0),(h-m*2)/Math.max(1,y1-y0));
+    if(k<0.998) for(const p of raw){ p.x=nx+(p.x-nx)*k; p.y=ny+(p.y-ny)*k; }
+    ED.fit=k;
+  }
+  return true;
+}
 function fitPad(){
   const r=pad.getBoundingClientRect();
   if(r.width<10||r.height<10){
@@ -2629,9 +2678,14 @@ function fitPad(){
   const dpr=Math.min(window.devicePixelRatio||1,2);
   pad.width=Math.max(2,Math.round(r.width*dpr));
   pad.height=Math.max(2,Math.round(r.height*dpr));
-  const s=Math.max(0.05,Math.min(r.width/PAD_W,r.height/PAD_H)*0.93);
+  /* clamped so a very narrow column still gets a board with usable proportions
+     rather than a corridor nothing sensible can be drawn in */
+  const a=clamp(r.width/r.height,0.42,2.6);
+  const reshaped=setPadDims(Math.round(Math.sqrt(PAD_AREA*a)),
+                            Math.round(Math.sqrt(PAD_AREA/a)));
+  const s=Math.max(0.05,Math.min(r.width/PAD_W,r.height/PAD_H)*0.97);
   PADT={s,ox:(r.width-PAD_W*s)/2,oy:(r.height-PAD_H*s)/2,dpr};
-  renderPad();
+  if(reshaped&&ED.raw) rebuild(); else renderPad();
 }
 function toPad(cx,cy){
   const r=pad.getBoundingClientRect();
