@@ -2203,34 +2203,45 @@ function step(dt){
      have, demand climbs past 1, and the rear starts to come round. Everything
      below that is planted, so the car feels fair rather than skittish. It also
      bleeds off on its own, so a slide always ends. */
-  const demand=Math.abs(yawWant)/Math.max(yawCap,0.001);   // 1.0 = at the limit
-  const target=hand?1:clamp((demand-1.00)/0.08,0,1)      // tracks DRIVE.overdrive
-                      *(gas?1:0.55)
-                      *clamp((Math.abs(vLong)-12)/10,0,1); // no drifting at walking pace
-  CAR.drift+=(target-CAR.drift)*Math.min(1,dt*(target>CAR.drift?6:2.2));
-
   /* A locked rear axle has no lateral grip left to give, so the tail comes
      round on its own. yawRate was clamped to yawWant, which is zero with no
      steering input — that is why the handbrake used to just slow the car
-     down. Now it strips most of the rear grip, opens the yaw ceiling, and
-     contributes rotation of its own toward whatever lock is held. It fades
-     out at walking pace, so it parks the car rather than spinning it. */
-  /* Grabs fast and lets go slowly. Tied straight to the button the slide died
-     the instant you released, which is the opposite of how a handbrake drift
-     works: you flick it to break the rear away and then steer the slide with
-     the handbrake already back off. The slow release is what leaves you
-     something to catch. */
+     down. It strips rear grip, opens the yaw ceiling, and contributes
+     rotation of its own toward whatever lock is held. It fades out at
+     walking pace, so it parks the car rather than spinning it.
+
+     The lever has travel, and it grabs faster than it lets go. At an attack
+     of 22/s it reached full lock inside 50ms, so the lightest dab broke the
+     rear away as hard as a long pull; it now builds in. The slow release is
+     separate, and deliberate: you flick the handbrake to break the rear away
+     and then steer the slide with it already back off, so something has to
+     be left to catch.
+
+     The terms that actually throw the tail out are squared on top of that,
+     so half a pull is a quarter of the slide and a brief touch only
+     unsettles the car. Grip stays linear in hb — that one is the front axle,
+     one is the front axle, and it should let go smoothly. */
   const hbT=hand?clamp((Math.abs(vLong)-2.5)/7,0,1):0;
-  CAR.hbF+=(hbT-CAR.hbF)*Math.min(1,dt*(hbT>CAR.hbF?22:3.0));
-  const hb=CAR.hbF;
+  CAR.hbF+=(hbT-CAR.hbF)*Math.min(1,dt*(hbT>CAR.hbF?6.5:3.0));
+  const hb=CAR.hbF, hbE=Math.pow(hb,1.6);
+
+  const demand=Math.abs(yawWant)/Math.max(yawCap,0.001);   // 1.0 = at the limit
+  const base=clamp((demand-1.00)/0.08,0,1)                 // tracks DRIVE.overdrive
+             *(gas?1:0.55)
+             *clamp((Math.abs(vLong)-12)/10,0,1);          // no drifting at walking pace
+  /* the handbrake asks for as much drift as it has actually pulled on, not a
+     flat 1 the instant the button goes down — a dab should not put the car
+     into the same state as hauling the lever */
+  const target=hand?Math.max(base,hb):base;
+  CAR.drift+=(target-CAR.drift)*Math.min(1,dt*(target>CAR.drift?6:2.2));
   const gripRate=lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)
                  *S.grip*P.grip*(brake?1.12:1)          // braking loads the front
                  *(1-0.30*hb);                          // rear locked; the front still bites
-  const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hb);
+  const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hbE);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
   /* steer is + to the right and yaw is negative to the right, so subtracting
      swings the tail the way the wheel is pointed */
-  if(hb) yawRate-=CAR.steer*hb*0.70*clamp(Math.abs(vLong)/26,0.3,1);
+  if(hb) yawRate-=CAR.steer*hbE*0.68*clamp(Math.abs(vLong)/26,0.3,1);
   /* self-aligning torque: the nose eases back toward the way the car is
      actually travelling, so a slide catches itself instead of snapping —
      held off while the rear is locked, or it would undo the slide */
@@ -2251,7 +2262,7 @@ function step(dt){
      feel of an ordinary drift is untouched. */
   if(hb){
     const over=yawRate-clamp(yawRate,-yawCap,yawCap);
-    vLat+=over*Math.abs(vLong)*dt*3.0;
+    vLat+=over*Math.abs(vLong)*dt*3.0*hbE;
   }
   vLat*=Math.exp(-gripRate*dt);
   /* the anti-spin clamp opens up while the rear is locked, so a handbrake
