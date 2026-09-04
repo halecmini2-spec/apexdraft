@@ -2225,7 +2225,7 @@ function step(dt){
   const hb=CAR.hbF;
   const gripRate=lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)
                  *S.grip*P.grip*(brake?1.12:1)          // braking loads the front
-                 *(1-0.66*hb);                          // rear locked: grip goes
+                 *(1-0.30*hb);                          // rear locked; the front still bites
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hb);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
   /* steer is + to the right and yaw is negative to the right, so subtracting
