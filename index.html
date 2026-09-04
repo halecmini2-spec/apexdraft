@@ -38,14 +38,17 @@ button{font-family:inherit;color:inherit}
 
 /* ============ editor ============ */
 #editor{display:flex;height:100%}
-@media (max-width:860px){ #editor{flex-direction:column-reverse} }
 
 .rail{
   width:322px;flex:0 0 322px;background:var(--panel);
   border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;
 }
+/* The settings stay beside the board at every size — stacking them under it
+   cost the board its height and pushed the controls off screen. Narrow the
+   rail instead; the padding it claws back is set after .rail-foot below, so
+   those overrides land after the base rules they replace. */
 @media (max-width:860px){
-  .rail{width:100%;flex:0 0 auto;max-height:52dvh;border-right:0;border-top:1px solid var(--line)}
+  .rail{width:clamp(170px,40vw,322px);flex:0 0 clamp(170px,40vw,322px)}
 }
 .brand{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:baseline}
 .brand h1{
@@ -108,6 +111,13 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 }
 
 .rail-foot{border-top:1px solid var(--line);padding:14px 20px 18px;background:var(--panel)}
+/* Narrow rail: buy back the horizontal room the 20px gutters were using. */
+@media (max-width:860px){
+  .brand{padding:12px 13px 10px;gap:8px}
+  .brand h1{font-size:16px;letter-spacing:.1em}
+  .rail-scroll{padding:4px 13px 10px}
+  .rail-foot{padding:11px 13px 13px}
+}
 .go{
   width:100%;border:0;border-radius:2px;background:var(--amber);color:#140D00;
   font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px;
@@ -2729,15 +2739,19 @@ $("presets").addEventListener("click",e=>{
   const k=b.dataset.preset;
   loadShape(k==="random"?randomShape():PRESETS[k]);
 });
+/* buildCircuit snapshots opts (Object.assign({},opts)), and the world is built
+   from that snapshot — so changing these without rebuilding left the track
+   holding the previous theme and colour, and the change only appeared after a
+   reload rebuilt from storage. */
 $("themes").addEventListener("click",e=>{
   const b=e.target.closest("[data-theme]"); if(!b)return;
   ED.opts.theme=b.dataset.theme; pressGroup($("themes"),"theme",ED.opts.theme);
-  store.set("ad.opts",ED.opts);
+  store.set("ad.opts",ED.opts); rebuild();
 });
 $("colors").addEventListener("click",e=>{
   const b=e.target.closest("[data-color]"); if(!b)return;
   ED.opts.color=b.dataset.color; pressGroup($("colors"),"color",ED.opts.color);
-  store.set("ad.opts",ED.opts);
+  store.set("ad.opts",ED.opts); rebuild();
 });
 const HILL=["Flat","Gentle","Rolling","Hilly","Mountainous"];
 const SMOOTH=["Raw","Loose","Normal","Flowing","Silky"];
