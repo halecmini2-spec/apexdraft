@@ -1887,7 +1887,7 @@ const CAR={
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
   sectors:[null,null,null], bestSectors:[null,null,null], secStart:0, secIdx:0,
   wrong:0, state:"count", countT:0, slip:0, wheelSpin:0, rumble:0,
-  brakeHold:0
+  brakeHold:0, hbF:0
 };
 let SOUND=store.get("ad.sound",true);
 
@@ -1993,7 +1993,7 @@ function resetCar(toStart){
   CAR.yaw=Math.atan2(T.TX[i],T.TZ[i]);
   CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
-  CAR.brakeHold=0;
+  CAR.brakeHold=0; CAR.hbF=0;
   if(G.skid)resetSkids();
   CAR.y=heightAt(T,CAR.x,CAR.z); CAR.prevSurf=CAR.y;
   if(toStart){
@@ -2215,10 +2215,17 @@ function step(dt){
      down. Now it strips most of the rear grip, opens the yaw ceiling, and
      contributes rotation of its own toward whatever lock is held. It fades
      out at walking pace, so it parks the car rather than spinning it. */
-  const hb=hand?clamp((Math.abs(vLong)-2.5)/7,0,1):0;
+  /* Grabs fast and lets go slowly. Tied straight to the button the slide died
+     the instant you released, which is the opposite of how a handbrake drift
+     works: you flick it to break the rear away and then steer the slide with
+     the handbrake already back off. The slow release is what leaves you
+     something to catch. */
+  const hbT=hand?clamp((Math.abs(vLong)-2.5)/7,0,1):0;
+  CAR.hbF+=(hbT-CAR.hbF)*Math.min(1,dt*(hbT>CAR.hbF?22:3.0));
+  const hb=CAR.hbF;
   const gripRate=lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)
                  *S.grip*P.grip*(brake?1.12:1)          // braking loads the front
-                 *(1-0.58*hb);                          // rear locked: grip goes
+                 *(1-0.66*hb);                          // rear locked: grip goes
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hb);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
   /* steer is + to the right and yaw is negative to the right, so subtracting
@@ -2244,7 +2251,7 @@ function step(dt){
      feel of an ordinary drift is untouched. */
   if(hb){
     const over=yawRate-clamp(yawRate,-yawCap,yawCap);
-    vLat+=over*Math.abs(vLong)*dt*2.0;
+    vLat+=over*Math.abs(vLong)*dt*3.0;
   }
   vLat*=Math.exp(-gripRate*dt);
   /* the anti-spin clamp opens up while the rear is locked, so a handbrake
