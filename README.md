@@ -7,13 +7,16 @@ Open `index.html` in any modern browser, or host it as-is.
 
 ## Playing
 
-- **Draw** a loop on the board, or load a preset. The direction you draw is the
-  racing direction, and where you start becomes the start/finish line.
+- **Draw** a loop on the board. The direction you draw is the racing
+  direction, and where you start becomes the start/finish line.
 - **Bank a corner** by clicking its number on the map, then using the slider.
 - **Pick a car** — a GT racer, a Formula single-seater, or a Yaris that never
   quite settles on its springs.
-- **Drive it** — `WASD`/arrows, `Space` handbrake, `R` recover, `C` camera,
-  `M` sound, `Esc` menu. On a phone, on-screen controls appear automatically.
+- **Drive it** — `WASD`/arrows, `R` recover, `C` camera, `M` sound, `Esc`
+  menu. On a phone, on-screen controls appear automatically.
+- **Lock the rear** by holding the brake. A stab slows you down; keep it
+  pinned and the back end lets go — at the cost of some braking, because a
+  locked wheel stops the car worse than one on the edge of grip.
 
 ## Hosting
 

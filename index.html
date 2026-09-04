@@ -237,7 +237,6 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 #tLeft,#tRight,#tBrake,#tGas{bottom:24px;width:98px;height:98px;border-radius:50%;font-size:24px}
 #tLeft{left:20px}  #tRight{left:130px}
 #tBrake{right:130px;font-size:13px} #tGas{right:20px;font-size:13px}
-#tHand{right:130px;bottom:134px;width:78px;height:60px;border-radius:14px;font-size:11px}
 #tMenu{left:50%;transform:translateX(-50%);top:10px;width:52px;height:34px;
   border-radius:8px;font-size:15px}
 body.touchmode .touch{display:block}
@@ -251,7 +250,6 @@ body.touchmode .tower{transform:scale(.86);transform-origin:top left}
 @media (max-height:430px){
   #tLeft,#tRight,#tBrake,#tGas{width:84px;height:84px;bottom:16px}
   #tLeft{left:14px} #tRight{left:106px} #tBrake{right:106px} #tGas{right:14px}
-  #tHand{right:106px;bottom:108px}
   body.touchmode .mapbox{display:none}
 }
 .rotate-tip{
@@ -475,7 +473,7 @@ body.touchcap .touchonly{display:block}
       </div>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
-        <div><kbd>Space</kbd> handbrake · <kbd>R</kbd> recover</div>
+        <div>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover</div>
         <div><kbd>C</kbd> camera · <kbd>M</kbd> sound · <kbd>Esc</kbd> menu</div>
       </div>
       <div class="mapbox"><canvas id="minimap" width="264" height="264"></canvas></div>
@@ -492,7 +490,6 @@ body.touchcap .touchonly{display:block}
         <button id="tRight" aria-label="Steer right">▶</button>
         <button id="tBrake" aria-label="Brake">BRAKE</button>
         <button id="tGas" aria-label="Accelerate">GAS</button>
-        <button id="tHand" aria-label="Handbrake">DRIFT</button>
         <button id="tMenu" aria-label="Menu">☰</button>
       </div>
       <div class="rotate-tip">Turn your phone sideways to drive ↻</div>
@@ -1887,7 +1884,7 @@ const CAR={
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
   sectors:[null,null,null], bestSectors:[null,null,null], secStart:0, secIdx:0,
   wrong:0, state:"count", countT:0, slip:0, wheelSpin:0, rumble:0,
-  brakeHold:0, hbF:0
+  brakeHold:0, hbF:0, handArm:0
 };
 let SOUND=store.get("ad.sound",true);
 
@@ -1993,7 +1990,7 @@ function resetCar(toStart){
   CAR.yaw=Math.atan2(T.TX[i],T.TZ[i]);
   CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
-  CAR.brakeHold=0; CAR.hbF=0;
+  CAR.brakeHold=0; CAR.hbF=0; CAR.handArm=0;
   if(G.skid)resetSkids();
   CAR.y=heightAt(T,CAR.x,CAR.z); CAR.prevSurf=CAR.y;
   if(toStart){
@@ -2027,7 +2024,7 @@ addEventListener("keyup",e=>{keys[e.code]=0;});
    came back latched on. */
 function releaseAllInput(){
   for(const k in keys)keys[k]=0;
-  touch.l=touch.r=touch.gas=touch.brake=touch.hand=0;
+  touch.l=touch.r=touch.gas=touch.brake=0;
 }
 addEventListener("blur",releaseAllInput);
 addEventListener("pagehide",releaseAllInput);
@@ -2110,6 +2107,7 @@ const DRIVE={
   overdrive:1.08,
   latAccel:16.8,      // cornering grip ceiling (m/s^2)
   gripRate:8.5,       // how fast sideways velocity is killed, 1/s
+  handDelay:0.55,     // seconds on the brake before the rear locks up
   frontBias:0.45,     // share of lateral grip from the front axle, which a
                       // drift does not take away — it is what keeps the nose
                       // pointed and stops a slide turning into washing wide
@@ -2132,7 +2130,12 @@ function step(dt){
     if(keys.KeyD||keys.ArrowRight||touch.r)steerIn+=1;
     if(keys.KeyW||keys.ArrowUp||touch.gas)gas=1;
     if(keys.KeyS||keys.ArrowDown||touch.brake)brake=1;
-    if(keys.Space||touch.hand)hand=1;
+    /* The handbrake has no button of its own. Keep the brake pinned and the
+       rear locks up of its own accord — a stab to slow down is just braking,
+       but hold it and the back end lets go. It only arms above walking pace,
+       so easing to a stop never trips it. */
+    if(brake&&Math.hypot(CAR.vx,CAR.vz)>6) CAR.handArm+=dt; else CAR.handArm=0;
+    if(CAR.handArm>DRIVE.handDelay) hand=1;
   }
   const fx=Math.sin(CAR.yaw),  fz=Math.cos(CAR.yaw);
   const rx=-Math.cos(CAR.yaw), rz=Math.sin(CAR.yaw);
@@ -2161,7 +2164,11 @@ function step(dt){
     a+=DRIVE.power*P.power*S.power*(1-t*t*0.90);
   }
   if(brake){
-    if(vLong>0.6){ a-=DRIVE.brake*S.brake; CAR.brakeHold=0; }   // strong, immediate stopping power
+    /* A locked wheel stops the car worse than one on the edge of grip, which
+       is the whole reason ABS exists. Holding the brake past the point the
+       rear lets go therefore costs you braking — and leaves enough speed to
+       actually slide with, rather than arriving at the slide already stopped. */
+    if(vLong>0.6){ a-=DRIVE.brake*S.brake*(hand?0.55:1); CAR.brakeHold=0; }
     else if(vLong>-14){
       /* Reverse asks for a deliberate hold. Engaging it the instant the car
          stopped meant a brief tap of the brake — or a single dropped touch
@@ -2170,11 +2177,11 @@ function step(dt){
       if(CAR.brakeHold>0.35) a-=DRIVE.reverse*S.power;
     }
   } else CAR.brakeHold=0;
-  /* The handbrake locks the rear axle, which carries maybe 40% of the weight,
-     so it should not stop the car like the brake pedal does — it should slow
-     it a little and take the back end away. The retardation is a third of
-     what it was; the grip it removes is handled in section 3. */
-  if(hand) a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*2.0,5.5);
+  /* The rear locking adds nothing to the retardation now, because it only
+     happens with the brake already down and section 1 has applied that in
+     full. Guarded rather than deleted so the term is still correct if the
+     rear is ever locked without the pedal. */
+  if(hand&&!brake) a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*2.0,5.5);
   if(!gas&&!brake&&!hand)
     a-=Math.sign(vLong)*Math.min(Math.abs(vLong)*2.4,DRIVE.engineBrake);
   a-=vLong*Math.abs(vLong)*0.00040;                  // aero drag
@@ -2493,7 +2500,7 @@ function updateCarMesh(){
     const q=Math.tanh(Math.sin(performance.now()/1000*bp.freq)*2.8);
     bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx);
   }
-  const braking=(keys.KeyS||keys.ArrowDown||touch.brake||keys.Space)?1:0;
+  const braking=(keys.KeyS||keys.ArrowDown||touch.brake)?1:0;
   for(const m of c.userData.tailMats){
     m.emissive.copy(SRGB(braking?0xFF2A12:0x2A0704));
     m.emissiveIntensity=braking?1.6:0.8;
@@ -2738,7 +2745,7 @@ function togglePause(force){
   const show=force!==undefined?force:p.hidden;
   p.hidden=!show;
   G.running=!show;
-  if(show){ for(const k in keys)keys[k]=0; touch.l=touch.r=touch.gas=touch.brake=touch.hand=0; }
+  if(show){ for(const k in keys)keys[k]=0; touch.l=touch.r=touch.gas=touch.brake=0; }
   if(!show){ G.lastT=performance.now(); }
   if(show&&AU.ctx)AU.master.gain.setTargetAtTime(0,AU.ctx.currentTime,0.05);
   else if(AU.master)AU.master.gain.setTargetAtTime(SOUND?0.5:0,AU.ctx?AU.ctx.currentTime:0,0.05);
@@ -3201,7 +3208,7 @@ $("pBack").addEventListener("click",()=>{
 (function boot(){
   const bars=$("gearbar");
   for(let i=0;i<14;i++)bars.appendChild(document.createElement("i"));
-  ["tLeft:l","tRight:r","tGas:gas","tBrake:brake","tHand:hand"].forEach(s=>{
+  ["tLeft:l","tRight:r","tGas:gas","tBrake:brake"].forEach(s=>{
     const [id,p]=s.split(":"); bindTouch(id,p);
   });
   /* a phone has no Esc key, so the menu needs a button of its own */
