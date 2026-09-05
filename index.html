@@ -2292,14 +2292,26 @@ function initRenderer(){
   G.renderer.shadowMap.enabled=true;
   G.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   G.camera=new THREE.PerspectiveCamera(64,1,0.4,5200);
-  window.addEventListener("resize",resize);
+  window.addEventListener("resize",resizeSoon);
+  window.addEventListener("orientationchange",resizeSoon);
+  if(window.visualViewport) window.visualViewport.addEventListener("resize",resizeSoon);
 }
 function resize(){
   if(!G.renderer)return;
   const el=document.getElementById("drive");
-  const w=el.clientWidth||window.innerWidth, h=el.clientHeight||window.innerHeight;
+  let w=el.clientWidth||window.innerWidth, h=el.clientHeight||window.innerHeight;
+  if(!w||!h)return;                       // mid-rotation it can report nothing
   G.renderer.setSize(w,h,false);
   G.camera.aspect=w/h; G.camera.updateProjectionMatrix();
+}
+/* Turning the phone does not resize the page in one go: for a moment it
+   still reports the shape it had before, and a camera set from that keeps a
+   4:3 picture stretched across a 16:9 screen until something else happens to
+   call this. Asking again a few times over the next second costs nothing and
+   catches whichever measurement is the real one. */
+function resizeSoon(){
+  resize(); fitPad();
+  [120,400,900].forEach(ms=>setTimeout(()=>{ resize(); fitPad(); },ms));
 }
 function disposeTree(obj){
   obj.traverse(o=>{
@@ -2853,9 +2865,14 @@ function updateCamera(dt){
     /* A phone screen is a fraction of the size, so the same chase distance
        leaves the car too small to read. Sit closer, and drop the aim point
        nearer the car so it holds more of the frame. */
-    const mob=touchUIOn();
-    const back=(G.camMode===0?9.2:6.4)*(mob?0.72:1);
-    const up  =(G.camMode===0?3.5:2.6)*(mob?0.80:1);
+    /* Sitting closer was for a phone held upright, where the car is small in
+       a narrow frame. Held sideways there is plenty of width and the same
+       pull-in just puts you on the back bumper with no road ahead, so it
+       eases right off. */
+    const mob=touchUIOn(), wide=innerWidth>innerHeight;
+    const near=mob?(wide?0.93:0.78):1;
+    const back=(G.camMode===0?9.2:6.4)*near;
+    const up  =(G.camMode===0?3.5:2.6)*(mob?(wide?0.96:0.84):1);
     const tx=CAR.x-fx*back, tz=CAR.z-fz*back;
     /* The hint again. This samples the ground behind the car to keep the
        camera above it, and underneath a flyover that point is as near the
@@ -2868,7 +2885,7 @@ function updateCamera(dt){
     cam.position.x+=(tx-cam.position.x)*k;
     cam.position.y+=(ty-cam.position.y)*k*0.8;
     cam.position.z+=(tz-cam.position.z)*k;
-    const ahead=mob?6.8:9;
+    const ahead=mob?(wide?8.4:6.8):9;
     camLook.set(CAR.x+fx*ahead,CAR.y+1.5,CAR.z+fz*ahead);
     cam.lookAt(camLook);
   }
