@@ -592,6 +592,11 @@ body.shelving #lobbybar{display:none}
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 #auth .go:disabled{background:var(--raise);color:var(--faint)}
 
+/* ============ name tags ============
+   Drawn over the world rather than in it: text in the scene has to be
+   rendered, lit and depth-tested, and would disappear behind the first crest
+   between you and them. This cannot be hidden by anything. */
+.tagcv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 /* ============ fastest laps ============
    Two places, one set of numbers: a live order of the room while you drive,
    and the whole board when you stop. */
@@ -1002,6 +1007,12 @@ body.shelving #lobbybar{display:none}
              at how tall they are. -->
         <div class="standings" id="standings" hidden></div>
       </div>
+      <!-- Who is where. Over the car when it is on screen, pinned to the edge
+           pointing at them when it is not, so nobody is ever simply lost.
+           Painted rather than laid out: the minimap already proves a canvas
+           over the view composites everywhere, and one canvas beats a dozen
+           elements being moved every frame. -->
+      <canvas class="tagcv" id="tagcv"></canvas>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
         <div>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover</div>
@@ -1043,6 +1054,10 @@ body.shelving #lobbybar{display:none}
           <button class="pbtn primary" id="pResume">Resume <span class="s">Esc</span></button>
           <button class="pbtn" id="pReset">Recover car <span class="s">R</span></button>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
+          <!-- Only in a party, and only the host may turn it: if one car is
+               solid and the other is not, one of you gets shoved and the
+               other feels nothing. -->
+          <button class="pbtn" id="pSolid" hidden>Contact <span class="s off" id="pSolidState">Off</span></button>
           <button class="pbtn" id="pFull" hidden>Fullscreen <span class="s off" id="fullState">Off</span></button>
           <button class="pbtn" id="pTouch">On-screen controls <span class="s on" id="touchState">On</span></button>
           <button class="pbtn" id="pBack">Back to the drawing board</button>
@@ -3743,6 +3758,7 @@ function frame(now){
   netTick(); netUpdateCars();
   if(G.smoke)updateSmoke(dt);
   updateCamera(dt);
+  netTags();                    /* after the camera moves, so the tags do not lag it */
   updateHUD(dt);
   updateAudio();
   if(flashT>0){ flashT-=dt; if(flashT<=0)$("flash").classList.remove("on"); }
@@ -3762,6 +3778,9 @@ function togglePause(force){
     /* Drawn from what is already known, then refreshed: a pause menu should
        not sit blank while a sleeping server is woken. */
     timesUI(); lbFetch(false);
+    /* The frame loop stops here, and it is what clears the name tags — so
+       they have to be told directly or they hang over the menu. */
+    netTags();
   }
   if(!show){ G.lastT=performance.now(); }
   if(show&&AU.ctx)AU.master.gain.setTargetAtTime(0,AU.ctx.currentTime,0.05);
@@ -4807,6 +4826,7 @@ function netUI(){
 
   $("boardTag").hidden=mode!=="guest";
   driveLabel();
+  solidUI();          // the contact row exists only inside a party
 
   if(on){
     $("netShow").textContent=NET.code||"----";
@@ -5011,18 +5031,46 @@ $("btnLeave").addEventListener("click",()=>{
    solid and the other is not, one of you gets shoved and the other feels
    nothing. The host sets it and it travels with the circuit, so everyone in
    a room is playing the same game. */
-$("btnSolid").addEventListener("click",()=>{
-  if(NET.id!==NET.hostId){ netSay("Only the host can change contact."); return; }
+/* Reachable from the rail before you go out and from the pause menu once you
+   are, because whether cars touch is the sort of thing you decide two laps
+   in rather than in advance. */
+function solidToggle(where){
+  if(NET.status!=="in")return;
+  if(NET.id!==NET.hostId){
+    if(where==="pause")flashPause("Only the host can change contact.");
+    else netSay("Only the host can change contact.");
+    return;
+  }
   ED.opts.solid=!ED.opts.solid;
   store.set("ad.opts",ED.opts);
   solidUI(); netSendTrack();
-});
+}
+$("btnSolid").addEventListener("click",()=>solidToggle("rail"));
+$("pSolid").addEventListener("click",()=>solidToggle("pause"));
+
+/* The pause menu has nowhere to put a sentence, so it borrows the button. */
+let pauseSayT=0;
+function flashPause(msg){
+  const b=$("pSolid"), keep=b.dataset.label||(b.dataset.label=b.firstChild.textContent);
+  b.firstChild.textContent=msg+" ";
+  clearTimeout(pauseSayT);
+  pauseSayT=setTimeout(()=>{ b.firstChild.textContent=keep; },2200);
+}
+
 function solidUI(){
-  const on=!!ED.opts.solid, host=NET.id===NET.hostId;
-  $("solidState").textContent=on?"On":"Off";
-  $("solidState").className="s "+(on?"on":"off");
+  const on=!!ED.opts.solid, host=NET.id===NET.hostId, party=NET.status==="in";
+  for(const id of ["solidState","pSolidState"]){
+    const s=$(id);
+    if(!s)continue;
+    s.textContent=on?"On":"Off";
+    s.className="s "+(on?"on":"off");
+  }
   $("btnSolid").disabled=!host;
   $("btnSolid").title=host?"":"Only the host can change this";
+  /* Alone there is nothing to touch, so the row is not there at all. */
+  $("pSolid").hidden=!party;
+  $("pSolid").disabled=!host;
+  $("pSolid").title=host?"":"Only the host can change this";
 }
 
 /* Other cars are solid only when the party says so. Both machines push
@@ -5069,6 +5117,125 @@ function netDropCar(id){
   if(p&&p.mesh){ if(G.scene)G.scene.remove(p.mesh); disposeTree(p.mesh); p.mesh=null; }
 }
 function netDropCars(){ for(const id of NET.peers.keys()) netDropCar(id); }
+
+/* ---- name tags ----
+   A car three hundred metres up the road is a few pixels, and one behind you
+   is nothing at all. The tag says who and how far, and when they are off the
+   screen it pins itself to the edge nearest them and points, so knowing
+   where somebody is never depends on being able to see their car. */
+const TAGV=new THREE.Vector3(), TAGD=new THREE.Vector3(), TAGR=new THREE.Vector3();
+let tagCtx=null, tagW=0, tagH=0, tagDpr=1;
+
+function tagPill(c,x,y,name,dist,colour,edge,ang){
+  c.font='600 11.5px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
+  const nw=c.measureText(name).width;
+  c.font='10px ui-monospace, "Cascadia Mono", Consolas, monospace';
+  const dw=c.measureText(dist).width;
+  const padL=8, dot=7, gap=6, padR=9;
+  const w=padL+dot+gap+nw+gap+dw+padR, h=20;
+  let X=Math.round(x-w/2), Y=Math.round(y-h/2);
+  /* Never off its own edge: a label you have to guess at is no label. */
+  X=Math.max(2,Math.min(tagW-w-2,X));
+  Y=Math.max(2,Math.min(tagH-h-2,Y));
+
+  c.beginPath();
+  const r=3;
+  c.moveTo(X+r,Y); c.arcTo(X+w,Y,X+w,Y+h,r); c.arcTo(X+w,Y+h,X,Y+h,r);
+  c.arcTo(X,Y+h,X,Y,r); c.arcTo(X,Y,X+w,Y,r); c.closePath();
+  c.fillStyle=edge?"rgba(9,14,15,.9)":"rgba(9,14,15,.76)";
+  c.fill();
+  c.lineWidth=1;
+  c.strokeStyle=edge?"rgba(255,255,255,.2)":"rgba(255,255,255,.1)";
+  c.stroke();
+
+  c.beginPath(); c.arc(X+padL+dot/2,Y+h/2,dot/2,0,TAU);
+  c.fillStyle=colour||"#8FA3A0"; c.fill();
+
+  c.textBaseline="middle";
+  c.font='600 11.5px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
+  c.fillStyle="#E6EEEC";
+  c.fillText(name,X+padL+dot+gap,Y+h/2+0.5);
+  c.font='10px ui-monospace, "Cascadia Mono", Consolas, monospace';
+  c.fillStyle="#7C918E";
+  c.fillText(dist,X+padL+dot+gap+nw+gap,Y+h/2+0.5);
+
+  if(edge){
+    /* A wedge on the outside, pointing the way you would have to look. */
+    c.save();
+    c.translate(X+w/2,Y+h/2);
+    c.rotate(ang);
+    c.beginPath();
+    c.moveTo(0,h/2+9); c.lineTo(-5,h/2+1); c.lineTo(5,h/2+1);
+    c.closePath();
+    c.fillStyle="#B9C9C6"; c.fill();
+    c.restore();
+  }
+}
+
+function netTags(){
+  const cv=$("tagcv");
+  if(!cv)return;
+  if(!tagCtx)tagCtx=cv.getContext("2d");
+  const box=cv.parentElement;
+  const W=box.clientWidth||1, H=box.clientHeight||1;
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  if(W!==tagW||H!==tagH||dpr!==tagDpr){
+    tagW=W; tagH=H; tagDpr=dpr;
+    cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  }
+  const c=tagCtx;
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,W,H);
+  if(NET.status!=="in"||!G.camera||!G.running)return;
+
+  /* The renderer refreshes these on draw, which is after this runs — and the
+     camera has just moved. Doing it here costs one matrix inversion and
+     stops the tags trailing a frame behind the view. */
+  G.camera.updateMatrixWorld();
+  G.camera.matrixWorldInverse.copy(G.camera.matrixWorld).invert();
+
+  const M=30, cx=W/2, cy=H/2;
+  for(const [id,p] of NET.peers){
+    if(!p.mesh)continue;
+    /* Above the roof, not at the wheels. */
+    TAGV.copy(p.mesh.position); TAGV.y+=1.9;
+    const dist=TAGR.subVectors(TAGV,G.camera.position).length();
+
+    /* Camera space, not the projection. Projecting a point behind you gives
+       a mirrored answer that is off the screen in the wrong direction — a
+       car directly astern would be pinned to a side edge. Here the sign of z
+       says plainly which side of the lens they are on. */
+    TAGD.copy(TAGV).applyMatrix4(G.camera.matrixWorldInverse);
+    const ahead=TAGD.z<-0.2;
+    let x,y,off,ang=0;
+    if(ahead){
+      TAGV.project(G.camera);
+      x=(TAGV.x*0.5+0.5)*W; y=(-TAGV.y*0.5+0.5)*H;
+      off=x<M||x>W-M||y<M||y>H-M;
+    }else{
+      /* Behind is below: down the screen, leaning to whichever side they are
+         on, which is the way you would swing the car to find them. */
+      off=true;
+      x=cx+TAGD.x; y=cy+Math.abs(TAGD.z);
+    }
+    if(off){
+      let dx=x-cx, dy=y-cy;
+      if(!dx&&!dy)dy=1;
+      const len=Math.hypot(dx,dy)||1;
+      dx/=len; dy/=len;
+      const s=Math.min((W/2-M)/Math.max(1e-6,Math.abs(dx)),(H/2-M)/Math.max(1e-6,Math.abs(dy)));
+      x=cx+dx*s; y=cy+dy*s;
+      ang=Math.atan2(dy,dx)-Math.PI/2;
+    }
+    /* Far away it steps back rather than disappearing. */
+    c.globalAlpha = dist>600 ? 0.55 : (dist>260 ? 0.78 : 1);
+    tagPill(c,x,y,p.name||"Driver",
+            dist<1000?Math.round(dist)+" m":(dist/1000).toFixed(1)+" km",
+            p.colour,off,ang);
+  }
+  c.globalAlpha=1;
+}
+
 function netUpdateCars(){
   if(!G.scene)return;
   const now=performance.now()-NET_LAG;

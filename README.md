@@ -85,6 +85,16 @@ is not.
 While you race other people there is a live order of the room under the
 timing tower, fed by everyone's improvements as they set them.
 
+Every other car carries a name tag in their colour, with how far away they
+are. When they are off the screen — behind you, or round the next corner —
+the tag pins itself to the edge nearest them and points, so you always know
+where somebody is even when you cannot see them.
+
+**Contact** — whether cars touch or drive through each other — is in the
+pause menu as well as on the drawing board, since it is the sort of thing you
+decide two laps in. Only the host can change it: if one car is solid and the
+other is not, one of you gets shoved and the other feels nothing.
+
 Times need an account to appear, but the board is readable without one.
 
 **A lap time is a claim.** The physics run in the browser, so the server
