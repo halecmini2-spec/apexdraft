@@ -2557,7 +2557,7 @@ const DRIVE={
   latAccel:16.8,      // cornering grip ceiling (m/s^2)
   gripRate:8.5,       // how fast sideways velocity is killed, 1/s
   handDelay:0.55,     // seconds on the brake before the rear locks up
-  frontBias:0.45,     // share of lateral grip from the front axle, which a
+  frontBias:0.62,     // share of lateral grip from the front axle, which a
                       // drift does not take away — it is what keeps the nose
                       // pointed and stops a slide turning into washing wide
   driftGrip:3.0,      // ...once a slide has started
@@ -2700,7 +2700,11 @@ function step(dt){
      that is the drift — while the front stays loaded and keeps steering. Only
      the rear term follows CAR.drift and the handbrake now. */
   const rearG =lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)*(1-0.30*hb);
-  const frontG=DRIVE.gripRate*(1-0.16*hb);              // the lever barely touches it
+  /* The lever is on the rear axle, and hauling it on throws weight forward
+     onto the nose — so the front does not merely keep its grip, it gets a
+     little more of it. That is what makes the car pivot about the front
+     rather than the pair of them ploughing on together. */
+  const frontG=DRIVE.gripRate*(1+0.14*hb);
   const gripRate=(frontG*DRIVE.frontBias+rearG*(1-DRIVE.frontBias))
                  *S.grip*P.grip*(brake?1.12:1);         // braking loads the front
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hbE);
