@@ -255,9 +255,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .gearbar i.on{background:var(--amber)}
 .gearbar i.red{background:var(--red)}
 
-.mapbox{position:absolute;left:16px;bottom:16px;background:rgba(9,14,15,.78);
-  border:1px solid var(--line);padding:8px;backdrop-filter:blur(4px)}
-#minimap{display:block;width:132px;height:132px}
+/* Right-hand side on everything, the same square in the same place, so the
+   glance is the same movement whichever screen it is. */
+.mapbox{position:absolute;right:16px;bottom:16px;background:rgba(9,14,15,.78);
+  border:1px solid var(--line);padding:7px;backdrop-filter:blur(4px)}
+#minimap{display:block;width:150px;height:150px}
 
 .flash{
   position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);text-align:center;
@@ -305,13 +307,17 @@ body.touchmode .keys{display:none}
 /* clear the bottom of the screen for thumbs — HUD moves to the top */
 body.touchmode .speedo{bottom:auto;top:12px;right:14px}
 body.touchmode .speedo .n{font-size:44px}
-body.touchmode .mapbox{bottom:auto;top:104px;left:auto;right:14px}
-body.touchmode #minimap{width:96px;height:96px}
+/* below the speedo, clear of the pedals in the bottom corners */
+body.touchmode .mapbox{top:100px;bottom:auto;left:auto;right:14px;padding:5px}
+body.touchmode #minimap{width:118px;height:118px}
 body.touchmode .tower{transform:scale(.86);transform-origin:top left}
 @media (max-height:430px){
   #tLeft,#tRight,#tBrake,#tGas{width:84px;height:84px;bottom:16px}
   #tLeft{left:14px} #tRight{left:106px} #tBrake{right:106px} #tGas{right:14px}
-  body.touchmode .mapbox{display:none}
+  /* small, not gone: knowing the next corner matters more on the screen
+     with the least room for it */
+  body.touchmode .mapbox{top:86px;bottom:auto;right:12px;padding:4px}
+  body.touchmode #minimap{width:92px;height:92px}
 }
 .touchonly2{display:none}
 .rotate-tip{
@@ -2248,7 +2254,7 @@ function buildCar(bodyColor,kind){
 const G={
   renderer:null, scene:null, camera:null, sun:null, root:null,
   T:null, TH:null, car:null, startLights:null,
-  running:false, raf:0, lastT:0, acc:0, mapPath:null,
+  running:false, raf:0, lastT:0, acc:0,
   camMode:0, shake:0, fovBase:64
 };
 const CAR={
@@ -2366,7 +2372,6 @@ function buildWorld(T){
   G.skid=skid; G.smoke=smoke;
   G.startLights=sl.userData.lights;
   resetCar(true);
-  buildMapPath(T);
   G.camMode=0;
 }
 
@@ -3041,38 +3046,89 @@ function showFlash(text,color,sub){
   f.style.color=color;
   f.classList.add("on"); flashT=2.2;
 }
-function buildMapPath(T){
-  const p=new Path2D();
-  const b=T.bounds;
-  const w=b.maxX-b.minX, h=b.maxZ-b.minZ, m=14, size=264;
-  const s=Math.min((size-m*2)/w,(size-m*2)/h);
-  const ox=(size-w*s)/2-b.minX*s, oy=(size-h*s)/2-b.minZ*s;
-  for(let i=0;i<=T.N;i++){
-    const j=i%T.N;
-    const X=T.X[j]*s+ox, Y=T.Z[j]*s+oy;
-    if(i===0)p.moveTo(X,Y); else p.lineTo(X,Y);
-  }
-  p.closePath();
-  G.mapPath={path:p,s,ox,oy,size};
-}
+/* The map is the road immediately ahead, not the whole lap. A lap seen whole
+   is a shape you recognise afterwards; what is useful at 200km/h is which way
+   the next two corners go. So it turns with the car, the car sits low in the
+   frame pointing up the screen, and it draws the stretch either side of you.
+
+   Every point is put through the car's own frame by hand rather than by
+   rotating the canvas: ahead is up, right is right, and there is no question
+   about which way a transform turns. */
+const MAP_AHEAD=185, MAP_BEHIND=65;         // metres
 function drawMinimap(){
-  const c=$("minimap"), ctx=c.getContext("2d"), M=G.mapPath;
-  ctx.clearRect(0,0,c.width,c.height);
-  ctx.lineCap="round"; ctx.lineJoin="round";
-  ctx.strokeStyle="#2C3A39"; ctx.lineWidth=9; ctx.stroke(M.path);
-  ctx.strokeStyle="#7E8F8C"; ctx.lineWidth=5; ctx.stroke(M.path);
-  const T=G.T;
-  /* start line tick */
-  ctx.strokeStyle="#FFB020"; ctx.lineWidth=3;
-  ctx.beginPath();
-  ctx.moveTo(T.X[0]*M.s+M.ox-T.RX[0]*9,T.Z[0]*M.s+M.oy-T.RZ[0]*9);
-  ctx.lineTo(T.X[0]*M.s+M.ox+T.RX[0]*9,T.Z[0]*M.s+M.oy+T.RZ[0]*9);
-  ctx.stroke();
-  /* car */
-  const cx=CAR.x*M.s+M.ox, cy=CAR.z*M.s+M.oy;
-  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-CAR.yaw);
-  ctx.fillStyle=G.T.opts.color;
-  ctx.beginPath(); ctx.moveTo(0,9); ctx.lineTo(6,-7); ctx.lineTo(-6,-7); ctx.closePath(); ctx.fill();
+  const c=$("minimap"), ctx=c.getContext("2d"), T=G.T;
+  const size=c.width;
+  ctx.clearRect(0,0,size,size);
+  if(!T)return;
+
+  const fx=Math.sin(CAR.yaw), fz=Math.cos(CAR.yaw);
+  const rx=-fz, rz=fx;                      // the car's right, in world terms
+  const s=size*0.94/(MAP_AHEAD+MAP_BEHIND);
+  const ox=size/2, oy=size-MAP_BEHIND*s-size*0.03;   // car low, so most of it is road ahead
+  const to=(X,Z)=>{
+    const dx=X-CAR.x, dz=Z-CAR.z;
+    return [ox+(dx*rx+dz*rz)*s, oy-(dx*fx+dz*fz)*s];
+  };
+
+  /* the window of lap to draw, in samples either side of where we are */
+  const step=T.len/T.N;
+  const here=nearest(T,CAR.x,CAR.z,null,CAR.y).i;
+  const nAhead=Math.ceil(MAP_AHEAD/step), nBack=Math.ceil(MAP_BEHIND/step);
+
+  const ribbon=(w,col)=>{
+    ctx.strokeStyle=col; ctx.lineWidth=w; ctx.lineCap="round"; ctx.lineJoin="round";
+    ctx.beginPath();
+    for(let k=-nBack;k<=nAhead;k++){
+      const i=(here+k+T.N*4)%T.N;
+      const p=to(T.X[i],T.Z[i]);
+      if(k===-nBack)ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]);
+    }
+    ctx.stroke();
+  };
+  ribbon(Math.max(7,T.halfW*2*s+5),"#2C3A39");
+  ribbon(Math.max(4,T.halfW*2*s),"#7E8F8C");
+
+  /* the start line, when it is one of the things coming up */
+  for(let k=-nBack;k<=nAhead;k++){
+    if(((here+k+T.N*4)%T.N)!==0)continue;
+    const a=to(T.X[0]-T.RX[0]*T.halfW,T.Z[0]-T.RZ[0]*T.halfW);
+    const b=to(T.X[0]+T.RX[0]*T.halfW,T.Z[0]+T.RZ[0]*T.halfW);
+    ctx.strokeStyle="#FFB020"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(a[0],a[1]); ctx.lineTo(b[0],b[1]); ctx.stroke();
+    break;
+  }
+
+  /* numbers on the corners you are about to arrive at */
+  ctx.font="600 11px 'IBM Plex Mono',monospace";
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  T.corners.forEach((cn,n)=>{
+    let d=cn.pi-here; if(d<-T.N/2)d+=T.N; if(d>T.N/2)d-=T.N;
+    if(d<-nBack*0.4||d>nAhead)return;
+    const p=to(T.X[cn.pi],T.Z[cn.pi]);
+    if(p[0]<8||p[0]>size-8||p[1]<8||p[1]>size-8)return;
+    ctx.fillStyle="rgba(9,14,15,.85)";
+    ctx.beginPath(); ctx.arc(p[0],p[1],9,0,TAU); ctx.fill();
+    ctx.fillStyle=(+((T.opts.banks||[])[n])||0)?"#FFB020":"#B9C7C4";
+    ctx.fillText(String(n+1),p[0],p[1]+0.5);
+  });
+
+  /* other people, so you can see who is about to arrive on your inside */
+  if(typeof NET!=="undefined"&&NET.status==="in"){
+    for(const p of NET.peers.values()){
+      if(!p.mesh)continue;
+      const q=to(p.mesh.position.x,p.mesh.position.z);
+      if(q[0]<0||q[0]>size||q[1]<0||q[1]>size)continue;
+      ctx.fillStyle=p.colour||"#8FA3A0";
+      ctx.beginPath(); ctx.arc(q[0],q[1],5,0,TAU); ctx.fill();
+      ctx.strokeStyle="rgba(9,14,15,.9)"; ctx.lineWidth=1.5; ctx.stroke();
+    }
+  }
+
+  /* you, always pointing up */
+  ctx.save(); ctx.translate(ox,oy);
+  ctx.fillStyle=T.opts.color;
+  ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(6.5,8); ctx.lineTo(0,4.5); ctx.lineTo(-6.5,8);
+  ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 
