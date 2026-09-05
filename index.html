@@ -2,7 +2,11 @@
 <!-- Without this a phone lays the page out at a ~980px virtual viewport and
      scales the result down, shrinking every control to roughly 40% and taking
      the desktop branch of the layout media queries with it. -->
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- maximum-scale and user-scalable are honoured by Chrome and Edge on
+     Android and refuse browser zoom outright. Safari has ignored them since
+     iOS 10 and cannot be told this way; there the gesture handlers below are
+     the only lever, and the system-wide Accessibility zoom is above both. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Apex Draft</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,6 +35,9 @@ body{
    while dropping the double-tap zoom; the callout and selection rules kill
    the magnifier; overscroll-behavior stops pull-to-refresh. */
 html,body{
+  /* stop the browser inflating text on its own, which reads as a zoom that
+     will not come back */
+  -webkit-text-size-adjust:100%; text-size-adjust:100%;
   -webkit-touch-callout:none;
   -webkit-tap-highlight-color:transparent;
   overscroll-behavior:none;
