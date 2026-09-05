@@ -3642,10 +3642,20 @@ function netCollide(){
     const d=Math.hypot(dx,dz);
     if(d>=R||d<1e-4)continue;
     const nx=dx/d, nz=dz/d;
-    CAR.x+=nx*(R-d); CAR.z+=nz*(R-d);
+    /* Half the separation each, because the other machine is running this
+       same code from its own side and taking the other half. Taking all of
+       it here made the other car feel like a wall — you got moved the whole
+       way and they appeared not to give at all. */
+    const half=(R-d)*0.5;
+    CAR.x+=nx*half; CAR.z+=nz*half;
+    /* And shove their car on screen straight away. Their own reaction is
+       real but it has to travel to us, so for the fifth of a second that
+       takes we show what we know is coming; the offset fades out as their
+       packets arrive already carrying it. */
+    p.px=(p.px||0)-nx*half; p.pz=(p.pz||0)-nz*half; p.pt=performance.now();
     const vin=CAR.vx*nx+CAR.vz*nz;
     if(vin<0){                                   // closing: bounce off
-      CAR.vx-=nx*vin*1.45; CAR.vz-=nz*vin*1.45;
+      CAR.vx-=nx*vin*1.25; CAR.vz-=nz*vin*1.25;
       if(-vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-vin/30); thud(-vin); CAR.hitCool=0.16; }
     }
   }
@@ -3692,7 +3702,15 @@ function netUpdateCars(){
        vertically — under a crest the car sinks into the tarmac, through a
        dip it floats above it. Their height still decides which road they are
        on, so a car on a flyover stays on the flyover. */
-    const gx=lerp(A[0],B[0],u), gz=lerp(A[2],B[2],u), gh=lerp(A[1],B[1],u);
+    let gx=lerp(A[0],B[0],u), gz=lerp(A[2],B[2],u);
+    const gh=lerp(A[1],B[1],u);
+    /* the shunt we gave them on contact, fading as their own account of it
+       comes back to us */
+    if(p.px||p.pz){
+      const k=Math.exp(-(performance.now()-p.pt)/190);
+      if(k<0.02){ p.px=0; p.pz=0; }
+      else { gx+=p.px*k; gz+=p.pz*k; }
+    }
     p.mesh.position.set(gx, G.T?heightAt(G.T,gx,gz,null,gh):gh, gz);
     let dy=B[3]-A[3];
     while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU;   // never spin the long way
