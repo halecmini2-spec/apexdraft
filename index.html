@@ -169,6 +169,59 @@ button{font-family:inherit;color:inherit}
 .who i{width:9px;height:9px;border-radius:50%;flex:0 0 9px;box-shadow:0 0 0 1px rgba(0,0,0,.5) inset}
 .who b{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .who.me{border-color:var(--party-deep);background:var(--party-glow)}
+/* ---- the lobby bar ----
+   A thin technical strip rather than a website header: the code set like
+   something read off a pit board, and the role stated plainly so nobody has
+   to work out whether they are allowed to touch the track. */
+#lobbybar{
+  display:flex;align-items:center;gap:14px;flex:0 0 auto;
+  padding:7px calc(16px + var(--sar)) 7px calc(16px + var(--sal));
+  background:linear-gradient(180deg,rgba(255,75,58,.10),rgba(10,15,16,0));
+  border-bottom:1px solid var(--party-deep);
+}
+.lb-brand{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+.lb-brand span{color:var(--amber)}
+.lb-role{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;
+  color:var(--party);border:1px solid var(--party-deep);border-radius:2px;
+  padding:3px 7px;background:var(--party-glow);
+}
+.lb-roster{display:flex;align-items:center;gap:9px;margin-left:14px;overflow:hidden}
+.lb-roster span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);white-space:nowrap}
+.lb-roster i{width:8px;height:8px;border-radius:50%;flex:0 0 8px;box-shadow:0 0 0 1px rgba(0,0,0,.5) inset}
+.lb-roster span.host{color:var(--ink);font-weight:600}
+.lb-code{display:flex;align-items:baseline;gap:8px;margin-left:auto}
+.lb-code .k{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+.lb-code b{font-family:var(--mono);font-size:19px;letter-spacing:.24em;color:var(--party);text-indent:.24em}
+.lb-count{font-size:10.5px;letter-spacing:.08em;color:var(--dim);white-space:nowrap}
+
+/* ---- the roster ----
+   A list rather than a row of chips: in a lobby you want to read who is here
+   and what they are driving, not merely count them. */
+.roster{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.rrow{
+  display:flex;align-items:center;gap:7px;padding:4px 8px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:2px;font-size:11.5px;
+}
+.rrow i{width:9px;height:9px;border-radius:50%;flex:0 0 9px;box-shadow:0 0 0 1px rgba(0,0,0,.5) inset}
+.rrow b{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rrow .rcar{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.rrow.host{border-color:var(--party-deep);background:var(--party-glow)}
+/* escaped rather than typed, so no tool can mangle the glyph on its way in */
+.rrow.host b::after{content:" \2022 host";color:var(--party);font-weight:600;font-size:10px;letter-spacing:.06em}
+.rrow.me b{color:var(--amber)}
+
+/* ---- somebody else's circuit ---- */
+.boardtag{
+  position:absolute;top:calc(14px + var(--sat));left:calc(14px + var(--sal));z-index:2;
+  display:flex;align-items:center;gap:7px;
+  background:rgba(9,14,15,.86);border:1px solid var(--party-deep);border-radius:2px;
+  padding:5px 10px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#F0B7AF;
+}
+.boardtag .dot{width:6px;height:6px;border-radius:50%;background:var(--party);
+  box-shadow:0 0 0 3px rgba(255,75,58,.18)}
+
 /* a lobby is live, and says so */
 .livedot{
   display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--party);
@@ -176,12 +229,48 @@ button{font-family:inherit;color:inherit}
   animation:pulse 1.9s ease-in-out infinite;
 }
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+/* ---- the three states ----
+   One attribute on the body, and the same controls arrange themselves around
+   whichever of the three jobs is in front of you. Nothing is duplicated: the
+   sliders, the car chips and the board are the same elements in all three. */
+
+/* SOLO — the track is the job. The party is one button until it is not. */
+body[data-mode="solo"] #lobbybar{display:none}
+body[data-mode="solo"] #netLive{display:none}
+
+/* GUEST — the host owns the circuit, so everything that edits one goes away
+   rather than sitting there greyed out and inviting a try. */
+body[data-mode="guest"] .grp-track,
+body[data-mode="guest"] .grp-bank,
+body[data-mode="guest"] .grp-env,
+body[data-mode="guest"] .grp-intro,
+body[data-mode="guest"] .board-tools{display:none}
+body[data-mode="guest"] #pad{cursor:default}
+body[data-mode="guest"] .brand{display:none}          /* the bar carries it */
+/* their circuit is a picture, so give it more of the screen than an editor
+   needs — there is nothing on the left to reach for */
+body[data-mode="guest"] .rail{width:clamp(210px,26vw,300px);flex:0 0 clamp(210px,26vw,300px)}
+
+/* HOST — the editor in full, with the lobby beside it. */
+body[data-mode="host"] .brand{display:none}
+body[data-mode="host"] .go{background:var(--party);color:#1A0603}
+body[data-mode="host"] .go:hover{background:#FF6553}
+
+/* the guest cannot start; the button says who can */
+body[data-mode="guest"] .go{
+  background:transparent;border:1px solid var(--party-deep);color:#C79289;
+  cursor:default;letter-spacing:.14em;
+}
+body[data-mode="guest"] .go:hover{background:transparent}
+body[data-mode="guest"].starting .go{background:var(--party);color:#1A0603;border-color:var(--party)}
+
 /* while you are in one, the party controls follow the same red */
 body.inparty #solidBox .chip{border-color:var(--party-deep);color:#F0B7AF}
 body.inparty #solidBox .chip:hover{border-color:var(--party);color:var(--ink)}
 body.inparty #netHint{color:#C79289}
-.swatches{display:flex;gap:8px}
-.sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+/* flex-basis, or a narrow rail squeezes the circles into ovals. */
+.sw{width:30px;height:30px;flex:0 0 30px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
 .sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--ground) inset}
 
 .slider{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
@@ -474,13 +563,51 @@ body.standalone .touchonly{display:none}
   .slider{margin-bottom:5px}
   .slider .lab{font-size:11px}
   .swatches{gap:5px}
-  .sw{width:24px;height:24px}
+  .sw{width:24px;height:24px;flex:0 0 24px}
   .chip{padding:5px 8px;font-size:11px}
   .hint{font-size:10.5px;line-height:1.3}
   .rail-foot{padding:7px 12px 8px}
   input[type=range]{height:26px}
   input[type=range]::-webkit-slider-thumb{width:19px;height:19px;margin-top:-8px}
   input[type=range]::-moz-range-thumb{width:19px;height:19px}
+}
+
+/* ---- a phone in a lobby ----
+   The bar along the top already says which role you are, who else is here
+   and what the code is. Repeating all of it down the rail as well costs the
+   height the car chips need, which is why a guest in landscape could not
+   reach them at all. Keep the one control the bar has no room for — whether
+   you collide — and let the bar say the rest. */
+/* Under about 600px the bar starts wrapping onto two lines. The count and
+   the word "code" are the two things it can lose without losing meaning:
+   the dots are the count, and a four-character block in red beside them is
+   not going to be read as anything else. */
+@media (max-width:600px){
+  .lb-count{display:none}
+  .lb-code .k{display:none}
+  #lobbybar{gap:10px}
+}
+@media (max-width:860px){
+  body.inparty #netLive .codeout,
+  body.inparty #netLive .roster,
+  body.inparty #netWho,
+  body.inparty #btnLeave{display:none}
+}
+/* Landscape is short of height before it is short of anything else, so the
+   bar gives up a line of padding and the wordmark, and the home-screen tip
+   stands down — the popup already makes that offer, and 40px of rail is
+   worth more than making it twice. */
+@media (max-width:860px) and (max-height:560px){
+  #lobbybar{padding-top:4px;padding-bottom:4px;gap:10px}
+  .lb-brand{display:none}
+  .lb-code b{font-size:17px}
+  /* body.touchcap .touchonly is what shows this, and that outranks a bare
+     .foot-note.touchonly however far down the sheet it sits. */
+  body.touchcap .foot-note.touchonly{display:none}
+  /* A guest has two short groups, not six. Two columns of them is a waste of
+     the width, and the width is the board's. */
+  body[data-mode="guest"] .rail-scroll{column-count:1}
+  body[data-mode="guest"] .rail{width:min(32vw,250px);flex:0 0 min(32vw,250px)}
 }
 </style>
 
@@ -507,6 +634,20 @@ body.standalone .touchonly{display:none}
 </script>
 <div id="app">
   <!-- ===================== EDITOR ===================== -->
+  <!-- Only in a lobby. It carries what a lobby makes you care about: which
+       role you are, the code you are reading out, and how many of you there
+       are. Solo never sees it and keeps the wordmark in the rail. -->
+  <div id="lobbybar" hidden>
+    <span class="lb-brand">Apex<span>Draft</span></span>
+    <span class="lb-role" id="lbRole">Host</span>
+    <!-- the grid at a glance, so a host building a circuit can see who has
+         turned up without leaving the tools to go and look -->
+    <div class="lb-roster" id="lbRoster"></div>
+    <div class="lb-code"><span class="k">Lobby code</span><b id="lbCode">----</b></div>
+    <span class="lb-count" id="lbCount">1 driver</span>
+    <button class="chip" id="lbLeave">Leave lobby</button>
+  </div>
+
   <section id="editor" class="screen">
     <aside class="rail">
       <div class="brand">
@@ -514,12 +655,15 @@ body.standalone .touchonly{display:none}
         <small>v4.0</small>
       </div>
       <div class="rail-scroll">
+        <!-- One line, not four. The board prints the rest as you draw, and
+             every row given back here is a row of car selection above the
+             fold instead. -->
         <div class="grp grp-intro">
-          <h2>Drawing</h2>
-          <p class="hint">Drag a closed loop on the board. Release and it becomes a circuit — the direction you draw is the racing direction, and where you start is the start&#8239;/&#8239;finish line.</p>
+          <p class="hint">Drag a closed loop on the board. The way you draw it
+             is the way you race it.</p>
         </div>
 
-        <div class="grp">
+        <div class="grp grp-track">
           <h2>Circuit build</h2>
           <div class="slider">
             <div class="lab"><span>Track width</span><span class="val" id="vWidth">12 m</span></div>
@@ -535,7 +679,7 @@ body.standalone .touchonly{display:none}
           </div>
         </div>
 
-        <div class="grp">
+        <div class="grp grp-bank">
           <h2>Corner banking</h2>
           <p class="hint" id="bankHint">Corners are flat by default. Click a numbered
              corner on the map to bank it.</p>
@@ -552,7 +696,7 @@ body.standalone .touchonly{display:none}
           </div>
         </div>
 
-        <div class="grp">
+        <div class="grp grp-env">
           <h2>Setting</h2>
           <div class="chips" id="themes">
             <button class="chip" data-theme="alpine" aria-pressed="true">Alpine</button>
@@ -561,7 +705,7 @@ body.standalone .touchonly{display:none}
           </div>
         </div>
 
-        <div class="grp">
+        <div class="grp grp-lobby" id="grpLobby">
           <h2>Party <span class="livedot" id="netDot" hidden></span></h2>
           <p class="hint" id="netHint">Race live with other people. The host draws
              the circuit and shares a code.</p>
@@ -582,7 +726,7 @@ body.standalone .touchonly{display:none}
               <span class="k">Party code</span>
               <b id="netShow">----</b>
             </div>
-            <div class="whos" id="netWhos"></div>
+            <div class="roster" id="netWhos"></div>
             <p class="hint" id="netWho">Waiting for players…</p>
             <div class="chips" id="solidBox">
               <button class="chip" id="btnSolid">Contact <span class="s" id="solidState">Off</span></button>
@@ -591,7 +735,7 @@ body.standalone .touchonly{display:none}
           </div>
         </div>
 
-        <div class="grp">
+        <div class="grp grp-car" id="grpCar">
           <h2>Car</h2>
           <div class="chips" id="cars">
             <button class="chip" data-car="gt" aria-pressed="true">GT</button>
@@ -620,6 +764,7 @@ body.standalone .touchonly{display:none}
 
     <main class="board">
       <canvas id="pad"></canvas>
+      <div class="boardtag" id="boardTag" hidden><span class="dot"></span>Host's track</div>
       <div class="board-tools">
         <button class="tool touchonly2" id="btnPanel" aria-label="Hide the panel">&lsaquo;&lsaquo; Panel</button>
         <button class="tool" id="btnUndo">Undo</button>
@@ -3421,6 +3566,9 @@ function cycleCorner(d){
 }
 function clearBanks(){ ED.opts.banks=[]; ED.sel=null; }
 function startDraw(cx,cy){
+  /* A guest is looking at the host's circuit. Every way of drawing arrives
+     here, so this is the only place that has to say no. */
+  if(document.body.dataset.mode==="guest")return;
   const p=toPad(cx,cy);
   if(!isFinite(p.x)||!isFinite(p.y))return;
   ED.drawing=true;
@@ -3819,6 +3967,48 @@ function netUI(){
   $("netDot").hidden=!on;
   $("netHint").hidden=on;        // the status line below says it better
   document.body.classList.toggle("inparty",on);
+
+  /* One attribute decides the whole shape of the screen. Everything else —
+     which panels exist, what the main button says, whether the board can be
+     drawn on — reads it rather than working it out again. */
+  const host=on&&NET.id===NET.hostId;
+  const mode=!on?"solo":(host?"host":"guest");
+  document.body.dataset.mode=mode;
+
+  $("lobbybar").hidden=!on;
+  if(on){
+    $("lbRole").textContent=host?"Host":"In a lobby";
+    $("lbCode").textContent=NET.code||"----";
+    const total=NET.peers.size+1;
+    $("lbCount").textContent=total+(total===1?" driver":" drivers");
+    const bar=$("lbRoster"); bar.innerHTML="";
+    const pin=(name,colour,isHost)=>{
+      const s=document.createElement("span");
+      if(isHost)s.className="host";
+      const i=document.createElement("i"); i.style.background=colour||"#8FA3A0";
+      s.appendChild(i); s.appendChild(document.createTextNode(name));
+      bar.appendChild(s);
+    };
+    pin("You",ED.opts.color,host);
+    for(const [id,p] of NET.peers) pin(p.name||"Driver",p.colour,id===NET.hostId);
+  }
+  /* A guest's lobby is the point of their screen, so it goes to the top of
+     the rail. A host is here to build a circuit, so theirs stays below the
+     tools. Solo puts it last of all: alone it is one button, and choosing a
+     car matters more than a party you are not in. Moving the one element
+     beats keeping two copies of it in step. */
+  const gl=$("grpLobby"), gc=$("grpCar"), scroll=gl.parentNode;
+  if(mode==="guest"){
+    if(scroll.firstElementChild!==gl) scroll.insertBefore(gl,scroll.firstElementChild);
+  }else if(mode==="host"){
+    if(gl.nextElementSibling!==gc) scroll.insertBefore(gl,gc);
+  }else{
+    if(gc&&gc.nextElementSibling!==gl) scroll.insertBefore(gl,gc.nextElementSibling);
+  }
+
+  $("boardTag").hidden=mode!=="guest";
+  driveLabel();
+
   if(on){
     $("netShow").textContent=NET.code||"----";
     /* Everyone in the room as a chip in the colour of the car they are
@@ -3826,28 +4016,37 @@ function netUI(){
        get there — and so a name is attached to whoever just went past. */
     const who=$("netWhos");
     who.innerHTML="";
-    const chip=(name,colour,me)=>{
-      const el=document.createElement("span");
-      el.className="who"+(me?" me":"");
+    const row=(name,colour,car,isHost,isMe)=>{
+      const el=document.createElement("div");
+      el.className="rrow"+(isHost?" host":"")+(isMe?" me":"");
       const dot=document.createElement("i");
       dot.style.background=colour||"#8FA3A0";
-      const b=document.createElement("b");
-      b.textContent=name;
-      el.appendChild(dot); el.appendChild(b);
+      const b=document.createElement("b"); b.textContent=name;
+      const c=document.createElement("span"); c.className="rcar";
+      const m=CAR_MODELS.find(x=>x.id===(car||"gt"));
+      c.textContent=m?m.label:"GT";
+      el.appendChild(dot); el.appendChild(b); el.appendChild(c);
       who.appendChild(el);
     };
-    chip(NET.id===NET.hostId?"You (host)":"You",ED.opts.color,true);
-    for(const p of NET.peers.values()) chip(p.name||"Driver",p.colour,false);
+    row("You",ED.opts.color,ED.opts.car,host,true);
+    for(const [id,p] of NET.peers) row(p.name||"Driver",p.colour,p.car,id===NET.hostId,false);
 
     const n=NET.peers.size;
-    $("netWho").textContent = n
-      ? (NET.id===NET.hostId
-          ? "They have your circuit. Drive when you're ready."
-          : "On the host's circuit. Drive when you're ready.")
-      : (NET.id===NET.hostId
-          ? "Share the code — whoever joins gets your circuit."
-          : "Waiting for the host's circuit…");
+    $("netWho").textContent = host
+      ? (n?"Everyone has your circuit. Start when you're ready."
+          :"Share the code — whoever joins gets your circuit.")
+      : "The host builds the circuit and starts the race.";
   }
+}
+
+/* The main button is the one place the three states differ most: build and
+   go, send everyone out, or wait to be sent. */
+function driveLabel(){
+  const b=$("btnDrive"), m=document.body.dataset.mode;
+  if(m==="host") b.textContent="Start race";
+  else if(m==="guest") b.textContent=document.body.classList.contains("starting")
+    ? "Race starting" : "Waiting for host";
+  else b.textContent="Drive it";
 }
 function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
 
@@ -3902,10 +4101,6 @@ function netOpen(then){
 function netHandle(m){
   if(m.t==="err"){ netSay(m.m||"That didn't work."); NET.status="off"; netUI(); return; }
   if(m.t==="hosted"||m.t==="joined"){
-    /* a party adds a code, a roster and a status line to a rail that was
-       already full, so bring it into view rather than leaving it to be
-       found by scrolling */
-    setTimeout(()=>{ try{ $("netLive").scrollIntoView({block:"nearest",behavior:"smooth"}); }catch(e){} },60);
     NET.id=m.id; NET.code=m.code; NET.status="in";
     NET.hostId=m.t==="hosted"?m.id:m.hostId;
     NET.peers.clear();
@@ -3920,6 +4115,13 @@ function netHandle(m){
   if(m.t==="want-track"){ netSendTrack(); return; }
   if(m.t==="meta"){ const p=NET.peers.get(m.id); if(p){p.name=m.name;p.car=m.car;p.colour=m.colour;netDropCar(m.id);} netUI(); return; }
   if(m.t==="track"){ netTakeTrack(m.data); return; }
+  /* the host has sent everyone out on track */
+  if(m.t==="go"){
+    if(NET.id===NET.hostId)return;
+    document.body.classList.add("starting"); driveLabel();
+    setTimeout(()=>{ driveNow(); document.body.classList.remove("starting"); driveLabel(); },450);
+    return;
+  }
   if(m.t==="state"){
     const p=NET.peers.get(m.id); if(!p)return;
     p.buf.push({t:performance.now(),p:m.p});
@@ -3976,6 +4178,7 @@ $("btnJoinGo").addEventListener("click",()=>{
   $("netJoinBox").hidden=true;
   netOpen(()=>{ NET.status="joining"; netSend({t:"join",code,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
 });
+$("lbLeave").addEventListener("click",()=>{ $("btnLeave").click(); });
 $("btnLeave").addEventListener("click",()=>{
   netSend({t:"bye"});
   if(NET.ws)NET.ws.close();
@@ -4205,7 +4408,10 @@ $("a2hsOk").addEventListener("click",()=>{
 
 $("btnDrive").addEventListener("click",()=>{
   if(!ED.track)return;
+  const m=document.body.dataset.mode;
+  if(m==="guest")return;                                   // the host sends everyone out
   if(a2hsWanted()){ a2hsShow(); return; }                  // OK carries on into driveNow
+  if(m==="host") netSend({t:"go"});                        // take the room with you
   driveNow();
 });
 function driveNow(){
@@ -4273,6 +4479,7 @@ $("pBack").addEventListener("click",()=>{
   pressGroup($("cars"),"car",ED.opts.car);
   solidUI();
   fsUI();
+  netUI();                          // settles the screen into solo before anything else
   syncSliders();
   const saved=store.get("ad.raw",null);
   ED.raw = (saved&&saved.length>8) ? saved : shapeLoop(DEFAULT_SHAPE);

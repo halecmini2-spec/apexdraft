@@ -163,6 +163,13 @@ wss.on("connection", (ws) => {
       broadcast(room, { t: "lap", id: ws.id, ms: m.ms, lap: m.lap }, ws.id);
       return;
     }
+    if (m.t === "go") {
+      /* Only the host sends everyone out on track, for the same reason only
+         the host sets the circuit. */
+      if (ws.id !== room.hostId) return;
+      broadcast(room, { t: "go" }, ws.id);
+      return;
+    }
     if (m.t === "bye") { leave(ws); return; }
   }
 
