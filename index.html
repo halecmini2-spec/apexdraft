@@ -39,7 +39,7 @@ body{
 }
 /* A phone browser treats a game the same as a newspaper: a double tap zooms,
    a long press summons the magnifier and a selection handle, two fingers
-   pinch, and a downward drag reloads the page. None of that is wanted here Ã¢ÂÂ
+   pinch, and a downward drag reloads the page. None of that is wanted here —
    a long press is the brake pedal. manipulation keeps taps and scrolling
    while dropping the double-tap zoom; the callout and selection rules kill
    the magnifier; overscroll-behavior stops pull-to-refresh. */
@@ -56,7 +56,7 @@ html,body{
 /* manipulation rather than none: a double tap on a control must not zoom,
    but the tap still has to become a click */
 button,select,label{touch-action:manipulation}
-/* except where you genuinely need to type and select Ã¢ÂÂ the party code */
+/* except where you genuinely need to type and select — the party code */
 input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 /* Out on track nothing should pan, zoom or select at all. The rail is not on
    screen to be scrolled, so there is nothing left worth allowing. */
@@ -80,14 +80,14 @@ button{font-family:inherit;color:inherit}
   width:322px;flex:0 0 322px;background:var(--panel);
   border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;
 }
-/* The settings stay beside the board at every size Ã¢ÂÂ stacking them under it
+/* The settings stay beside the board at every size — stacking them under it
    cost the board its height and pushed the controls off screen. Narrow the
    rail instead; the padding it claws back is set after .rail-foot below, so
    those overrides land after the base rules they replace. */
 @media (max-width:860px){
   /* Every point given back here is board, but the rail still has to hold
      all its controls without scrolling. Measured: 190px is the floor in a
-     tab Ã¢ÂÂ at 180 the content wraps past the bottom. */
+     tab — at 180 the content wraps past the bottom. */
   .rail{width:clamp(190px,36vw,310px);flex:0 0 clamp(190px,36vw,310px)}
   /* the panel can be got out of the way entirely, which is the only way the
      board gets the whole screen on a phone held sideways */
@@ -291,7 +291,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
   font-family:var(--ui);font-weight:600;letter-spacing:.06em;
   -webkit-tap-highlight-color:transparent;
 }
-/* .held, not :active Ã¢ÂÂ a browser only ever marks one element active, so
+/* .held, not :active — a browser only ever marks one element active, so
    with a thumb on the throttle and a thumb on the steering only one of them
    ever lit up. This follows the state the car is actually being given. */
 .touch button.held{background:rgba(255,176,32,.34);border-color:var(--amber);color:var(--amber)}
@@ -302,7 +302,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
   border-radius:8px;font-size:15px}
 body.touchmode .touch{display:block}
 body.touchmode .keys{display:none}
-/* clear the bottom of the screen for thumbs Ã¢ÂÂ HUD moves to the top */
+/* clear the bottom of the screen for thumbs — HUD moves to the top */
 body.touchmode .speedo{bottom:auto;top:12px;right:14px}
 body.touchmode .speedo .n{font-size:44px}
 body.touchmode .mapbox{bottom:auto;top:104px;left:auto;right:14px}
@@ -358,7 +358,7 @@ body.touchcap .touchonly{display:block}
 @media (prefers-reduced-motion:reduce){.loading .bar i{animation:none;width:100%}}
 
 /* Running from the home screen there is no browser chrome above the game,
-   and no reason to still be advertising how to get rid of it Ã¢ÂÂ that is a
+   and no reason to still be advertising how to get rid of it — that is a
    whole line of the rail handed back to the board. */
 body.standalone .touchonly{display:none}
 
@@ -395,14 +395,14 @@ body.standalone .touchonly{display:none}
 /* On the home screen the tip about adding it to the home screen is gone,
    and that line is worth about 40px of rail, which goes to the board.
    Portrait only: in landscape the rail is short of height, not width, and
-   the two columns below already answer that Ã¢ÂÂ squeezing it there would
+   the two columns below already answer that — squeezing it there would
    cramp the controls and win nothing. Measured to still fit at 152. */
 @media (max-width:860px) and (min-height:561px){
   body.standalone .rail{width:clamp(152px,30vw,300px);flex:0 0 clamp(152px,30vw,300px)}
 }
 
 /* A landscape phone leaves the rail barely 330px of height, which one column
-   cannot hold. Widen it a little and let the groups flow into two columns Ã¢ÂÂ
+   cannot hold. Widen it a little and let the groups flow into two columns —
    there is width to spare in landscape, only height is scarce. */
 @media (max-width:860px) and (max-height:560px){
   .rail{width:min(46vw,404px);flex:0 0 min(46vw,404px)}
@@ -437,7 +437,7 @@ body.standalone .touchonly{display:none}
   }
   window.addEventListener("error",function(ev){
     shout("Something broke: "+(ev.message||"script error")+
-          (ev.lineno?" (line "+ev.lineno+")":"")+" Ã¢ÂÂ please tell Claude what this says.");
+          (ev.lineno?" (line "+ev.lineno+")":"")+" — please tell Claude what this says.");
   });
   window.addEventListener("load",function(){
     setTimeout(function(){
@@ -457,7 +457,7 @@ body.standalone .touchonly{display:none}
       <div class="rail-scroll">
         <div class="grp grp-intro">
           <h2>Drawing</h2>
-          <p class="hint">Drag a closed loop on the board. Release and it becomes a circuit Ã¢ÂÂ the direction you draw is the racing direction, and where you start is the start&#8239;/&#8239;finish line.</p>
+          <p class="hint">Drag a closed loop on the board. Release and it becomes a circuit — the direction you draw is the racing direction, and where you start is the start&#8239;/&#8239;finish line.</p>
         </div>
 
         <div class="grp">
@@ -482,12 +482,12 @@ body.standalone .touchonly{display:none}
              corner on the map to bank it.</p>
           <div id="bankCtl" hidden>
             <div class="slider">
-              <div class="lab"><span id="bankWho">Corner 1</span><span class="val" id="vBank">0ÃÂ°</span></div>
+              <div class="lab"><span id="bankWho">Corner 1</span><span class="val" id="vBank">0°</span></div>
               <input type="range" id="sBank" min="0" max="20" step="1" value="0">
             </div>
             <div class="chips">
-              <button class="chip" id="bankPrev">Ã¢ÂÂ¹</button>
-              <button class="chip" id="bankNext">Ã¢ÂÂº</button>
+              <button class="chip" id="bankPrev">‹</button>
+              <button class="chip" id="bankNext">›</button>
               <button class="chip" id="bankClear">Flatten all</button>
             </div>
           </div>
@@ -520,7 +520,7 @@ body.standalone .touchonly{display:none}
           </div>
           <div id="netLive" hidden>
             <div class="codeout"><span class="k">Code</span><b id="netShow">----</b></div>
-            <p class="hint" id="netWho">Waiting for playersÃ¢ÂÂ¦</p>
+            <p class="hint" id="netWho">Waiting for players…</p>
             <div class="chips" id="solidBox">
               <button class="chip" id="btnSolid">Contact <span class="s" id="solidState">Off</span></button>
               <button class="chip" id="btnLeave">Leave party</button>
@@ -550,7 +550,7 @@ body.standalone .touchonly{display:none}
         <button class="go" id="btnDrive">Drive it</button>
         <p class="foot-note">No account. Nothing to install.</p>
         <p class="foot-note touchonly" style="margin-top:7px;line-height:1.5">
-          Tap your browser's share button Ã¢ÂÂ<br><b style="color:var(--dim)">Add to Home Screen</b>
+          Tap your browser's share button →<br><b style="color:var(--dim)">Add to Home Screen</b>
           to play fullscreen, with no browser around it.</p>
       </div>
     </aside>
@@ -572,7 +572,7 @@ body.standalone .touchonly{display:none}
   <div class="pause sheet" id="a2hs" hidden>
     <div class="card">
       <h3>Play fullscreen</h3>
-      <p>Add it to your home screen and the address bar goes Ã¢ÂÂ all screen, no browser.</p>
+      <p>Add it to your home screen and the address bar goes — all screen, no browser.</p>
       <p id="a2hsHow">Tap the share button, then <b>Add to Home Screen</b>.</p>
       <div class="btns"><button class="pbtn primary" id="a2hsOk">OK</button></div>
     </div>
@@ -583,18 +583,18 @@ body.standalone .touchonly{display:none}
     <div class="hud">
       <div class="tower">
         <div class="row now"><span class="k">Lap <b id="lapNo">1</b></span><span class="t" id="tCur">0:00.000</span></div>
-        <div class="row"><span class="k">Last</span><span class="t" id="tLast">Ã¢ÂÂ:Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ</span></div>
-        <div class="row best"><span class="k">Best</span><span class="t" id="tBest">Ã¢ÂÂ:Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ</span></div>
+        <div class="row"><span class="k">Last</span><span class="t" id="tLast">—:—.———</span></div>
+        <div class="row best"><span class="k">Best</span><span class="t" id="tBest">—:—.———</span></div>
         <div class="sectors">
-          <div class="sec" id="sec1"><span class="k">S1</span><span class="t">Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ</span></div>
-          <div class="sec" id="sec2"><span class="k">S2</span><span class="t">Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ</span></div>
-          <div class="sec" id="sec3"><span class="k">S3</span><span class="t">Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ</span></div>
+          <div class="sec" id="sec1"><span class="k">S1</span><span class="t">—.———</span></div>
+          <div class="sec" id="sec2"><span class="k">S2</span><span class="t">—.———</span></div>
+          <div class="sec" id="sec3"><span class="k">S3</span><span class="t">—.———</span></div>
         </div>
       </div>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
-        <div>hold <kbd>S</kbd> to lock the rear ÃÂ· <kbd>R</kbd> recover</div>
-        <div><kbd>C</kbd> camera ÃÂ· <kbd>M</kbd> sound ÃÂ· <kbd>Esc</kbd> menu</div>
+        <div>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover</div>
+        <div><kbd>C</kbd> camera · <kbd>M</kbd> sound · <kbd>Esc</kbd> menu</div>
       </div>
       <div class="mapbox"><canvas id="minimap" width="264" height="264"></canvas></div>
       <div class="speedo">
@@ -606,18 +606,18 @@ body.standalone .touchonly{display:none}
       <div class="flash" id="flash"></div>
       <div class="warn" id="warn">Wrong way</div>
       <div class="touch">
-        <button id="tLeft" aria-label="Steer left">Ã¢ÂÂ</button>
-        <button id="tRight" aria-label="Steer right">Ã¢ÂÂ¶</button>
+        <button id="tLeft" aria-label="Steer left">◀</button>
+        <button id="tRight" aria-label="Steer right">▶</button>
         <button id="tBrake" aria-label="Brake">BRAKE</button>
         <button id="tGas" aria-label="Accelerate">GAS</button>
-        <button id="tMenu" aria-label="Menu">Ã¢ÂÂ°</button>
+        <button id="tMenu" aria-label="Menu">☰</button>
       </div>
-      <div class="rotate-tip">Turn your phone sideways to drive Ã¢ÂÂ»</div>
+      <div class="rotate-tip">Turn your phone sideways to drive ↻</div>
     </div>
     <div class="pause" id="pause" hidden>
       <div class="card">
         <h3>Paused</h3>
-        <p id="pauseSub">Alpine circuit ÃÂ· 4.1 km ÃÂ· 14 corners</p>
+        <p id="pauseSub">Alpine circuit · 4.1 km · 14 corners</p>
         <div class="btns">
           <button class="pbtn primary" id="pResume">Resume <span class="s">Esc</span></button>
           <button class="pbtn" id="pReset">Recover car <span class="s">R</span></button>
@@ -638,7 +638,7 @@ body.standalone .touchonly{display:none}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 /* =====================================================================
-   APEX DRAFT Ã¢ÂÂ draw a circuit, then drive it.
+   APEX DRAFT — draw a circuit, then drive it.
    ===================================================================== */
 "use strict";
 
@@ -655,11 +655,11 @@ function vnoise(x,y){
 }
 function fbm(x,y,oct){oct=oct||4;let s=0,a=.5,f=1,n=0;for(let i=0;i<oct;i++){s+=a*vnoise(x*f,y*f);n+=a;f*=2;a*=.5;}return s/n;}
 function fmtTime(ms){
-  if(ms==null||!isFinite(ms))return "Ã¢ÂÂ:Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ";
+  if(ms==null||!isFinite(ms))return "—:—.———";
   const m=Math.floor(ms/60000), s=Math.floor(ms%60000/1000), t=Math.floor(ms%1000);
   return m+":"+String(s).padStart(2,"0")+"."+String(t).padStart(3,"0");
 }
-function fmtSec(ms){ return ms==null?"Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ":(ms/1000).toFixed(3); }
+function fmtSec(ms){ return ms==null?"—.———":(ms/1000).toFixed(3); }
 const store={
   get(k,d){ try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;} },
   set(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
@@ -799,8 +799,8 @@ function buildCircuit(raw,opts){
      near itself a long way round from where it left, and lift one of the two
      over the other with enough headroom to pass underneath.
 
-     OV records how much each point was raised. Everything else Ã¢ÂÂ the ground,
-     the barriers, the deck geometry Ã¢ÂÂ reads it back, because the lift is the
+     OV records how much each point was raised. Everything else — the ground,
+     the barriers, the deck geometry — reads it back, because the lift is the
      only thing that distinguishes a bridge from a hill. */
   const HW0=opts.width/2;
   const OV=new Float32Array(N);        // how high the deck stands over the ground
@@ -820,7 +820,7 @@ function buildCircuit(raw,opts){
       if(bj<0)continue;
       /* claim both approaches so one junction is not lifted several times */
       for(let t=-50;t<=50;t++){ seen[(i+t+N*4)%N]=1; seen[(bj+t+N*4)%N]=1; }
-      /* whichever is already higher goes over Ã¢ÂÂ least earth moved */
+      /* whichever is already higher goes over — least earth moved */
       const hi=Y[i]>=Y[bj]?i:bj, lo=hi===i?bj:i;
       const have=Y[hi]-Y[lo];
       const rise=Math.max(0,CLEAR-have);
@@ -857,7 +857,7 @@ function buildCircuit(raw,opts){
   for(let i=0;i<N;i++){let s=0,w=0;for(let d=-6;d<=6;d++){const j=(i+d+N*2)%N;const ww=1-Math.abs(d)/8;s+=K[j]*ww;w+=ww;}Ks[i]=s/w;}
 
   /* Start the lap on a straight. The line used to fall wherever the drawing
-     happened to begin, which was as often as not mid-corner Ã¢ÂÂ you launched
+     happened to begin, which was as often as not mid-corner — you launched
      into a turn, the grid sat on the apex and the first split landed
      somewhere meaningless. Score every point by how straight the road is for
      a good stretch either side, take the flattest, and rotate every
@@ -865,8 +865,8 @@ function buildCircuit(raw,opts){
 
      Y is rotated with its point rather than recomputed, so the elevation
      stays exactly where it was in the world; only the arclength is
-     renumbered from the new line. Everything downstream Ã¢ÂÂ corners, banking,
-     stats, the bucket grid Ã¢ÂÂ is built after this and simply sees the new
+     renumbered from the new line. Everything downstream — corners, banking,
+     stats, the bucket grid — is built after this and simply sees the new
      ordering. */
   let startI=0, flattest=Infinity;
   for(let i=0;i<N;i++){
@@ -906,7 +906,7 @@ function buildCircuit(raw,opts){
   /* Banking: flat everywhere unless a corner has been given an angle on the
      drawing board. Each banked corner ramps in and out over ~14 samples so
      the transition isn't a step, and the sign puts the OUTSIDE of the corner
-     high Ã¢ÂÂ that's what a banked corner is. */
+     high — that's what a banked corner is. */
   const B=new Float32Array(N);
   const banks=opts.banks||[];
   merged.forEach((c,ci)=>{
@@ -990,8 +990,8 @@ function buildCircuit(raw,opts){
 }
 
 /* nearest point on the centreline: {i, t, d(signed), y, bank, s, tx, tz} */
-/* yHint disambiguates a flyover. The search is flat Ã¢ÂÂ it compares distance
-   in x and z only Ã¢ÂÂ so under a bridge the deck centreline is every bit as
+/* yHint disambiguates a flyover. The search is flat — it compares distance
+   in x and z only — so under a bridge the deck centreline is every bit as
    "near" as the road you are actually on, and the car could be snapped onto
    the wrong one and dropped through the deck. Given a height, candidates are
    also judged on how far they are from it vertically. */
@@ -1055,7 +1055,7 @@ function heightAt(T,x,z,np,yHint){
   /* On a flyover the verge has nowhere to go: the deck stops at its edge and
      the ground carries on underneath at the height it would have had anyway.
      So a lifted section gets a narrow shoulder and the open ground ignores
-     the lift entirely Ã¢ÂÂ otherwise the terrain would rise with the bridge and
+     the lift entirely — otherwise the terrain would rise with the bridge and
      bury the road passing beneath it. */
   const edge=T.halfW+7.5;                       // road + kerb + verge
   const roadY=p.y+Math.sin(p.bank)*clamp(p.d,-edge,edge);
@@ -1103,7 +1103,7 @@ const THEMES={
 
 /* Colours are authored as sRGB hex but the renderer shades in linear space.
    Every authored colour has to be converted or the whole scene renders milky
-   and washed out Ã¢ÂÂ this one helper is the difference between "flat 3D" and
+   and washed out — this one helper is the difference between "flat 3D" and
    something that looks lit. */
 const SRGB=hex=>new THREE.Color(hex).convertSRGBToLinear();
 
@@ -1117,7 +1117,7 @@ function surfaceTextures(){
   const N=256;
   const h=new Float32Array(N*N);
   for(let y=0;y<N;y++)for(let x=0;x<N;x++){
-    /* coarse chippings over a fine sandy grain, plus per-texel speckle Ã¢ÂÂ
+    /* coarse chippings over a fine sandy grain, plus per-texel speckle —
        that mix is what reads as asphalt rather than grey plastic */
     h[y*N+x]=fbm(x*0.11,y*0.11,3)*0.60+fbm(x*0.42,y*0.42,2)*0.25+Math.random()*0.15;
   }
@@ -1169,7 +1169,7 @@ function buildEnvironment(TH){
   const hex=v=>"#"+new THREE.Color(v).getHexString();
   /* The ground half is heavily desaturated toward grey. It feeds diffuse
      ambient as well as reflections, and a vivid green lower hemisphere casts
-     that green over every surface in the scene Ã¢ÂÂ the road most of all. */
+     that green over every surface in the scene — the road most of all. */
   const ground=new THREE.Color(TH.grassA).lerp(new THREE.Color(0x9AA0A2),0.62);
   const g=ctx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,hex(TH.skyTop));
@@ -1188,7 +1188,7 @@ function buildEnvironment(TH){
 
 /* three r128 has no InstancedMesh.computeBoundingSphere, so the renderer culls
    an instanced mesh against its *geometry's* sphere sitting at the object
-   origin Ã¢ÂÂ one tree's worth, about 1.8 m. Everything here is scattered over
+   origin — one tree's worth, about 1.8 m. Everything here is scattered over
    the whole circuit from an origin in the middle of it, so the moment the
    frustum left the centre of the map the entire forest, every armco post and
    every tyre wall blinked out. Measure where the instances actually are and
@@ -1260,7 +1260,7 @@ function buildRoad(T,TH){
   let vi=0;
   for(let r=0;r<rings;r++){
     const i=r%N;
-    /* Kerb anything tighter than a 300 m radius Ã¢ÂÂ a circuit kerbs almost every
+    /* Kerb anything tighter than a 300 m radius — a circuit kerbs almost every
        corner, where a road only marks the sharp ones. */
     const kerbHere=Math.abs(T.K[i])>1/300;
     const s=T.S[i];
@@ -1297,7 +1297,7 @@ function buildRoad(T,TH){
     const a=r*perRing+k*2, b=a+1, cI=(r+1)*perRing+k*2, d=cI+1;
     /* Winding matters: right = (-TZ, TX), so a vertex at lateral offset o sits
        at x = -o and O[] increases left-to-right. (a, cI, b) gives u x v = (0,
-       -4d, 0) Ã¢ÂÂ the whole road faced DOWNWARD and was culled away, which is
+       -4d, 0) — the whole road faced DOWNWARD and was culled away, which is
        why the terrain showed through and the car appeared to hover above it. */
     idx[f++]=a; idx[f++]=b;  idx[f++]=cI;
     idx[f++]=b; idx[f++]=d;  idx[f++]=cI;
@@ -1336,7 +1336,7 @@ function buildTerrain(T,TH){
     const x=x0+spanX*i/nx, z=z0+spanZ*j/nz;
     const np=nearest(T,x,z);
     /* Duck the ground well under the road ribbon. The terrain grid is ~10 m
-       and the road is 27 m wide, so only two or three vertices span it Ã¢ÂÂ a
+       and the road is 27 m wide, so only two or three vertices span it — a
        straight chord between them easily rises above a banked, curving road.
        0.8 m of clearance is more than any chord error. */
     /* The ground follows the road everywhere, which is exactly what a bridge
@@ -1408,7 +1408,7 @@ function buildBarriers(T,TH){
     idx.push(v,v+1,v+2, v,v+2,v+3);          // one winding; the material is DoubleSide
     v+=4;
   }
-  /* Real armco is a corrugated W-beam, not a flat plate Ã¢ÂÂ the ribs are what
+  /* Real armco is a corrugated W-beam, not a flat plate — the ribs are what
      give it the broken highlight that reads as galvanised steel.
      [depth toward the track, height above ground] */
   const WBEAM=[[0.00,0.44],[0.09,0.53],[0.02,0.615],[0.09,0.70],[0.00,0.79]];
@@ -1425,11 +1425,11 @@ function buildBarriers(T,TH){
          through each other. Ask what is actually underneath: if it is a
          different part of the lap, and close enough to its centreline to be
          road, there is no room for a barrier here. The collision corridor is
-         unaffected Ã¢ÂÂ it follows whichever centreline is nearest, so the gap
+         unaffected — it follows whichever centreline is nearest, so the gap
          is only ever in the geometry, never in what you can drive through. */
       /* A bridge always keeps its rail. The check asks what is underneath to
          spot a rail lying on another part of the lap, and on a flyover the
-         answer is always "another part of the lap" Ã¢ÂÂ the road being crossed Ã¢ÂÂ
+         answer is always "another part of the lap" — the road being crossed —
          so it deleted rails in patches across the deck. */
       const onDeck=T.OV&&T.OV[a]>0.4;
       if(!onDeck){
@@ -1440,8 +1440,8 @@ function buildBarriers(T,TH){
       /* hint with the road this rail belongs to, or on a flyover it resolves
          to whatever is passing underneath and the rail drops off the deck */
       /* On a deck the height comes straight from the road it belongs to. A
-         lookup here is ambiguous by nature Ã¢ÂÂ the road being crossed can be
-         nearer in plan than the deck the rail is standing on Ã¢ÂÂ and it put the
+         lookup here is ambiguous by nature — the road being crossed can be
+         nearer in plan than the deck the rail is standing on — and it put the
          rail on the ground seven metres below. */
       const ay=onDeck?T.Y[a]-0.9:heightAt(T,ax,az,null,T.Y[a]);
       const by=(T.OV&&T.OV[b]>0.4)?T.Y[b]-0.9:heightAt(T,bx,bz,null,T.Y[b]);
@@ -1456,7 +1456,7 @@ function buildBarriers(T,TH){
              [ax+T.RX[a]*o1, ay+p1[1], az+T.RZ[a]*o1], c);
       }
       /* sponsor boards on the fence behind the rail, over about two thirds
-         of the lap Ã¢ÂÂ nothing says "circuit" faster */
+         of the lap — nothing says "circuit" faster */
       const blockN=Math.floor(T.S[a]/34);
       if(blockN%3!==2){
         const bo=(off+0.16)*side;
@@ -1529,7 +1529,7 @@ function buildBarriers(T,TH){
 /* ---- flyover structure ----
    The elevation gives the deck; this gives it something to stand on. A fascia
    closes the drop at each shoulder, and piers march down to whatever the
-   ground is doing underneath Ã¢ÂÂ which, because heightAt subtracts the lift out
+   ground is doing underneath — which, because heightAt subtracts the lift out
    there, is the land the other road is running across. */
 function buildBridges(T,TH){
   if(!T.OV)return null;
@@ -1547,7 +1547,7 @@ function buildBridges(T,TH){
   };
   /* Edge beam: a fixed shallow depth, and it hangs BELOW the deck rather
      than standing above it. It used to be scaled by the lift, so a 7m
-     flyover grew a 6.6m skirt down each side Ã¢ÂÂ which is the concrete you
+     flyover grew a 6.6m skirt down each side — which is the concrete you
      met head-on driving underneath, and why there was nothing to see
      through. A deck edge is a beam, not a wall. */
   const BEAM=1.0, TOP=0.35;
@@ -1850,7 +1850,7 @@ function puffSmoke(x,y,z,strength){
   p.s.scale.setScalar(0.72+Math.random()*0.42);
   p.s.material.opacity=0.12*strength;
 }
-/* steel on steel Ã¢ÂÂ short-lived, gravity-fed, and they die fast */
+/* steel on steel — short-lived, gravity-fed, and they die fast */
 function puffSpark(x,y,z,strength){
   const d=G.smoke.userData, p=d.pool[d.next];
   d.next=(d.next+1)%d.pool.length;
@@ -1920,7 +1920,7 @@ function loft(stations,seg){
 /* ---- the cars ----
    Three bodies over one chassis. The wheels hang off the car group itself and
    everything else lives in a child group, so a body can move on its springs
-   without lifting the tyres off the road Ã¢ÂÂ which is what the Yaris needs. */
+   without lifting the tyres off the road — which is what the Yaris needs. */
 const CAR_MODELS=[
   {id:"gt",     label:"GT"},
   {id:"formula",label:"Formula"},
@@ -1928,7 +1928,7 @@ const CAR_MODELS=[
   {id:"kart",   label:"Kart"}
 ];
 /* Multipliers on the shared physics constants. Because these change lap
-   times, the car is part of the best-lap key Ã¢ÂÂ a Formula lap and a Yaris lap
+   times, the car is part of the best-lap key — a Formula lap and a Yaris lap
    around the same circuit are not the same record. */
 const CAR_PERF={
   gt:     {power:1.00, top:1.00, grip:1.00},
@@ -1968,7 +1968,7 @@ function trimKit(){
   };
 }
 
-/* headlights are optional Ã¢ÂÂ a formula car has none Ã¢ÂÂ but every car keeps a red
+/* headlights are optional — a formula car has none — but every car keeps a red
    lamp so the brake light still has something to drive */
 function addLamps(body,front,rear){
   if(front){
@@ -2181,7 +2181,7 @@ function bodyYaris(b,M){
 
 /* ---- Kart: no bodywork to hide behind, and hardly any of it ---- */
 function bodyKart(b,M){
-  /* a flat pan rather than a shell Ã¢ÂÂ a kart is a floor, a seat and an axle */
+  /* a flat pan rather than a shell — a kart is a floor, a seat and an axle */
   const pan=new THREE.Mesh(loft([
     {z: 1.02,w:0.26,y0:0.07,y1:0.15,n:4.0},
     {z: 0.60,w:0.44,y0:0.06,y1:0.15,n:6.0},
@@ -2311,7 +2311,7 @@ function disposeTree(obj){
 function buildWorld(T){
   initRenderer();
   const TH=THEMES[T.opts.theme]||THEMES.alpine;
-  /* peers' cars live in the scene, so they go with it Ã¢ÂÂ drop the references
+  /* peers' cars live in the scene, so they go with it — drop the references
      before it is disposed or the next frame reuses a freed mesh */
   if(typeof NET!=="undefined") for(const p of NET.peers.values()) p.mesh=null;
   if(G.scene){ disposeTree(G.scene); }
@@ -2444,7 +2444,7 @@ addEventListener("blur",releaseAllInput);
 addEventListener("pagehide",releaseAllInput);
 document.addEventListener("visibilitychange",()=>{ if(document.hidden)releaseAllInput(); });
 /* A held control is a latch, so anything that loses the release event leaves
-   it stuck down Ã¢ÂÂ and a stuck brake reverses the car on its own. Remember
+   it stuck down — and a stuck brake reverses the car on its own. Remember
    which pointer pressed the button, release the capture on the way out, and
    listen for lostpointercapture as well, which fires even when the OS takes
    the gesture away mid-press (app switch, edge swipe, notification). */
@@ -2474,7 +2474,7 @@ function bindTouch(id,prop){
 /* ---------- physics step ----------
    Sign conventions, stated once so they stay honest:
      forward = ( sin yaw,  cos yaw )
-     right   = (-cos yaw,  sin yaw )   Ã¢ÂÂ right-handed, right = forward x up
+     right   = (-cos yaw,  sin yaw )   — right-handed, right = forward x up
    Rotating about +Y carries +Z toward +X, and +X is the car's LEFT when it
    faces +Z. So yaw INCREASES on a left turn, and a right-hand steering input
    must produce a NEGATIVE yaw rate.                                          */
@@ -2485,7 +2485,7 @@ const SURF={
   kerb  :{mu:0.86,grip:0.85,power:0.95,brake:0.85,drag0:0.90,dragV:0.020},
   /* Paved run-off between the kerb and the barrier. It was being treated as
      grass, which capped you at ~60 km/h and made running wide feel like a
-     punishment rather than a mistake. It's asphalt Ã¢ÂÂ dusty and slower than the
+     punishment rather than a mistake. It's asphalt — dusty and slower than the
      racing line, but you can still drive on it. */
   runoff:{mu:0.84,grip:0.86,power:0.80,brake:0.88,drag0:1.10,dragV:0.026},
   grass :{mu:0.52,grip:0.55,power:0.60,brake:0.62,drag0:4.00,dragV:0.060}
@@ -2500,8 +2500,8 @@ const SURF={
       at the rate you ask for, ceilinged by grip. Nothing feeds slip back
       into rotation, so there is no loop that can run away into a spin.
    2. Grip is a pull of the velocity vector toward the nose. It is high by
-      default and reduced deliberately Ã¢ÂÂ handbrake, overdriving a corner,
-      off-track Ã¢ÂÂ to produce a slide that is always recovering.
+      default and reduced deliberately — handbrake, overdriving a corner,
+      off-track — to produce a slide that is always recovering.
    3. Sideways speed is hard-clamped to a maximum slip angle. That single
       clamp is what makes spinning out structurally impossible.
    4. Steering lock shrinks with speed: darty in a hairpin, calm at 230.
@@ -2509,13 +2509,13 @@ const SURF={
 const DRIVE={
   topSpeed:64,        // m/s on tarmac (~230 km/h)
   power:14.0,         // m/s^2 of thrust off the line
-  brake:19.0,         // m/s^2 Ã¢ÂÂ arcade-strong, close to 2g, stops NOW
+  brake:19.0,         // m/s^2 — arcade-strong, close to 2g, stops NOW
   reverse:7.0,
   engineBrake:2.6,    // lift-off deceleration, so coasting actually slows you
   wheelbase:2.85,
-  maxSteer:0.62,      // rad Ã¢ÂÂ the physical steering rack limit (~35 deg)
+  maxSteer:0.62,      // rad — the physical steering rack limit (~35 deg)
   /* How much of the available grip full lock asks for. Above 1.0 the surplus
-     is understeer Ã¢ÂÂ you're asking for more than the tyres can give and the car
+     is understeer — you're asking for more than the tyres can give and the car
      pushes wide. Trimming it (1.25, then 1.13, now this) means more of the
      wheel's travel does real work, which is what "direct" feels like. The
      drift window in section 3 is calibrated to this number: it has to reach
@@ -2525,11 +2525,11 @@ const DRIVE={
   gripRate:8.5,       // how fast sideways velocity is killed, 1/s
   handDelay:0.55,     // seconds on the brake before the rear locks up
   frontBias:0.45,     // share of lateral grip from the front axle, which a
-                      // drift does not take away Ã¢ÂÂ it is what keeps the nose
+                      // drift does not take away — it is what keeps the nose
                       // pointed and stops a slide turning into washing wide
   driftGrip:3.0,      // ...once a slide has started
   driftYaw:0.32,      // extra rotation allowed while sliding
-  maxSlip:0.55,       // |vLat| <= maxSlip*|vLong| + 3  Ã¢ÂÂ the anti-spin clamp
+  maxSlip:0.55,       // |vLat| <= maxSlip*|vLong| + 3  — the anti-spin clamp
   scrub:0.30          // sliding sideways costs forward speed
 };
 
@@ -2547,7 +2547,7 @@ function step(dt){
     if(keys.KeyW||keys.ArrowUp||touch.gas)gas=1;
     if(keys.KeyS||keys.ArrowDown||touch.brake)brake=1;
     /* The handbrake has no button of its own. Keep the brake pinned and the
-       rear locks up of its own accord Ã¢ÂÂ a stab to slow down is just braking,
+       rear locks up of its own accord — a stab to slow down is just braking,
        but hold it and the back end lets go. It only arms above walking pace,
        so easing to a stop never trips it. */
     if(brake&&Math.hypot(CAR.vx,CAR.vz)>6) CAR.handArm+=dt; else CAR.handArm=0;
@@ -2582,13 +2582,13 @@ function step(dt){
   if(brake){
     /* A locked wheel stops the car worse than one on the edge of grip, which
        is the whole reason ABS exists. Holding the brake past the point the
-       rear lets go therefore costs you braking Ã¢ÂÂ and leaves enough speed to
+       rear lets go therefore costs you braking — and leaves enough speed to
        actually slide with, rather than arriving at the slide already stopped. */
     if(vLong>0.6){ a-=DRIVE.brake*S.brake*(hand?0.55:1); CAR.brakeHold=0; }
     else if(vLong>-14){
       /* Reverse asks for a deliberate hold. Engaging it the instant the car
-         stopped meant a brief tap of the brake Ã¢ÂÂ or a single dropped touch
-         release Ã¢ÂÂ walked the car backwards on its own. */
+         stopped meant a brief tap of the brake — or a single dropped touch
+         release — walked the car backwards on its own. */
       CAR.brakeHold+=dt;
       if(CAR.brakeHold>0.35) a-=DRIVE.reverse*S.power;
     }
@@ -2625,13 +2625,13 @@ function step(dt){
 
   /* ---------- 3. DRIFT ----------
      A bounded STATE, not an instability. It only builds in the top sliver of
-     the grip envelope Ã¢ÂÂ carry too much speed in and you need lock you don't
+     the grip envelope — carry too much speed in and you need lock you don't
      have, demand climbs past 1, and the rear starts to come round. Everything
      below that is planted, so the car feels fair rather than skittish. It also
      bleeds off on its own, so a slide always ends. */
   /* A locked rear axle has no lateral grip left to give, so the tail comes
      round on its own. yawRate was clamped to yawWant, which is zero with no
-     steering input Ã¢ÂÂ that is why the handbrake used to just slow the car
+     steering input — that is why the handbrake used to just slow the car
      down. It strips rear grip, opens the yaw ceiling, and contributes
      rotation of its own toward whatever lock is held. It fades out at
      walking pace, so it parks the car rather than spinning it.
@@ -2645,7 +2645,7 @@ function step(dt){
 
      The terms that actually throw the tail out are squared on top of that,
      so half a pull is a quarter of the slide and a brief touch only
-     unsettles the car. Grip stays linear in hb Ã¢ÂÂ that one is the front axle,
+     unsettles the car. Grip stays linear in hb — that one is the front axle,
      one is the front axle, and it should let go smoothly. */
   const hbT=hand?clamp((Math.abs(vLong)-2.5)/7,0,1):0;
   CAR.hbF+=(hbT-CAR.hbF)*Math.min(1,dt*(hbT>CAR.hbF?6.5:3.0));
@@ -2656,15 +2656,15 @@ function step(dt){
              *(gas?1:0.55)
              *clamp((Math.abs(vLong)-12)/10,0,1);          // no drifting at walking pace
   /* the handbrake asks for as much drift as it has actually pulled on, not a
-     flat 1 the instant the button goes down Ã¢ÂÂ a dab should not put the car
+     flat 1 the instant the button goes down — a dab should not put the car
      into the same state as hauling the lever */
   const target=hand?Math.max(base,hb):base;
   CAR.drift+=(target-CAR.drift)*Math.min(1,dt*(target>CAR.drift?6:2.2));
   /* Lateral grip is really two axles, and collapsing it as one number was
      what made the nose give up along with the tail: at full drift the whole
      car fell to driftGrip, so the front stopped pulling the velocity toward
-     the nose and the car washed wide. The rear is what lets go in a drift Ã¢ÂÂ
-     that is the drift Ã¢ÂÂ while the front stays loaded and keeps steering. Only
+     the nose and the car washed wide. The rear is what lets go in a drift —
+     that is the drift — while the front stays loaded and keeps steering. Only
      the rear term follows CAR.drift and the handbrake now. */
   const rearG =lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)*(1-0.30*hb);
   const frontG=DRIVE.gripRate*(1-0.16*hb);              // the lever barely touches it
@@ -2676,7 +2676,7 @@ function step(dt){
      swings the tail the way the wheel is pointed */
   if(hb) yawRate-=CAR.steer*hbE*0.68*clamp(Math.abs(vLong)/26,0.3,1);
   /* self-aligning torque: the nose eases back toward the way the car is
-     actually travelling, so a slide catches itself instead of snapping Ã¢ÂÂ
+     actually travelling, so a slide catches itself instead of snapping —
      held off while the rear is locked, or it would undo the slide */
   yawRate-=vLat*0.008*(1-0.72*hb);
   CAR.yaw+=yawRate*dt;
@@ -2686,8 +2686,8 @@ function step(dt){
      where it points; low grip (drifting) = it slides, but the hard slip clamp
      below means it can NEVER rotate past a fixed angle. This is the line that
      makes spinning out impossible. */
-  /* Rotating the car rotates its velocity with it Ã¢ÂÂ vLong and vLat are
-     re-projected onto the new heading below Ã¢ÂÂ so yaw alone never produces a
+  /* Rotating the car rotates its velocity with it — vLong and vLat are
+     re-projected onto the new heading below — so yaw alone never produces a
      slip angle, and vLat is otherwise only ever decayed. That is why a locked
      rear axle could not slide the car however much grip was taken away: there
      was nothing to slide with. Feed the rotation the tyres cannot support
@@ -2704,7 +2704,7 @@ function step(dt){
   vLat=clamp(vLat,-slipMax,slipMax);
   /* sliding scrubs speed, so drifting everywhere is slower than driving well */
   /* eased while the rear is locked: at full scrub a handbrake turn bled all
-     its speed, which shrank the slip clamp, which killed the slide Ã¢ÂÂ the car
+     its speed, which shrank the slip clamp, which killed the slide — the car
      spiralled to a stop instead of coming round and driving away */
   vLong-=Math.sign(vLong)*Math.min(Math.abs(vLat)*DRIVE.scrub*(1-0.70*hb),7)*dt;
 
@@ -2737,7 +2737,7 @@ function step(dt){
     if(over<=0)continue;
     const sgn=p.d>0?1:-1;
     CAR.x-=p.rx*sgn*over; CAR.z-=p.rz*sgn*over;
-    /* swing the car parallel to the rail Ã¢ÂÂ this is what makes a scrape feel
+    /* swing the car parallel to the rail — this is what makes a scrape feel
        like a scrape instead of a wall you stick to */
     let dy=Math.atan2(p.tx,p.tz)-CAR.yaw;
     dy=Math.atan2(Math.sin(dy),Math.cos(dy));
@@ -2859,7 +2859,7 @@ function updateCamera(dt){
     const tx=CAR.x-fx*back, tz=CAR.z-fz*back;
     /* The hint again. This samples the ground behind the car to keep the
        camera above it, and underneath a flyover that point is as near the
-       deck as it is the road Ã¢ÂÂ so it would find the deck, clamp the camera
+       deck as it is the road — so it would find the deck, clamp the camera
        to seven metres up and throw the view into the underside of the
        bridge for the moment you passed through. */
     const ty=Math.max(heightAt(G.T,tx,tz,null,CAR.y)+1.2,CAR.y+up);
@@ -2896,7 +2896,7 @@ function updateCarMesh(){
      enough out of a corner to look soft, and the ceilings let terrain and
      cornering stack into a noticeable rock. */
   const pitch=-Math.atan2(hF-hB,3.0)-clamp(CAR.ax*0.0020,-0.042,0.042);
-  /* Lean is now barely there Ã¢ÂÂ a hint of weight transfer rather than a car
+  /* Lean is now barely there — a hint of weight transfer rather than a car
      falling onto its outside springs. The terrain term is untouched: that is
      the car following the camber, which is what makes banking read. */
   const roll=Math.atan2(hL-hR,1.8)-clamp(CAR.ay*0.0011,-0.017,0.017);
@@ -2915,7 +2915,7 @@ function updateCarMesh(){
     w[i].rotation.y=i<2?st:0;
     w[i].rotation.x=CAR.wheelSpin*spin;
   }
-  /* The Yaris never settles Ã¢ÂÂ but it squashes rather than hops: it snaps
+  /* The Yaris never settles — but it squashes rather than hops: it snaps
      between narrow-and-tall and short-and-wide without leaving the road.
      tanh flattens the sine towards its extremes, so it holds each shape and
      flicks between them instead of easing sinusoidally. Scaling is about the
@@ -2988,7 +2988,7 @@ function paintSectors(reset){
     const el=$("sec"+(k+1));
     el.className="sec";
     const t=CAR.sectors[k];
-    el.querySelector(".t").textContent=t==null?"Ã¢ÂÂ.Ã¢ÂÂÃ¢ÂÂÃ¢ÂÂ":fmtSec(t);
+    el.querySelector(".t").textContent=t==null?"—.———":fmtSec(t);
     if(t!=null){
       if(CAR.bestSectors[k]!=null&&t<=CAR.bestSectors[k])el.classList.add("purple");
       else if(CAR.bestSectors[k]!=null&&t<CAR.bestSectors[k]*1.02)el.classList.add("green");
@@ -3251,7 +3251,7 @@ function toPad(cx,cy){
    board (or a browser that drops pointer capture) still completes normally. */
 let drawId=null;
 /* Clicking a numbered corner selects it for banking rather than starting a
-   new drawing. Hit radius is generous Ã¢ÂÂ the markers are small on screen. */
+   new drawing. Hit radius is generous — the markers are small on screen. */
 function hitCorner(cx,cy){
   if(!ED.track||!ED.cornerPts||!ED.cornerPts.length)return false;
   const p=toPad(cx,cy);
@@ -3276,7 +3276,7 @@ function syncBank(){
   const deg=+(ED.opts.banks[ED.sel])||0;
   $("bankWho").textContent="Corner "+(ED.sel+1);
   $("sBank").value=deg;
-  $("vBank").textContent=deg+"ÃÂ°";
+  $("vBank").textContent=deg+"°";
 }
 function cycleCorner(d){
   const n=ED.track?ED.track.corners.length:0;
@@ -3313,7 +3313,7 @@ function endDraw(){
   if(!enough){
     ED.raw=ED.prevRaw;                // a stray click shouldn't wipe your circuit
     if(ED.raw)rebuild(); else {renderPad();updateReadout();}
-    if(pts&&pts.length>2)msg("That loop is too small to race on Ã¢ÂÂ draw a bigger one.");
+    if(pts&&pts.length>2)msg("That loop is too small to race on — draw a bigger one.");
     return;
   }
   ED.history.push(ED.prevRaw);
@@ -3353,9 +3353,9 @@ function finalise(){
   const L=plen(ED.raw);
   const gap=Math.hypot(ED.raw[0].x-ED.raw[ED.raw.length-1].x,ED.raw[0].y-ED.raw[ED.raw.length-1].y);
   rebuild();
-  if(!ED.track){ msg("That line couldn't be made into a circuit Ã¢ÂÂ try a rounder, closed loop."); return; }
-  if(ED.track.crosses) msg("This circuit crosses itself Ã¢ÂÂ you'll drive straight through the junction.");
-  else if(gap>L*0.30) msg("Loop closed for you Ã¢ÂÂ the open ends were joined up.");
+  if(!ED.track){ msg("That line couldn't be made into a circuit — try a rounder, closed loop."); return; }
+  if(ED.track.crosses) msg("This circuit crosses itself — you'll drive straight through the junction.");
+  else if(gap>L*0.30) msg("Loop closed for you — the open ends were joined up.");
 }
 function rebuild(){
   if(!ED.raw){ED.track=null;renderPad();updateReadout();return;}
@@ -3363,7 +3363,7 @@ function rebuild(){
     ED.track=buildCircuit(ED.raw,ED.opts);
   }catch(err){
     ED.track=null; console.error(err);
-    msg("Couldn't build that circuit Ã¢ÂÂ try a simpler loop.");
+    msg("Couldn't build that circuit — try a simpler loop.");
   }
   store.set("ad.raw",ED.raw); store.set("ad.opts",ED.opts);
   syncBank();                      // corner count may have changed
@@ -3421,7 +3421,7 @@ function renderPad(){
 }
 function drawCircuitMap(ctx,T){
   const P=T.pad, n=P.length;
-  /* circuit maps always exaggerate the road Ã¢ÂÂ a true-scale 12 m ribbon is a hairline */
+  /* circuit maps always exaggerate the road — a true-scale 12 m ribbon is a hairline */
   const wPad=Math.max(15,T.opts.width/SCALE*2.0);
   ctx.save();
   ctx.translate(PADT.ox,PADT.oy); ctx.scale(PADT.s,PADT.s);
@@ -3469,7 +3469,7 @@ function drawCircuitMap(ctx,T){
     let ox=(a.x+b.x)/2-p.x, oy=(a.y+b.y)/2-p.y;
     const m=Math.hypot(ox,oy)||1; ox/=m; oy/=m;
     /* The canvas is scaled by PADT.s, so a radius quoted in pad units shrinks
-       with the board Ã¢ÂÂ on a phone the old 11-unit disc rendered about 2px
+       with the board — on a phone the old 11-unit disc rendered about 2px
        across. Quote every size in CSS pixels and divide by the scale so the
        markers stay a real touch target however small the board gets. */
     const u=1/PADT.s;                       // one CSS pixel, in pad units
@@ -3488,7 +3488,7 @@ function drawCircuitMap(ctx,T){
     if(deg){
       ctx.font="600 "+(10*u).toFixed(2)+"px 'IBM Plex Mono',monospace";
       ctx.fillStyle="#FFB020";
-      ctx.fillText(deg+"ÃÂ°",X,Y+R+8*u);
+      ctx.fillText(deg+"°",X,Y+R+8*u);
     }
   });
   ctx.restore();
@@ -3496,7 +3496,7 @@ function drawCircuitMap(ctx,T){
 function updateReadout(){
   const el=$("readout"), T=ED.track;
   $("btnDrive").disabled=!T;
-  if(!T){ el.innerHTML='<div class="cell"><span class="k">Circuit</span><span class="v">Ã¢ÂÂ</span></div>'; return; }
+  if(!T){ el.innerHTML='<div class="cell"><span class="k">Circuit</span><span class="v">—</span></div>'; return; }
   const s=T.stats;
   const cells=[
     ["Length",(s.length/1000).toFixed(2),"km"],
@@ -3504,7 +3504,7 @@ function updateReadout(){
     ["Longest straight",Math.round(s.longest),"m"],
     ["Max gradient",s.grade.toFixed(1),"%"],
     ["Elevation change",Math.round(s.climb),"m"],
-    ["Tightest radius",s.minRadius?Math.round(s.minRadius):"Ã¢ÂÂ","m"]
+    ["Tightest radius",s.minRadius?Math.round(s.minRadius):"—","m"]
   ];
   el.innerHTML=cells.map(c=>
     '<div class="cell"><span class="k">'+c[0]+'</span><span class="v">'+c[1]+
@@ -3533,7 +3533,7 @@ function pressGroup(container,attr,value){
   });
 }
 /* buildCircuit snapshots opts (Object.assign({},opts)), and the world is built
-   from that snapshot Ã¢ÂÂ so changing these without rebuilding left the track
+   from that snapshot — so changing these without rebuilding left the track
    holding the previous theme and colour, and the change only appeared after a
    reload rebuilt from storage. */
 $("themes").addEventListener("click",e=>{
@@ -3599,7 +3599,7 @@ setInterval(updateCheck,10*60*1000);
 
 /* ---- fullscreen ----
    Android honours the Fullscreen API and gives up the address bar and the
-   navigation buttons. iPhone Safari implements none of it Ã¢ÂÂ there the only
+   navigation buttons. iPhone Safari implements none of it — there the only
    route is Add to Home Screen, which the meta tags at the top set up, so
    the button hides itself rather than offering something that cannot work. */
 function fsOn(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
@@ -3646,7 +3646,7 @@ function fsUI(){
    is in which room, and passes messages along; every car is simulated by
    the machine driving it. Other players are drawn from the positions they
    send and are not collided with, so two machines can never disagree about
-   a crash Ã¢ÂÂ there is nothing to disagree about.
+   a crash — there is nothing to disagree about.
    ===================================================================== */
 const NET={
   ws:null, id:null, code:null, hostId:null, peers:new Map(),
@@ -3664,7 +3664,7 @@ function relayURL(){
   if(q) return q;
   const h=location.hostname;
   /* Opened as a file, or off a local dev server, there is no same-host relay
-     to derive Ã¢ÂÂ and defaulting to localhost meant the copy on your own disk
+     to derive — and defaulting to localhost meant the copy on your own disk
      could never join a party at all. Fall back to the deployed one, which is
      the only relay such a page can reach. Point it elsewhere with
      ?relay=ws://localhost:8080 when running one locally. */
@@ -3685,11 +3685,11 @@ function netUI(){
     $("netShow").textContent=NET.code||"----";
     const n=NET.peers.size;
     $("netWho").textContent = n
-      ? n+(n===1?" other driver":" other drivers")+" ÃÂ· "+
+      ? n+(n===1?" other driver":" other drivers")+" · "+
         (NET.id===NET.hostId?"you are hosting":"hosted by someone else")
       : (NET.id===NET.hostId
           ? "Share the code. Anyone who joins gets your circuit."
-          : "Waiting for the host's circuitÃ¢ÂÂ¦");
+          : "Waiting for the host's circuit…");
   }
 }
 function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
@@ -3697,7 +3697,7 @@ function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringif
 /* The relay is a free service and sleeps when nobody has used it for a
    while, so the first connection of the day genuinely can take the better
    part of a minute to answer. Say so, keep saying so, and never leave the
-   button looking like it did nothing Ã¢ÂÂ an earlier version set an error on
+   button looking like it did nothing — an earlier version set an error on
    the socket error and then wiped it on the close that always follows, so
    every failure looked exactly like being ignored. */
 function netOpen(then){
@@ -3710,17 +3710,17 @@ function netOpen(then){
   catch(e){ netSay("Could not open a connection to "+url); return; }
 
   NET.ws=ws; NET.status="opening"; NET.opened=false; NET.err=null;
-  netSay("Connecting to the party relayÃ¢ÂÂ¦");
+  netSay("Connecting to the party relay…");
   netUI();
 
   /* progress, because a silent 50 seconds is indistinguishable from broken */
   const t1=setTimeout(()=>{ if(NET.status==="opening")
-    netSay("Waking the relay Ã¢ÂÂ it sleeps when idle, so this first connection can take up to a minute."); },2500);
+    netSay("Waking the relay — it sleeps when idle, so this first connection can take up to a minute."); },2500);
   const t2=setTimeout(()=>{ if(NET.status==="opening")
-    netSay("Still waking the relayÃ¢ÂÂ¦ hang on."); },20000);
+    netSay("Still waking the relay… hang on."); },20000);
   const kill=setTimeout(()=>{
     if(NET.status!=="opening")return;
-    NET.err="The relay did not answer. It may still be starting up Ã¢ÂÂ give it a moment and try again.";
+    NET.err="The relay did not answer. It may still be starting up — give it a moment and try again.";
     try{ ws.close(); }catch(e){}
   },75000);
   const done=()=>{ clearTimeout(t1); clearTimeout(t2); clearTimeout(kill); };
@@ -3733,7 +3733,7 @@ function netOpen(then){
     NET.ws=null; NET.status="off"; NET.peers.clear(); netDropCars(); netUI();
     /* an error already explains itself; do not replace it with the idle text */
     if(NET.err) netSay(NET.err);
-    else if(wasIn) netSay("Party ended Ã¢ÂÂ the connection dropped.");
+    else if(wasIn) netSay("Party ended — the connection dropped.");
     else netSay(NET_IDLE);
     NET.err=null;
   };
@@ -3771,7 +3771,7 @@ function netSendTrack(){
   const raw=ED.raw.map(p=>[+p.x.toFixed(2),+p.y.toFixed(2)]);
   /* Adopt exactly what goes down the wire. The circuit used to be sent
      rounded while the host went on driving the unrounded original, so the
-     two machines built from different numbers Ã¢ÂÂ and since the start line is
+     two machines built from different numbers — and since the start line is
      chosen by hunting for the flattest point on the lap, a hair of
      difference could hand them different answers. Different start line,
      different spawn, two people racing subtly different circuits. */
@@ -3839,7 +3839,7 @@ function solidUI(){
 
 /* Other cars are solid only when the party says so. Both machines push
    themselves out of the overlap rather than one being told where to go, so
-   there is no authority to argue over Ã¢ÂÂ each of you feels the same shunt
+   there is no authority to argue over — each of you feels the same shunt
    from your own side of it. */
 function netCollide(){
   if(!ED.opts.solid||NET.status!=="in")return;
@@ -3854,7 +3854,7 @@ function netCollide(){
     const nx=dx/d, nz=dz/d;
     /* Half the separation each, because the other machine is running this
        same code from its own side and taking the other half. Taking all of
-       it here made the other car feel like a wall Ã¢ÂÂ you got moved the whole
+       it here made the other car feel like a wall — you got moved the whole
        way and they appeared not to give at all. */
     const half=(R-d)*0.5;
     CAR.x+=nx*half; CAR.z+=nz*half;
@@ -3875,7 +3875,7 @@ function netCollide(){
    One mesh per peer, built the first time they are heard from and thrown
    away when they leave. Positions arrive about fifteen times a second, so
    they are played back a fraction behind live and interpolated between the
-   last two Ã¢ÂÂ the alternative is a car that teleports on every packet. */
+   last two — the alternative is a car that teleports on every packet. */
 function netDropCar(id){
   const p=NET.peers.get(id);
   if(p&&p.mesh){ if(G.scene)G.scene.remove(p.mesh); disposeTree(p.mesh); p.mesh=null; }
@@ -3889,7 +3889,7 @@ function netUpdateCars(){
     /* A player whose connection simply dies is not reported gone until the
        relay's keepalive notices, which can take the better part of a minute.
        Rather than leave their car parked on the racing line, take it away
-       once it has stopped saying anything Ã¢ÂÂ if they come back, the next
+       once it has stopped saying anything — if they come back, the next
        packet builds it again. */
     if(performance.now()-p.buf[p.buf.length-1].t>4000){
       if(p.mesh) netDropCar(id);
@@ -3909,7 +3909,7 @@ function netUpdateCars(){
     const A=a.p, B=b.p;
     /* Height comes from our own road, not the wire. Straight-line
        interpolation between two packets 60ms apart cuts the corner
-       vertically Ã¢ÂÂ under a crest the car sinks into the tarmac, through a
+       vertically — under a crest the car sinks into the tarmac, through a
        dip it floats above it. Their height still decides which road they are
        on, so a car on a flyover stays on the flyover. */
     let gx=lerp(A[0],B[0],u), gz=lerp(A[2],B[2],u);
@@ -3933,7 +3933,7 @@ function netUpdateCars(){
       for(let i=0;i<4;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<2?st:0;
         w[i].rotation.x=lerp(A[7],B[7],u)*sp; } }
     /* Somebody else's Yaris has to squash too. It is a property of the car,
-       not of who is driving it, and there is no point sending it Ã¢ÂÂ the shape
+       not of who is driving it, and there is no point sending it — the shape
        is a function of the clock, so each machine can work it out. */
     const bp=p.mesh.userData.bop, bd=p.mesh.userData.body;
     if(bp&&bd){
@@ -3960,7 +3960,7 @@ function netTick(){
 $("sBank").addEventListener("input",()=>{
   if(ED.sel==null)return;
   ED.opts.banks[ED.sel]=+$("sBank").value;
-  $("vBank").textContent=$("sBank").value+"ÃÂ°";
+  $("vBank").textContent=$("sBank").value+"°";
   clearTimeout(sliderT); sliderT=setTimeout(rebuild,90);
 });
 $("bankPrev").addEventListener("click",()=>cycleCorner(-1));
@@ -4006,7 +4006,7 @@ function a2hsInstalled(){
 let a2hsSeen=false;
 function a2hsWanted(){
   /* Answered it is gone for the rest of the visit, which makes it impossible
-     to look at again Ã¢ÂÂ so ?a2hs brings it back for checking the wording. */
+     to look at again — so ?a2hs brings it back for checking the wording. */
   if(new URLSearchParams(location.search).has("a2hs"))return true;
   /* Tied to having actually added it, not to having tapped OK. Tapping OK
      only means "not now", so it comes back next visit; installing it is what
@@ -4051,13 +4051,13 @@ function driveNow(){
     try{
       buildWorld(ED.track);
       const s=ED.track.stats;
-      $("pauseSub").textContent=THEMES[ED.track.opts.theme].label+" circuit ÃÂ· "+
-        (s.length/1000).toFixed(2)+" km ÃÂ· "+s.corners+" corners";
+      $("pauseSub").textContent=THEMES[ED.track.opts.theme].label+" circuit · "+
+        (s.length/1000).toFixed(2)+" km · "+s.corners+" corners";
       $("loading").hidden=true;
       resize();
       startGame();
     }catch(err){
-      $("loadLbl").textContent="Could not build that circuit Ã¢ÂÂ try a simpler loop.";
+      $("loadLbl").textContent="Could not build that circuit — try a simpler loop.";
       console.error(err);
       setTimeout(()=>{ $("loading").hidden=true; $("drive").hidden=true; $("editor").hidden=false;
                        document.body.classList.remove("driving"); fitPad(); },2200);
