@@ -3934,15 +3934,25 @@ $("btnReverse").addEventListener("click",()=>{
    not already running this from the home screen. Asked on the way out to the
    track, because that is the moment the browser chrome starts costing you
    road. Answered once and never asked again. */
+/* Whether the page is running from a home screen icon rather than in a tab.
+   Chrome and the standard say display-mode; iOS Safari has its own flag and
+   answers the media query with a shrug, so both are asked. */
+function a2hsInstalled(){
+  return (window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)
+         ||navigator.standalone===true;
+}
+let a2hsSeen=false;
 function a2hsWanted(){
-  /* Once answered it is gone for good, which makes it impossible to look at
-     again — so ?a2hs brings it back regardless, for checking the wording. */
+  /* Answered it is gone for the rest of the visit, which makes it impossible
+     to look at again — so ?a2hs brings it back for checking the wording. */
   if(new URLSearchParams(location.search).has("a2hs"))return true;
-  if(store.get("ad.a2hs",false))return false;              // already answered
+  /* Tied to having actually added it, not to having tapped OK. Tapping OK
+     only means "not now", so it comes back next visit; installing it is what
+     stops it for good, because then there is nothing left to suggest. */
+  if(a2hsInstalled())return false;
+  if(a2hsSeen)return false;                                // once a visit, not once a lap
   if(!touchUIOn())return false;                            // nothing to gain on a desktop
-  const standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)
-                   ||navigator.standalone===true;
-  return !standalone;
+  return true;
 }
 function a2hsShow(){
   const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)
@@ -3953,7 +3963,7 @@ function a2hsShow(){
   $("a2hs").hidden=false;
 }
 $("a2hsOk").addEventListener("click",()=>{
-  store.set("ad.a2hs",true);
+  a2hsSeen=true;                       // not now; ask again next visit
   $("a2hs").hidden=true;
   driveNow();
 });
