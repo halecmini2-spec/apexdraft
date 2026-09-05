@@ -870,8 +870,15 @@ function buildCircuit(raw,opts){
 }
 
 /* nearest point on the centreline: {i, t, d(signed), y, bank, s, tx, tz} */
-function nearest(T,x,z,hintI){
+/* yHint disambiguates a flyover. The search is flat — it compares distance
+   in x and z only — so under a bridge the deck centreline is every bit as
+   "near" as the road you are actually on, and the car could be snapped onto
+   the wrong one and dropped through the deck. Given a height, candidates are
+   also judged on how far they are from it vertically. */
+function nearest(T,x,z,hintI,yHint){
   const g=T.grid; let best=-1, bd=Infinity;
+  const useY=(yHint!=null&&T.OV)?1:0;
+  const YW=3.2;                       // a metre up counts for more than one across
   const bx=Math.floor(x/g.CELL)-g.gx0, bz=Math.floor(z/g.CELL)-g.gz0;
   for(let rad=1;rad<=3&&best<0;rad++){
     for(let dz=-rad;dz<=rad;dz++)for(let dx=-rad;dx<=rad;dx++){
@@ -879,7 +886,9 @@ function nearest(T,x,z,hintI){
       if(cxi<0||czi<0||cxi>=g.gw||czi>=g.gh)continue;
       const arr=g.buckets[czi*g.gw+cxi]; if(!arr)continue;
       for(let n=0;n<arr.length;n++){
-        const i=arr[n]; const d=(T.X[i]-x)*(T.X[i]-x)+(T.Z[i]-z)*(T.Z[i]-z);
+        const i=arr[n];
+        let d=(T.X[i]-x)*(T.X[i]-x)+(T.Z[i]-z)*(T.Z[i]-z);
+        if(useY){ const dy=T.Y[i]-yHint; d+=dy*dy*YW; }
         if(d<bd){bd=d;best=i;}
       }
     }
@@ -920,8 +929,8 @@ function terrainBase(T,x,z){
   return (fbm(x*0.0021+11.5,z*0.0021-4.2,4)-0.5)*2*a
        + (fbm(x*0.0087,z*0.0087,3)-0.5)*2*3.2;
 }
-function heightAt(T,x,z,np){
-  const p=np||nearest(T,x,z);
+function heightAt(T,x,z,np,yHint){
+  const p=np||nearest(T,x,z,null,yHint);
   const ad=Math.abs(p.d);
   /* On a flyover the verge has nowhere to go: the deck stops at its edge and
      the ground carries on underneath at the height it would have had anyway.
@@ -1400,6 +1409,12 @@ function buildBridges(T,TH){
     for(let i=0;i<4;i++)col.push(c.r,c.g,c.b);
     idx.push(v,v+1,v+2, v,v+2,v+3); v+=4;
   };
+  /* Edge beam: a fixed shallow depth, and it hangs BELOW the deck rather
+     than standing above it. It used to be scaled by the lift, so a 7m
+     flyover grew a 6.6m skirt down each side — which is the concrete you
+     met head-on driving underneath, and why there was nothing to see
+     through. A deck edge is a beam, not a wall. */
+  const BEAM=0.75;
   for(let side=-1;side<=1;side+=2){
     for(let k=0;k<N;k++){
       const a=k, b=(k+1)%N;
@@ -1407,22 +1422,21 @@ function buildBridges(T,TH){
       const o=off*side;
       const ax=T.X[a]+T.RX[a]*o, az=T.Z[a]+T.RZ[a]*o;
       const bx=T.X[b]+T.RX[b]*o, bz=T.Z[b]+T.RZ[b]*o;
-      const at=T.Y[a]+0.2, bt=T.Y[b]+0.2;                  // deck top
-      const ab=at-Math.max(1.1,T.OV[a]*0.92);              // fascia depth
-      const bb=bt-Math.max(1.1,T.OV[b]*0.92);
-      quad([ax,at,az],[bx,bt,bz],[bx,bb,bz],[ax,ab,az],cDeck);
+      const at=T.Y[a]-0.35, bt=T.Y[b]-0.35;                // just under the surface
+      quad([ax,at,az],[bx,bt,bz],[bx,bt-BEAM,bz],[ax,at-BEAM,az],cDeck);
     }
   }
-  /* piers, on the deeper half of each span so they read as supports */
-  for(let k=0;k<N;k+=6){
-    if(T.OV[k]<2.0)continue;
-    /* down to the cut ground, not the ground the deck pretends to sit on */
+  /* Piers, kept well clear of the headroom: slim, well spaced, tucked in
+     under the middle of the deck so they never break its surface and never
+     stand in the road underneath. */
+  for(let k=0;k<N;k+=14){
+    if(T.OV[k]<3.0)continue;
     const gy=heightAt(T,T.X[k],T.Z[k])-T.OV[k];
-    const top=T.Y[k]-1.0, h=top-gy;
-    if(h<1.5)continue;
+    const top=T.Y[k]-BEAM-0.5, h=top-gy;
+    if(h<2.0)continue;                                     // too shallow to bother
     for(const sx of [-1,1]){
-      const px=T.X[k]+T.RX[k]*(T.halfW*0.55*sx), pz=T.Z[k]+T.RZ[k]*(T.halfW*0.55*sx);
-      const w=1.15;
+      const px=T.X[k]+T.RX[k]*(T.halfW*0.42*sx), pz=T.Z[k]+T.RZ[k]*(T.halfW*0.42*sx);
+      const w=0.8;
       const rx=T.RX[k]*w, rz=T.RZ[k]*w, tx=T.TX[k]*w, tz=T.TZ[k]*w;
       const c=[[px-rx-tx,pz-rz-tz],[px+rx-tx,pz+rz-tz],[px+rx+tx,pz+rz+tz],[px-rx+tx,pz-rz+tz]];
       for(let e=0;e<4;e++){
@@ -2356,7 +2370,7 @@ function step(dt){
   let vLat =CAR.vx*rx+CAR.vz*rz;      // speed out the passenger door (+ = right)
   const speed=Math.hypot(CAR.vx,CAR.vz);
 
-  const np=nearest(T,CAR.x,CAR.z);
+  const np=nearest(T,CAR.x,CAR.z,null,CAR.y);
   const ad=Math.abs(np.d);
   const S = ad<T.halfW+0.5 ? SURF.road
           : ad<T.halfW+2.2 ? SURF.kerb
@@ -2529,7 +2543,7 @@ function step(dt){
   let worst=0;
   for(const endz of [1.35,-1.35]){
     const ex=CAR.x+nfx*endz, ez=CAR.z+nfz*endz;
-    const p=nearest(T,ex,ez);
+    const p=nearest(T,ex,ez,null,CAR.y);
     const over=Math.abs(p.d)-LIM;
     if(over<=0)continue;
     const sgn=p.d>0?1:-1;
@@ -2673,10 +2687,10 @@ function updateCarMesh(){
   const T=G.T, c=G.car;
   const fx=Math.sin(CAR.yaw),  fz=Math.cos(CAR.yaw);
   const rx=-Math.cos(CAR.yaw), rz=Math.sin(CAR.yaw);
-  const hF=heightAt(T,CAR.x+fx*1.5,CAR.z+fz*1.5);
-  const hB=heightAt(T,CAR.x-fx*1.5,CAR.z-fz*1.5);
-  const hR=heightAt(T,CAR.x+rx*0.9,CAR.z+rz*0.9);
-  const hL=heightAt(T,CAR.x-rx*0.9,CAR.z-rz*0.9);
+  const hF=heightAt(T,CAR.x+fx*1.5,CAR.z+fz*1.5,null,CAR.y);
+  const hB=heightAt(T,CAR.x-fx*1.5,CAR.z-fz*1.5,null,CAR.y);
+  const hR=heightAt(T,CAR.x+rx*0.9,CAR.z+rz*0.9,null,CAR.y);
+  const hL=heightAt(T,CAR.x-rx*0.9,CAR.z-rz*0.9,null,CAR.y);
   /* terrain attitude plus the body moving on its springs: it dives under braking,
      squats under power, and leans on the outside wheels through a corner */
   /* Dive, squat and lean are all trimmed back: the body was rolling far
