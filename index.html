@@ -3458,6 +3458,7 @@ const NET={
   ws:null, id:null, code:null, hostId:null, peers:new Map(),
   status:"off", sendAt:0, wantTrack:false
 };
+const PUBLIC_RELAY="wss://apexdraft-relay.onrender.com";
 const NET_IDLE="Race live with other people. The host draws the circuit and shares a code.";
 const NET_RATE=1000/15;              // position updates per second
 const NET_LAG=120;                   // render remote cars this far in the past
@@ -3468,7 +3469,12 @@ function relayURL(){
   const q=new URLSearchParams(location.search).get("relay");
   if(q) return q;
   const h=location.hostname;
-  if(!h||h==="localhost"||h==="127.0.0.1") return "ws://localhost:8080";
+  /* Opened as a file, or off a local dev server, there is no same-host relay
+     to derive — and defaulting to localhost meant the copy on your own disk
+     could never join a party at all. Fall back to the deployed one, which is
+     the only relay such a page can reach. Point it elsewhere with
+     ?relay=ws://localhost:8080 when running one locally. */
+  if(!h||h==="localhost"||h==="127.0.0.1") return PUBLIC_RELAY;
   /* the blueprint names the relay after the site, so apexdraft.onrender.com
      is served by apexdraft-relay.onrender.com */
   const parts=h.split(".");
