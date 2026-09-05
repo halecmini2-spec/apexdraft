@@ -878,7 +878,7 @@ function buildCircuit(raw,opts){
 function nearest(T,x,z,hintI,yHint){
   const g=T.grid; let best=-1, bd=Infinity;
   const useY=(yHint!=null&&T.OV)?1:0;
-  const YW=3.2;                       // a metre up counts for more than one across
+  const YW=11;                        // a metre up counts for a good few across
   const bx=Math.floor(x/g.CELL)-g.gx0, bz=Math.floor(z/g.CELL)-g.gz0;
   for(let rad=1;rad<=3&&best<0;rad++){
     for(let dz=-rad;dz<=rad;dz++)for(let dx=-rad;dx<=rad;dx++){
@@ -1307,12 +1307,24 @@ function buildBarriers(T,TH){
          road, there is no room for a barrier here. The collision corridor is
          unaffected — it follows whichever centreline is nearest, so the gap
          is only ever in the geometry, never in what you can drive through. */
-      const nq=nearest(T,ax,az);
-      let gap=Math.abs(nq.i-a); gap=Math.min(gap,N-gap);
-      if(gap>26&&Math.abs(nq.d)<hw+3.4){ T.wall[a]=0; continue; }
+      /* A bridge always keeps its rail. The check asks what is underneath to
+         spot a rail lying on another part of the lap, and on a flyover the
+         answer is always "another part of the lap" — the road being crossed —
+         so it deleted rails in patches across the deck. */
+      const onDeck=T.OV&&T.OV[a]>0.4;
+      if(!onDeck){
+        const nq=nearest(T,ax,az,null,T.Y[a]);
+        let gap=Math.abs(nq.i-a); gap=Math.min(gap,N-gap);
+        if(gap>26&&Math.abs(nq.d)<hw+3.4){ T.wall[a]=0; continue; }
+      }
       /* hint with the road this rail belongs to, or on a flyover it resolves
          to whatever is passing underneath and the rail drops off the deck */
-      const ay=heightAt(T,ax,az,null,T.Y[a]), by=heightAt(T,bx,bz,null,T.Y[b]);
+      /* On a deck the height comes straight from the road it belongs to. A
+         lookup here is ambiguous by nature — the road being crossed can be
+         nearer in plan than the deck the rail is standing on — and it put the
+         rail on the ground seven metres below. */
+      const ay=onDeck?T.Y[a]-0.9:heightAt(T,ax,az,null,T.Y[a]);
+      const by=(T.OV&&T.OV[b]>0.4)?T.Y[b]-0.9:heightAt(T,bx,bz,null,T.Y[b]);
       /* subtle weathering so a 4 km rail isn't one flat tone */
       const c=(Math.floor(T.S[a]/4.3)%2)?cSteel:cSteelB;
       for(let p=0;p<WBEAM.length-1;p++){
@@ -1372,7 +1384,7 @@ function buildBarriers(T,TH){
     for(let s=-5;s<=5;s++){
       const i=(c.pi+s*3+N)%N, o=(off-0.52)*outside;
       const x=T.X[i]+T.RX[i]*o, z=T.Z[i]+T.RZ[i]*o;
-      stacks.push([x,heightAt(T,x,z),z]);
+      stacks.push([x,heightAt(T,x,z,null,T.Y[i]),z]);
     }
   }
   if(stacks.length){
@@ -1401,7 +1413,9 @@ function buildBarriers(T,TH){
    there, is the land the other road is running across. */
 function buildBridges(T,TH){
   if(!T.OV)return null;
-  const N=T.N, off=T.halfW+7.5, grp=new THREE.Group();
+  /* out past the rail line, so the armco stands on the deck instead of
+     hanging over its edge with nothing underneath it */
+  const N=T.N, off=T.halfW+9.2, grp=new THREE.Group();
   let any=false; for(let i=0;i<N;i++) if(T.OV[i]>0.4){ any=true; break; }
   if(!any)return null;
   const pos=[],col=[],idx=[]; let v=0;
