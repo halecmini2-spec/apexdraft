@@ -44,6 +44,9 @@ html,body{
   touch-action:manipulation;
 }
 *{-webkit-user-select:none;user-select:none}
+/* manipulation rather than none: a double tap on a control must not zoom,
+   but the tap still has to become a click */
+button,select,label{touch-action:manipulation}
 /* except where you genuinely need to type and select — the party code */
 input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 /* Out on track nothing should pan, zoom or select at all. The rail is not on
@@ -2368,6 +2371,23 @@ function releaseAllInput(){
 addEventListener("contextmenu",e=>{ if(!(e.target&&e.target.closest&&e.target.closest("input"))) e.preventDefault(); });
 ["gesturestart","gesturechange","gestureend"].forEach(g=>
   addEventListener(g,e=>e.preventDefault(),{passive:false}));
+
+/* Safari ignores maximum-scale and user-scalable, so on an iPhone the only
+   thing that actually stops a pinch or a repeated tap zooming the page is
+   refusing the touches that start it. Anything you can press is exempt:
+   cancelling a touchend there would swallow the click it turns into, and
+   two fingers on the pedals is how you drive. */
+const pressable=el=>el&&el.closest&&el.closest('button,input,select,textarea,a,label,[role="button"]');
+addEventListener("touchstart",e=>{
+  if(e.touches.length>1&&!pressable(e.target)) e.preventDefault();
+},{passive:false});
+let lastTap=0;
+addEventListener("touchend",e=>{
+  const now=Date.now();
+  if(now-lastTap<=380&&!pressable(e.target)) e.preventDefault();   // second and third tap
+  lastTap=now;
+},{passive:false});
+addEventListener("dblclick",e=>{ if(!pressable(e.target)) e.preventDefault(); });
 addEventListener("blur",releaseAllInput);
 addEventListener("pagehide",releaseAllInput);
 document.addEventListener("visibilitychange",()=>{ if(document.hidden)releaseAllInput(); });
