@@ -7,6 +7,15 @@
      iOS 10 and cannot be told this way; there the gesture handlers below are
      the only lever, and the system-wide Accessibility zoom is above both. -->
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<!-- iPhone Safari has no Fullscreen API at all. The only way to lose the
+     browser chrome there is Add to Home Screen, and these are what make that
+     launch as a standalone app rather than a tab. Android gets the real
+     Fullscreen API instead, requested when you go out on track. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Apex Draft">
+<meta name="theme-color" content="#0A0F10">
 <title>Apex Draft</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -514,7 +523,7 @@ body.touchcap .touchonly{display:block}
         <p class="foot-note">No account. Nothing to install.</p>
         <p class="foot-note touchonly" style="margin-top:7px;line-height:1.5">
           Tap your browser's share button →<br><b style="color:var(--dim)">Add to Home Screen</b>
-          to keep this one tap away.</p>
+          to play fullscreen, with no browser around it.</p>
       </div>
     </aside>
 
@@ -575,6 +584,7 @@ body.touchcap .touchonly{display:block}
           <button class="pbtn primary" id="pResume">Resume <span class="s">Esc</span></button>
           <button class="pbtn" id="pReset">Recover car <span class="s">R</span></button>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
+          <button class="pbtn" id="pFull" hidden>Fullscreen <span class="s off" id="fullState">Off</span></button>
           <button class="pbtn" id="pTouch">On-screen controls <span class="s on" id="touchState">On</span></button>
           <button class="pbtn" id="pBack">Back to the drawing board</button>
         </div>
@@ -3519,6 +3529,49 @@ function onSlider(id,key,fn){
 }
 onSlider("sWidth","width"); onSlider("sHills","hills"); onSlider("sSmooth","smooth");
 
+/* ---- fullscreen ----
+   Android honours the Fullscreen API and gives up the address bar and the
+   navigation buttons. iPhone Safari implements none of it — there the only
+   route is Add to Home Screen, which the meta tags at the top set up, so
+   the button hides itself rather than offering something that cannot work. */
+function fsOn(){ return !!(document.fullscreenElement||document.webkitFullscreenElement); }
+function fsCan(){
+  const e=document.documentElement;
+  return !!(e.requestFullscreen||e.webkitRequestFullscreen);
+}
+function fsEnter(){
+  const e=document.documentElement;
+  const r=e.requestFullscreen||e.webkitRequestFullscreen;
+  if(!r)return Promise.reject();
+  try{ return Promise.resolve(r.call(e,{navigationUI:"hide"})); }
+  catch(err){ return Promise.reject(err); }
+}
+function fsExit(){
+  const x=document.exitFullscreen||document.webkitExitFullscreen;
+  if(x&&fsOn()){ try{ x.call(document); }catch(e){} }
+}
+/* the game wants to be held sideways, and a phone will only agree to be
+   pinned that way while it is fullscreen */
+function fsLandscape(){
+  try{
+    if(screen.orientation&&screen.orientation.lock)
+      screen.orientation.lock("landscape").catch(()=>{});
+  }catch(e){}
+}
+function fsToggle(){
+  if(fsOn()){ fsExit(); }
+  else fsEnter().then(fsLandscape).catch(()=>{});
+}
+function fsUI(){
+  const b=$("pFull");
+  if(!b)return;
+  b.hidden=!fsCan();
+  const s=$("fullState");
+  if(s){ s.textContent=fsOn()?"On":"Off"; s.className="s "+(fsOn()?"on":"off"); }
+}
+["fullscreenchange","webkitfullscreenchange"].forEach(ev=>
+  document.addEventListener(ev,()=>{ fsUI(); resize(); }));
+
 /* =====================================================================
    PARTY
    The relay knows nothing about racing. It hands out a code, remembers who
@@ -3869,6 +3922,8 @@ $("btnDrive").addEventListener("click",()=>{
   $("editor").hidden=true;
   $("drive").hidden=false;
   document.body.classList.add("driving");
+  /* has to ride on this click: fullscreen is only granted from a gesture */
+  if(touchUIOn()&&fsCan()&&!fsOn()) fsEnter().then(fsLandscape).catch(()=>{});
   $("loading").hidden=false;
   $("pause").hidden=true;
   resize();
@@ -3891,6 +3946,7 @@ $("btnDrive").addEventListener("click",()=>{
 });
 $("pResume").addEventListener("click",()=>togglePause(false));
 $("pReset").addEventListener("click",()=>{ resetCar(false); togglePause(false); });
+$("pFull").addEventListener("click",()=>{ fsToggle(); setTimeout(fsUI,120); });
 $("pSound").addEventListener("click",()=>setSound(!SOUND));
 $("pTouch").addEventListener("click",()=>{
   TOUCHUI=!touchUIOn(); store.set("ad.touchui",TOUCHUI); applyTouchUI();
@@ -3921,6 +3977,7 @@ $("pBack").addEventListener("click",()=>{
   pressGroup($("colors"),"color",ED.opts.color);
   pressGroup($("cars"),"car",ED.opts.car);
   solidUI();
+  fsUI();
   syncSliders();
   const saved=store.get("ad.raw",null);
   ED.raw = (saved&&saved.length>8) ? saved : shapeLoop(DEFAULT_SHAPE);

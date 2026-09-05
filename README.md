@@ -15,6 +15,10 @@ Open `index.html` in any modern browser, or host it as-is.
   Each keeps its own best lap, since they don't lap at the same pace.
 - **Drive it** — `WASD`/arrows, `R` recover, `C` camera, `M` sound, `Esc`
   menu. On a phone, on-screen controls appear automatically.
+- **Fullscreen** — on Android the browser is asked for it as you go out on
+  track, and there is a toggle in the pause menu. iPhone Safari has no
+  Fullscreen API at all, so there the route is Add to Home Screen: the page
+  is set up to launch standalone, with no browser around it.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
