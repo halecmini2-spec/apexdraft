@@ -2285,7 +2285,19 @@ function resetCar(toStart){
   if(!toStart&&isFinite(CAR.x)&&isFinite(CAR.z)){
     i=nearest(T,CAR.x,CAR.z).i;
   }
-  CAR.x=T.X[i]; CAR.z=T.Z[i];
+  /* A starting grid, in staggered pairs back from the line, so a party does
+     not begin with everybody inside the same car. The slot comes from join
+     order, which every machine works out identically, so nobody has to be
+     told where to stand. */
+  const slot=(toStart&&typeof netSlot==="function")?netSlot():-1;
+  if(slot>=0){
+    const row=Math.floor(slot/2), col=slot%2;
+    i=(i-row*2+T.N*2)%T.N;                        // ~14m between rows
+    const lat=(col?1:-1)*T.halfW*0.44;
+    CAR.x=T.X[i]+T.RX[i]*lat; CAR.z=T.Z[i]+T.RZ[i]*lat;
+  }else{
+    CAR.x=T.X[i]; CAR.z=T.Z[i];
+  }
   CAR.yaw=Math.atan2(T.TX[i],T.TZ[i]);
   CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
@@ -3578,10 +3590,30 @@ function netHandle(m){
 }
 function netSendTrack(){
   if(NET.id!==NET.hostId||!ED.raw)return;
-  /* Points rounded to the whole pad unit: the circuit is metres wide, and it
-     roughly halves what goes down the wire. */
-  const raw=ED.raw.map(p=>[Math.round(p.x),Math.round(p.y)]);
+  const raw=ED.raw.map(p=>[+p.x.toFixed(2),+p.y.toFixed(2)]);
+  /* Adopt exactly what goes down the wire. The circuit used to be sent
+     rounded while the host went on driving the unrounded original, so the
+     two machines built from different numbers — and since the start line is
+     chosen by hunting for the flattest point on the lap, a hair of
+     difference could hand them different answers. Different start line,
+     different spawn, two people racing subtly different circuits. */
+  let differs=false;
+  for(let i=0;i<raw.length;i++){
+    if(raw[i][0]!==ED.raw[i].x||raw[i][1]!==ED.raw[i].y){ differs=true; break; }
+  }
+  if(differs){ ED.raw=raw.map(a=>({x:a[0],y:a[1]})); rebuild(); }
   netSend({t:"track",data:{raw,opts:ED.opts}});
+}
+
+/* Everyone's place on the grid. The relay hands out ids in join order, so
+   sorting them gives every machine the same running order without anybody
+   having to agree on one. */
+function netSlot(){
+  if(NET.status!=="in")return -1;                 // driving alone: dead centre
+  const ids=[NET.id];
+  for(const k of NET.peers.keys()) ids.push(k);
+  ids.sort((a,b)=>(+a)-(+b));
+  return Math.max(0,ids.indexOf(NET.id));
 }
 function netTakeTrack(d){
   if(!d||!d.raw||!d.raw.length)return;
