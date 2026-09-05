@@ -3581,7 +3581,16 @@ function updateCheck(){
       const tag=r.headers.get("etag")||r.headers.get("last-modified");
       if(!tag)return;
       if(bootTag===null){ bootTag=tag; return; }         // first look: remember it
-      if(tag!==bootTag&&$("drive").hidden&&NET.status!=="in") location.reload();
+      if(tag===bootTag||!$("drive").hidden||NET.status==="in")return;
+      /* The check asks the origin directly, but the reload goes through the
+         CDN and can land on the copy it is still holding — which would look
+         like another new version and reload again. Once a minute at most,
+         remembered across the reload itself, so that cannot become a loop. */
+      let last=0;
+      try{ last=+(sessionStorage.getItem("ad.reloadAt")||0); }catch(e){}
+      if(Date.now()-last<60000)return;
+      try{ sessionStorage.setItem("ad.reloadAt",String(Date.now())); }catch(e){}
+      location.reload();
     })
     .catch(()=>{});                                      // offline is not an error here
 }
