@@ -279,16 +279,16 @@ body[data-mode="guest"] #pad{cursor:default}
 body[data-mode="guest"] .rail{width:clamp(210px,26vw,300px);flex:0 0 clamp(210px,26vw,300px)}
 
 /* HOST — the editor in full, with the lobby beside it. */
-body[data-mode="host"] .go{background:var(--party);color:#1A0603}
-body[data-mode="host"] .go:hover{background:#FF6553}
+body[data-mode="host"] #btnDrive{background:var(--party);color:#1A0603}
+body[data-mode="host"] #btnDrive:hover{background:#FF6553}
 
 /* the guest cannot start; the button says who can */
-body[data-mode="guest"] .go{
+body[data-mode="guest"] #btnDrive{
   background:transparent;border:1px solid var(--party-deep);color:#C79289;
   cursor:default;letter-spacing:.14em;
 }
-body[data-mode="guest"] .go:hover{background:transparent}
-body[data-mode="guest"].starting .go{background:var(--party);color:#1A0603;border-color:var(--party)}
+body[data-mode="guest"] #btnDrive:hover{background:transparent}
+body[data-mode="guest"].starting #btnDrive{background:var(--party);color:#1A0603;border-color:var(--party)}
 
 /* while you are in one, the party controls follow the same red */
 body.inparty #solidBox .chip{border-color:var(--party-deep);color:#F0B7AF}
@@ -529,6 +529,63 @@ body.touchcap .touchonly{display:block}
    whole line of the rail handed back to the board. */
 body.standalone .touchonly{display:none}
 
+/* ---- the account ----
+   One chip, in every state: the way in when you are signed out, your name
+   when you are in. In a party it stands down — the roster is already saying
+   who you are, twice over. */
+.lb-acct{
+  display:flex;align-items:center;flex:0 0 auto;
+  margin-left:12px;padding-left:12px;border-left:1px solid var(--line-soft);
+}
+.lb-acct .chip.on{color:var(--amber);border-color:var(--amber-deep)}
+body.inparty .lb-acct{display:none}
+/* The account page carries its own wordmark and is the only thing up. */
+body.authing #lobbybar{display:none}
+
+/* ============ the account desk ============
+   A page, not a dialog. It is the only thing on the screen while it is up,
+   which is what makes it plain that the circuit behind it is not going
+   anywhere. The card is the panel the rail is made of. */
+#auth{
+  display:flex;align-items:center;justify-content:center;overflow-y:auto;
+  padding:calc(24px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal));
+}
+.auth-card{
+  width:100%;max-width:384px;background:var(--panel);border:1px solid var(--line);
+  border-radius:4px;padding:26px 26px 22px;
+}
+.auth-brand{margin:0;font-size:19px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.auth-brand span{color:var(--amber)}
+.auth-sub{margin:4px 0 18px;font-size:11.5px;color:var(--faint);letter-spacing:.03em}
+.auth-tabs{display:flex;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.atab{
+  background:none;border:0;border-bottom:2px solid transparent;margin:0 20px -1px 0;
+  padding:8px 1px;font:inherit;font-size:12.5px;letter-spacing:.04em;color:var(--dim);cursor:pointer;
+}
+.atab[aria-pressed="true"]{color:var(--amber);border-bottom-color:var(--amber)}
+.afield{display:block;margin-bottom:13px}
+.afield span{
+  display:block;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:5px;
+}
+.afield input{
+  width:100%;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line);
+  border-radius:2px;padding:11px;color:var(--ink);font-family:var(--ui);font-size:14px;
+}
+.afield input:focus{outline:none;border-color:var(--amber)}
+/* Said under the field it is about, while you are still standing in it. */
+.anote{margin:-9px 0 12px;font-size:11px;min-height:14px}
+.anote.bad{color:var(--party)}
+.anote.good{color:var(--green)}
+.amsg{margin:0 0 12px;min-height:16px;font-size:11.5px;line-height:1.4;color:var(--dim)}
+.amsg.bad{color:var(--party)}
+.ahint{margin:15px 0 0;font-size:11px;line-height:1.5;color:var(--faint)}
+.awho{margin:0 0 3px;font-size:15px;color:var(--dim)}
+.awho b{color:var(--amber);font-weight:700}
+.amail{margin:0 0 18px;font-size:11.5px;color:var(--faint)}
+.aback{width:100%;margin-top:16px;padding:9px 10px}
+#auth .go:disabled{background:var(--raise);color:var(--faint)}
+
 /* ============ mobile ============
    Deliberately last in the sheet: a media query adds no specificity, so an
    override placed above the rule it targets simply loses. */
@@ -639,6 +696,32 @@ body.standalone .touchonly{display:none}
   body[data-mode="guest"] .rail-scroll{column-count:1}
   body[data-mode="guest"] .rail{width:min(32vw,250px);flex:0 0 min(32vw,250px)}
 }
+
+/* A landscape phone is about 400px tall, and the card as it stands is taller
+   than that: the wordmark went off the top and the button off the bottom, so
+   you could not see what you were filling in and what it would do at the
+   same time. Everything tightens; nothing is taken away. */
+@media (max-height:560px){
+  #auth{
+    align-items:flex-start;
+    padding-top:calc(10px + var(--sat));padding-bottom:calc(10px + var(--sab));
+  }
+  .auth-card{max-width:440px;padding:13px 18px 12px}
+  .auth-brand{font-size:15px}
+  .auth-sub{margin:2px 0 10px;font-size:10.5px}
+  .auth-tabs{margin-bottom:10px}
+  .atab{padding:6px 1px;font-size:12px}
+  .afield{margin-bottom:9px}
+  .afield span{margin-bottom:3px}
+  .afield input{padding:8px 10px;font-size:13.5px}
+  .anote{margin:-6px 0 8px}
+  .amsg{margin-bottom:4px;min-height:12px}
+  #auth .go{padding:11px 12px;font-size:13px}
+  .ahint{margin-top:8px;font-size:10.5px;line-height:1.4}
+  .aback{margin-top:8px;padding:6px 10px}
+  .awho{font-size:14px}
+  .amail{margin-bottom:12px}
+}
 </style>
 
 <div id="bootErr" class="boot-err" hidden></div>
@@ -698,6 +781,10 @@ body.standalone .touchonly{display:none}
           <button class="chip" id="btnJoinCancel">Cancel</button>
         </div>
       </div>
+    </div>
+
+    <div class="lb-acct" id="lbAcct">
+      <button class="chip" id="btnAccount">Sign in</button>
     </div>
   </div>
 
@@ -876,6 +963,57 @@ body.standalone .touchonly{display:none}
     <div class="loading" id="loading" hidden>
       <div class="lbl" id="loadLbl">Building circuit</div>
       <div class="bar"><i></i></div>
+    </div>
+  </section>
+
+  <!-- ===================== ACCOUNT ===================== -->
+  <!-- A username, an email and a password, and nothing else asked for. It
+       is a form, so a password manager can fill it and Enter submits it. -->
+  <section id="auth" class="screen" hidden>
+    <div class="auth-card">
+      <h1 class="auth-brand">Apex<span>Draft</span></h1>
+      <p class="auth-sub" id="auSub">Race under your own name</p>
+
+      <div id="authForms">
+        <div class="auth-tabs">
+          <button type="button" class="atab" id="tabIn" aria-pressed="true">Sign in</button>
+          <button type="button" class="atab" id="tabUp" aria-pressed="false">Create account</button>
+        </div>
+
+        <form id="authForm" novalidate>
+          <label class="afield">
+            <span>Username</span>
+            <input id="auName" maxlength="16" autocomplete="username"
+                   autocapitalize="none" autocorrect="off" spellcheck="false">
+          </label>
+          <p class="anote" id="auNote"></p>
+
+          <label class="afield" id="auMailRow" hidden>
+            <span>Email</span>
+            <input id="auMail" type="email" maxlength="120" autocomplete="email"
+                   autocapitalize="none" autocorrect="off" spellcheck="false">
+          </label>
+
+          <label class="afield">
+            <span>Password</span>
+            <input id="auPass" type="password" maxlength="200" autocomplete="current-password">
+          </label>
+
+          <p class="amsg" id="auMsg"></p>
+          <button class="go" id="auGo" type="submit">Sign in</button>
+        </form>
+
+        <p class="ahint" id="auWhy">An account puts your own name on your car when you
+          race other people, and keeps anyone else from turning up wearing it.</p>
+      </div>
+
+      <div id="authWho" hidden>
+        <p class="awho">Signed in as <b id="auWhoName">—</b></p>
+        <p class="amail" id="auWhoMail">—</p>
+        <button class="chip" id="auOut">Sign out</button>
+      </div>
+
+      <button class="chip aback" id="auBack">Back to the track</button>
     </div>
   </section>
 </div>
@@ -2656,6 +2794,11 @@ function trackKey(T){
 /* ---------- input ---------- */
 addEventListener("keydown",e=>{
   if(e.repeat)return;
+  /* Space and the arrows are swallowed below so the page cannot scroll out
+     from under the car. In a text field that means no spaces in a password
+     and no moving the cursor, so typing is left entirely alone. */
+  const t=e.target;
+  if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable))return;
   keys[e.code]=1;
   if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].indexOf(e.code)>=0)e.preventDefault();
   if(document.getElementById("drive").hidden)return;
@@ -3997,6 +4140,193 @@ function relayURL(){
   parts[0]+="-relay";
   return "wss://"+parts.join(".");
 }
+/* =====================================================================
+   ACCOUNTS
+   ===================================================================== */
+/* A username, an email and a password, and the account settles exactly one
+   thing: the name other people see on your car, and that nobody else can
+   turn up wearing it. There is no verification mail and no password reset,
+   so nothing here is written as though there were.
+   The token is the account; the relay resolves the name from it, because a
+   name the client sends is a name the client can make up. */
+const ACCT={
+  token:store.get("ad.token",null),
+  user:store.get("ad.user",null),
+  checked:store.get("ad.checked",0),
+};
+const myName=()=>(ACCT.token&&ACCT.user&&ACCT.user.name)||"You";
+
+/* Same host as the party relay, over http rather than websocket. */
+function apiBase(){ return relayURL().replace(/^ws/,"http").replace(/\/+$/,""); }
+
+async function api(path,opts){
+  opts=opts||{};
+  const ctrl=("AbortController" in window)?new AbortController():null;
+  /* The free plan sleeps when nobody is using it, and waking takes the best
+     part of a minute. Long enough to allow for that, then give up rather
+     than hang on a form for ever. */
+  const kill=setTimeout(()=>{ try{ ctrl&&ctrl.abort(); }catch(e){} },75000);
+  const headers={};
+  if(opts.body)headers["content-type"]="application/json";
+  if(opts.token)headers["authorization"]="Bearer "+opts.token;
+  let r;
+  try{
+    r=await fetch(apiBase()+path,{
+      method:opts.method||"GET",headers,
+      body:opts.body?JSON.stringify(opts.body):undefined,
+      signal:ctrl?ctrl.signal:undefined,
+    });
+  }catch(e){
+    clearTimeout(kill);
+    throw new Error((e&&e.name==="AbortError")
+      ? "The account server didn't answer. It sleeps when idle — give it a moment and try again."
+      : "Could not reach the account server. Check your connection and try again.");
+  }
+  clearTimeout(kill);
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(!r.ok) throw new Error(j.error||("Something went wrong ("+r.status+")."));
+  return j;
+}
+
+function acctSave(){
+  store.set("ad.token",ACCT.token);
+  store.set("ad.user",ACCT.user);
+  store.set("ad.checked",ACCT.checked);
+}
+function acctIn(){ return !!(ACCT.token&&ACCT.user); }
+function acctUI(){
+  const on=acctIn(), chip=$("btnAccount");
+  chip.textContent=on?ACCT.user.name:"Sign in";
+  chip.classList.toggle("on",on);
+  $("authForms").hidden=on;
+  $("authWho").hidden=!on;
+  $("auSub").textContent=on?"Your account":"Race under your own name";
+  if(on){
+    $("auWhoName").textContent=ACCT.user.name;
+    $("auWhoMail").textContent=ACCT.user.email||"";
+  }
+  netUI();                       // the roster prints whatever this is now
+}
+function acctOut(){ ACCT.token=null; ACCT.user=null; ACCT.checked=0; acctSave(); acctUI(); }
+
+/* The stored name is shown at once and confirmed afterwards. A page load
+   should not wait on a sleeping server to know your own name, and the worst
+   an expired session costs is the wrong name on screen for a moment. */
+async function acctVerify(force){
+  if(!ACCT.token)return;
+  if(!force && Date.now()-ACCT.checked < 6*3600*1000)return;
+  try{
+    const r=await api("/api/me",{token:ACCT.token});
+    ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctUI();
+  }catch(e){
+    /* Only a refusal means the session is gone. Asleep, offline or in a
+       tunnel must never sign anybody out. */
+    if(/Not signed in/i.test(e.message)) acctOut();
+  }
+}
+
+let AU_MODE="in";
+const AU_WHY={
+  in:"An account puts your own name on your car when you race other people, "+
+     "and keeps anyone else turning up wearing it.",
+  up:"Three things, and nothing else asked for. There is no verification email "+
+     "and no password reset, so pick a password you will remember.",
+};
+function auSay(msg,bad){ const e=$("auMsg"); e.textContent=msg||""; e.classList.toggle("bad",!!bad); }
+function auNote(msg,good){
+  const e=$("auNote");
+  e.textContent=msg||"";
+  e.classList.toggle("bad",!!msg&&!good);
+  e.classList.toggle("good",!!msg&&!!good);
+}
+function authTab(mode){
+  AU_MODE=mode;
+  $("tabIn").setAttribute("aria-pressed",String(mode==="in"));
+  $("tabUp").setAttribute("aria-pressed",String(mode==="up"));
+  $("auMailRow").hidden=mode!=="up";
+  /* Tells a password manager to offer a new one rather than an old one. */
+  $("auPass").setAttribute("autocomplete",mode==="up"?"new-password":"current-password");
+  $("auGo").textContent=mode==="up"?"Create account":"Sign in";
+  $("auWhy").textContent=AU_WHY[mode];
+  auSay(""); auNote("");
+}
+function showAuth(on){
+  $("auth").hidden=!on;
+  $("editor").hidden=on;
+  document.body.classList.toggle("authing",on);
+  if(on){
+    acctUI();
+    if(!acctIn()){ authTab(AU_MODE); setTimeout(()=>{ try{$("auName").focus();}catch(e){} },40); }
+  }else{
+    auSay(""); auNote("");
+    fitPad();                    // the board has the width back
+  }
+}
+
+$("btnAccount").addEventListener("click",()=>showAuth(true));
+$("auBack").addEventListener("click",()=>showAuth(false));
+$("tabIn").addEventListener("click",()=>authTab("in"));
+$("tabUp").addEventListener("click",()=>authTab("up"));
+addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("auth").hidden)showAuth(false); });
+
+/* Says whether a name is free while you are still typing it, because being
+   told on submit that the name you picked is taken means filling the form
+   in again. */
+let auCheckT=0, auCheckSeq=0;
+$("auName").addEventListener("input",()=>{
+  auSay("");
+  if(AU_MODE!=="up"){ auNote(""); return; }
+  clearTimeout(auCheckT);
+  const name=$("auName").value.trim();
+  if(!name){ auNote(""); return; }
+  const seq=++auCheckSeq;
+  auCheckT=setTimeout(async()=>{
+    try{
+      const r=await api("/api/check?name="+encodeURIComponent(name));
+      if(seq!==auCheckSeq)return;          // they have typed on since
+      auNote(r.ok?"That one's free.":r.error,r.ok);
+    }catch(e){ /* not worth a red line: submit will say for certain */ }
+  },450);
+});
+
+$("authForm").addEventListener("submit",async ev=>{
+  ev.preventDefault();
+  const up=AU_MODE==="up";
+  const username=$("auName").value.trim();
+  const email=$("auMail").value.trim();
+  const password=$("auPass").value;
+  $("auGo").disabled=true;
+  auNote("");
+  auSay(up?"Creating your account…":"Signing in…");
+  const slow=setTimeout(()=>auSay("Waking the account server — it sleeps when idle, "+
+    "so the first go can take up to a minute."),2500);
+  try{
+    const r=await api(up?"/api/signup":"/api/signin",{
+      method:"POST",
+      body:up?{username,email,password}:{username,password},
+    });
+    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave();
+    $("auPass").value="";                  // not left sitting in the DOM
+    acctUI();
+    showAuth(false);
+  }catch(e){
+    auSay(e.message,true);
+  }finally{
+    clearTimeout(slow);
+    $("auGo").disabled=false;
+  }
+});
+
+$("auOut").addEventListener("click",async()=>{
+  const t=ACCT.token;
+  acctOut();
+  authTab("in");
+  auSay("Signed out.");
+  /* Locally it is already gone; this is the server letting the session go
+     too, and it not arriving changes nothing here. */
+  try{ await api("/api/signout",{method:"POST",token:t,body:{}}); }catch(e){}
+});
+
 function netSay(msg){ $("netHint").textContent=msg; }
 function netUI(){
   const on=NET.status==="in", busy=NET.status==="opening"||NET.status==="joining";
@@ -4031,7 +4361,7 @@ function netUI(){
       s.appendChild(i); s.appendChild(document.createTextNode(name));
       bar.appendChild(s);
     };
-    pin("You",ED.opts.color,host);
+    pin(myName(),ED.opts.color,host);
     for(const [id,p] of NET.peers) pin(p.name||"Driver",p.colour,id===NET.hostId);
   }
   /* A guest's lobby is the point of their screen, so it goes to the top of
@@ -4070,7 +4400,7 @@ function netUI(){
       el.appendChild(dot); el.appendChild(b); el.appendChild(c);
       who.appendChild(el);
     };
-    row("You",ED.opts.color,ED.opts.car,host,true);
+    row(myName(),ED.opts.color,ED.opts.car,host,true);
     for(const [id,p] of NET.peers) row(p.name||"Driver",p.colour,p.car,id===NET.hostId,false);
 
     const n=NET.peers.size;
@@ -4210,7 +4540,7 @@ function netTakeTrack(d){
   netSay("Circuit received from the host.");
 }
 $("btnHost").addEventListener("click",()=>{
-  netOpen(()=>{ NET.status="joining"; netSend({t:"host",name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
+  netOpen(()=>{ NET.status="joining"; netSend({t:"host",token:ACCT.token,name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
 });
 /* In a bar the two live side by side, and a Join beside a Join party reads
    as a choice rather than as a step, so entering a code takes the space the
@@ -4226,7 +4556,7 @@ $("btnJoinGo").addEventListener("click",()=>{
   const code=($("netCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   if(code.length<4){ netSay("A party code is four characters."); return; }
   joinBox(false);
-  netOpen(()=>{ NET.status="joining"; netSend({t:"join",code,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
+  netOpen(()=>{ NET.status="joining"; netSend({t:"join",code,token:ACCT.token,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
 });
 $("lbLeave").addEventListener("click",()=>{ $("btnLeave").click(); });
 $("btnLeave").addEventListener("click",()=>{
@@ -4532,7 +4862,11 @@ $("pBack").addEventListener("click",()=>{
   pressGroup($("cars"),"car",ED.opts.car);
   solidUI();
   fsUI();
+  acctUI();                         // your own name, from the last visit
   netUI();                          // settles the screen into solo before anything else
+  /* Confirmed in the background, and only every few hours: a page load must
+     not wait on a sleeping server, nor keep one awake for no reason. */
+  setTimeout(()=>acctVerify(false),1200);
   syncSliders();
   const saved=store.get("ad.raw",null);
   ED.raw = (saved&&saved.length>8) ? saved : shapeLoop(DEFAULT_SHAPE);

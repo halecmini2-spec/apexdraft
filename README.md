@@ -33,12 +33,49 @@ machines can never disagree about a crash.
 
 The relay that carries the messages is in [`relay/`](relay/): a small
 websocket server that hands out codes and passes messages between players in
-a room. It knows nothing about racing and stores nothing — a room exists
-while someone is in it and is forgotten when the last player leaves.
+a room. It knows nothing about racing and keeps nothing about a race — a room
+exists while someone is in it and is forgotten when the last player leaves.
 
 It is deployed alongside the game by the same blueprint. The page finds it by
 name (`apexdraft` → `apexdraft-relay`), and `?relay=ws://localhost:8080`
 points it somewhere else for local work.
+
+## Accounts
+
+Optional, and they settle one thing: the name other people see on your car.
+Sign in from the bar along the top — a username, an email and a password, and
+nothing else asked for. You can host and join parties without one.
+
+The name comes from the session token rather than from the client, so a
+signed-in driver races under their own name and nobody else can turn up
+wearing it.
+
+There is **no verification email and no password reset**, and the UI says so
+where you choose a password. Passwords are hashed with scrypt and a random
+salt per account; sessions are stored as a hash of the token, so a copy of
+the database is not a set of keys to everyone's account.
+
+Accounts are the one thing here that outlives a connection, so they need
+somewhere to live:
+
+- **`DATABASE_URL` set** — Postgres. The server creates its own tables.
+  The blueprint declares a free Render database and wires this up, so
+  applying it is all that is needed.
+- **not set** — a JSON file beside the server, for local work. A free Render
+  instance has no filesystem that survives a restart, so an account made
+  there would not last the day. The server says as much at boot.
+
+Render's free Postgres expires 30 days after it is created. To keep accounts
+past that, make a database that doesn't expire — [Neon](https://neon.tech)'s
+free tier is the usual choice — and set `DATABASE_URL` on the relay by hand.
+
+To run the whole thing locally:
+
+```
+cd relay && npm install && node server.js
+```
+
+then open the game with `?relay=ws://localhost:8080`.
 
 ## Hosting
 

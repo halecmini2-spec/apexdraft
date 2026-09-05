@@ -27,9 +27,10 @@ services:
         name: Cache-Control
         value: public, max-age=0, s-maxage=30, must-revalidate
 
-  # The game itself stays static and free. Only the party relay needs a
-  # process, and all it does is pass messages between players in a room —
-  # it holds no state beyond who is currently connected.
+  # The game itself stays static and free. The relay is the only process,
+  # and it does two things: pass messages between players in a room, which
+  # it keeps nothing of, and keep accounts, which is the one thing here that
+  # has to outlive a connection.
   - type: web
     name: apexdraft-relay
     runtime: node
@@ -38,3 +39,21 @@ services:
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /health
+    envVars:
+      # Without this the server keeps accounts in a file, and a free instance
+      # has no filesystem that survives a restart — so every account would go
+      # with it. Pointing it at Postgres is what makes an account an account.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: apexdraft-db
+          property: connectionString
+
+# Free Postgres on Render expires 30 days after it is created. To keep the
+# accounts past that, make a database somewhere that doesn't expire (Neon's
+# free tier is the usual one) and set DATABASE_URL on the relay by hand —
+# the server creates its own tables wherever it is pointed.
+databases:
+  - name: apexdraft-db
+    plan: free
+    databaseName: apexdraft
+    user: apexdraft

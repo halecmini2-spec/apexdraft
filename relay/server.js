@@ -10,6 +10,14 @@
  */
 const http = require("http");
 const { WebSocketServer } = require("ws");
+const { open } = require("./store");
+const { makeAuth } = require("./auth");
+
+/* Accounts are the one thing here that does outlive a connection. The rooms
+   above still know nothing and keep nothing; all an account does is settle
+   what name goes on your car, so that it is yours and stays yours. */
+const store = open();
+const auth = makeAuth(store);
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;
@@ -40,7 +48,7 @@ const send = (ws, obj) => {
 function roomPeers(room, exceptId) {
   const out = [];
   for (const p of room.players.values()) {
-    if (p.id !== exceptId) out.push({ id: p.id, name: p.name, car: p.car, colour: p.colour });
+    if (p.id !== exceptId) out.push({ id: p.id, name: p.name, car: p.car, colour: p.colour, acct: p.acct });
   }
   return out;
 }
@@ -73,14 +81,30 @@ function leave(ws) {
 }
 
 const server = http.createServer((req, res) => {
+  let url;
+  try { url = new URL(req.url, "http://" + (req.headers.host || "localhost")); }
+  catch (e) { res.writeHead(400).end(); return; }
+
   /* A plain GET is how Render checks the service is alive, and how you can
      see at a glance that it is running. */
-  if (req.url === "/health" || req.url === "/") {
+  if (url.pathname === "/health" || url.pathname === "/") {
+    res.setHeader("Access-Control-Allow-Origin", "*");
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: wss ? wss.clients.size : 0 }));
     return;
   }
-  res.writeHead(404).end();
+
+  /* The account desk. It answers on the same service because it is the same
+     small amount of work, and because one address is one thing to wake. */
+  auth.route(req, res, url)
+    .then((handled) => { if (!handled) res.writeHead(404).end(); })
+    .catch((e) => {
+      console.error("api:", e && e.message);
+      if (res.headersSent) return;
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.writeHead(500, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "Something went wrong at our end." }));
+    });
 });
 
 const wss = new WebSocketServer({ server, maxPayload: MAX_MSG });
@@ -98,21 +122,37 @@ wss.on("connection", (ws) => {
     try { m = JSON.parse(buf); } catch (e) { return; }
     if (!m || typeof m.t !== "string") return;
     /* One unexpected message must never be able to take the relay down for
-       everyone in every room, which is exactly what the broadcast bug did. */
-    try { handle(ws, m); } catch (e) { console.error("handler:", e && e.message); }
+       everyone in every room, which is exactly what the broadcast bug did.
+       handle is a promise now — looking an account up is a round trip — so
+       a rejection has to be caught as well as a throw. */
+    try {
+      const r = handle(ws, m);
+      if (r && r.catch) r.catch((e) => console.error("handler:", e && e.message));
+    } catch (e) { console.error("handler:", e && e.message); }
   });
 
-  function handle(ws, m) {
+  /* A signed-in player races under the name on their account, and the name
+     comes from the token rather than from the message: a name you can type
+     is a name you can type somebody else's into. */
+  async function named(ws, m, fallback) {
+    let acct = null;
+    try { acct = await auth.userFor(m.token); } catch (e) { console.error("auth:", e && e.message); }
+    ws.acct = !!acct;
+    ws.name = acct ? acct.name : String(m.name || fallback).slice(0, 16);
+  }
+
+  async function handle(ws, m) {
 
     if (m.t === "host") {
       leave(ws);
       if (rooms.size >= MAX_ROOMS) return send(ws, { t: "err", m: "The relay is full — try again shortly." });
+      await named(ws, m, "Host");
+      if (ws.readyState !== 1) return;            // gone while we were looking
       const code = makeCode();
       if (!code) return send(ws, { t: "err", m: "Could not allocate a code." });
       const room = { code, hostId: ws.id, players: new Map() };
       rooms.set(code, room);
       ws.room = code;
-      ws.name = String(m.name || "Host").slice(0, 16);
       ws.car = m.car; ws.colour = m.colour;
       room.players.set(ws.id, ws);
       send(ws, { t: "hosted", code, id: ws.id });
@@ -125,13 +165,14 @@ wss.on("connection", (ws) => {
       const room = rooms.get(code);
       if (!room) return send(ws, { t: "err", m: "No party with that code." });
       if (room.players.size >= MAX_PLAYERS) return send(ws, { t: "err", m: "That party is full." });
+      await named(ws, m, "Driver");
+      if (ws.readyState !== 1) return;
       ws.room = code;
-      ws.name = String(m.name || "Driver").slice(0, 16);
       ws.car = m.car; ws.colour = m.colour;
       const peers = roomPeers(room, ws.id);
       room.players.set(ws.id, ws);
       send(ws, { t: "joined", code, id: ws.id, hostId: room.hostId, peers });
-      broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour }, ws.id);
+      broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
       /* Ask the host to re-send the circuit for the newcomer. */
       const host = room.players.get(room.hostId);
       if (host) send(host, { t: "want-track", id: ws.id });
@@ -155,8 +196,9 @@ wss.on("connection", (ws) => {
     }
     if (m.t === "meta") {
       ws.car = m.car; ws.colour = m.colour;
-      if (m.name) ws.name = String(m.name).slice(0, 16);
-      broadcast(room, { t: "meta", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour }, ws.id);
+      /* An account name is not the client's to change. */
+      if (m.name && !ws.acct) ws.name = String(m.name).slice(0, 16);
+      broadcast(room, { t: "meta", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
       return;
     }
     if (m.t === "lap") {
