@@ -537,10 +537,16 @@ body.standalone .touchonly{display:none}
   display:flex;align-items:center;flex:0 0 auto;
   margin-left:12px;padding-left:12px;border-left:1px solid var(--line-soft);
 }
+.lb-acct{gap:7px}
 .lb-acct .chip.on{color:var(--amber);border-color:var(--amber-deep)}
-body.inparty .lb-acct{display:none}
-/* The account page carries its own wordmark and is the only thing up. */
-body.authing #lobbybar{display:none}
+/* In a party the roster already says who you are. The shelf stays, though,
+   because picking a favourite circuit to race is most of the point of
+   having one — but only for the host, whose circuit it is. */
+body.inparty #btnAccount{display:none}
+body[data-mode="guest"] .lb-acct{display:none}
+/* These pages carry their own heading and are the only thing up. */
+body.authing #lobbybar,
+body.shelving #lobbybar{display:none}
 
 /* ============ the account desk ============
    A page, not a dialog. It is the only thing on the screen while it is up,
@@ -585,6 +591,42 @@ body.authing #lobbybar{display:none}
 .amail{margin:0 0 18px;font-size:11.5px;color:var(--faint)}
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 #auth .go:disabled{background:var(--raise);color:var(--faint)}
+
+/* ============ the shelf ============
+   Circuits are shapes, so the list is shapes: a name alone tells you nothing
+   about which lap it was. Each one is drawn from the points it was saved
+   with, which costs nothing and is the only label that means anything. */
+#tracks{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
+.tk-wrap{max-width:880px;margin:0 auto}
+.tk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
+.tk-head .auth-sub{margin:4px 0 0}
+.tk-save{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.tk-nameIn{
+  flex:1 1 220px;min-width:0;background:var(--panel2);border:1px solid var(--line);
+  border-radius:2px;padding:9px 11px;color:var(--ink);font-family:var(--ui);font-size:13.5px;
+}
+.tk-nameIn:focus{outline:none;border-color:var(--amber)}
+#tkMsg{margin:9px 0 4px}
+
+.tk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.tk-card{
+  background:var(--panel);border:1px solid var(--line);border-radius:3px;
+  padding:10px;display:flex;flex-direction:column;gap:8px;
+}
+.tk-card canvas{
+  width:100%;height:110px;display:block;background:var(--ground);
+  border:1px solid var(--line-soft);border-radius:2px;
+}
+.tk-name{font-size:13px;color:var(--ink);font-weight:600;letter-spacing:.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk-meta{font-size:10px;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;margin-top:-5px}
+.tk-row{display:flex;gap:7px}
+.tk-row .chip{flex:1;text-align:center;padding:6px 8px;font-size:11.5px}
+/* Deleting asks first, in the button itself: a confirm box over a game is a
+   heavier thing than the question deserves. */
+.tk-del.arm{border-color:var(--party);color:var(--party)}
+.tk-empty{padding:26px 2px;text-align:center}
+.tk-emptyLine{margin:0 0 14px;font-size:12.5px;color:var(--faint);line-height:1.6}
 
 /* ============ mobile ============
    Deliberately last in the sheet: a media query adds no specificity, so an
@@ -784,6 +826,7 @@ body.authing #lobbybar{display:none}
     </div>
 
     <div class="lb-acct" id="lbAcct">
+      <button class="chip" id="btnTracks">Tracks</button>
       <button class="chip" id="btnAccount">Sign in</button>
     </div>
   </div>
@@ -1014,6 +1057,37 @@ body.authing #lobbybar{display:none}
       </div>
 
       <button class="chip aback" id="auBack">Back to the track</button>
+    </div>
+  </section>
+
+  <!-- ===================== SAVED CIRCUITS ===================== -->
+  <!-- A saved circuit is the same thing a host sends a party: the points and
+       the settings. So the shelf is a list of those, drawn small. -->
+  <section id="tracks" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head">
+        <div>
+          <h1 class="auth-brand">Saved <span>circuits</span></h1>
+          <p class="auth-sub" id="tkSub">The ones you want to keep</p>
+        </div>
+        <button class="chip" id="tkBack">Back to the track</button>
+      </div>
+
+      <!-- saving what is on the board now -->
+      <div class="tk-save" id="tkSaveBox">
+        <input id="tkName" class="tk-nameIn" maxlength="40" placeholder="Name this circuit"
+               autocomplete="off" spellcheck="false">
+        <button class="chip go-party" id="tkSave">Save the circuit on the board</button>
+      </div>
+      <p class="amsg" id="tkMsg"></p>
+
+      <div class="tk-grid" id="tkGrid"></div>
+
+      <!-- signed out, or nothing saved yet -->
+      <div class="tk-empty" id="tkEmpty" hidden>
+        <p class="tk-emptyLine" id="tkEmptyLine">Nothing saved yet.</p>
+        <button class="chip go-party" id="tkSignIn" hidden>Sign in</button>
+      </div>
     </div>
   </section>
 </div>
@@ -3641,11 +3715,16 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden&&G.running
 /* =====================================================================
    4. THE DRAWING BOARD
    ===================================================================== */
+/* What a circuit is set to before anyone touches it, and the floor under any
+   circuit that arrives from somewhere else: a saved lap or a host's may not
+   carry every setting this build knows about, and a missing one has to come
+   out as the default rather than as undefined. */
+const OPTS0={width:12,hills:45,smooth:45,theme:"alpine",car:"gt",
+             color:"#E2482B",seed:7,banks:[]};
 const ED={
   raw:null, track:null, drawing:false, pending:null, prevRaw:null, history:[], fit:1,
   sel:null, cornerPts:[],
-  opts:store.get("ad.opts",{width:12,hills:45,smooth:45,theme:"alpine",car:"gt",
-                            color:"#E2482B",seed:7,banks:[]})
+  opts:store.get("ad.opts",Object.assign({},OPTS0))
 };
 const pad=$("pad"), pctx=pad.getContext("2d");
 let PADT={s:1,ox:0,oy:0};
@@ -4207,7 +4286,11 @@ function acctUI(){
   }
   netUI();                       // the roster prints whatever this is now
 }
-function acctOut(){ ACCT.token=null; ACCT.user=null; ACCT.checked=0; acctSave(); acctUI(); }
+function acctOut(){
+  ACCT.token=null; ACCT.user=null; ACCT.checked=0; acctSave();
+  TK.list=[]; TK.loaded=false;      // that shelf was somebody else's
+  acctUI();
+}
 
 /* The stored name is shown at once and confirmed afterwards. A page load
    should not wait on a sleeping server to know your own name, and the worst
@@ -4306,6 +4389,8 @@ $("authForm").addEventListener("submit",async ev=>{
       body:up?{username,email,password}:{username,password},
     });
     ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave();
+    TK.list=[]; TK.loaded=false;         // fetch this account's own
+
     $("auPass").value="";                  // not left sitting in the DOM
     acctUI();
     showAuth(false);
@@ -4325,6 +4410,173 @@ $("auOut").addEventListener("click",async()=>{
   /* Locally it is already gone; this is the server letting the session go
      too, and it not arriving changes nothing here. */
   try{ await api("/api/signout",{method:"POST",token:t,body:{}}); }catch(e){}
+});
+
+/* =====================================================================
+   SAVED CIRCUITS
+   ===================================================================== */
+/* What gets kept is exactly what a host sends a party — the points and the
+   settings — so a circuit off the shelf and a circuit off the wire are the
+   same thing arriving by different roads. The car and the colour are not
+   part of it: those belong to the driver, not the lap. */
+function trackData(){
+  if(!ED.raw||ED.raw.length<8)return null;
+  const raw=ED.raw.map(p=>[+p.x.toFixed(2),+p.y.toFixed(2)]);
+  const opts=Object.assign({},ED.opts);
+  delete opts.car; delete opts.color;
+  return {raw,opts};
+}
+
+const TK={list:[],loaded:false};
+function tkSay(msg,bad){ const e=$("tkMsg"); e.textContent=msg||""; e.classList.toggle("bad",!!bad); }
+
+/* Drawn from the points it was saved with. A row of names tells you nothing
+   about which lap is which; a row of shapes tells you at a glance. */
+function drawMini(cv,raw){
+  const r=cv.getBoundingClientRect();
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=Math.max(40,r.width|0), h=Math.max(30,r.height|0);
+  cv.width=w*dpr; cv.height=h*dpr;
+  const c=cv.getContext("2d");
+  c.setTransform(dpr,0,0,dpr,0,0);
+  c.clearRect(0,0,w,h);
+  if(!raw||raw.length<2)return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for(const p of raw){ if(p[0]<x0)x0=p[0]; if(p[0]>x1)x1=p[0]; if(p[1]<y0)y0=p[1]; if(p[1]>y1)y1=p[1]; }
+  const pad=10, s=Math.min((w-pad*2)/Math.max(1,x1-x0),(h-pad*2)/Math.max(1,y1-y0));
+  const ox=(w-(x1-x0)*s)/2-x0*s, oy=(h-(y1-y0)*s)/2-y0*s;
+  c.lineJoin=c.lineCap="round";
+  c.strokeStyle="#2C3D3B"; c.lineWidth=7;
+  c.beginPath();
+  raw.forEach((p,i)=>{ const X=p[0]*s+ox, Y=p[1]*s+oy; i?c.lineTo(X,Y):c.moveTo(X,Y); });
+  c.closePath(); c.stroke();
+  c.strokeStyle="#8FA3A0"; c.lineWidth=1.5; c.stroke();
+  /* where the lap starts, which is where you drew from */
+  c.fillStyle="#FFB020";
+  c.beginPath(); c.arc(raw[0][0]*s+ox,raw[0][1]*s+oy,3,0,7); c.fill();
+}
+
+function tkRender(){
+  const grid=$("tkGrid"), signedIn=acctIn();
+  grid.innerHTML="";
+  $("tkSaveBox").hidden=!signedIn;
+  $("tkSignIn").hidden=signedIn;
+  const empty=!signedIn||!TK.list.length;
+  $("tkEmpty").hidden=!empty;
+  $("tkEmptyLine").textContent=!signedIn
+    ? "Circuits are kept with your account, so they are there on whatever you next sit down at."
+    : "Nothing saved yet. Draw a lap you like, name it above, and it will be here.";
+  $("tkSub").textContent=signedIn
+    ? (TK.list.length?TK.list.length+" saved":"The ones you want to keep")
+    : "The ones you want to keep";
+  if(!signedIn)return;
+
+  TK.list.forEach(t=>{
+    const card=document.createElement("div"); card.className="tk-card";
+    const cv=document.createElement("canvas"); card.appendChild(cv);
+    const nm=document.createElement("div"); nm.className="tk-name"; nm.textContent=t.name;
+    const meta=document.createElement("div"); meta.className="tk-meta";
+    const n=t.data&&t.data.raw?t.data.raw.length:0;
+    meta.textContent=new Date(t.created).toLocaleDateString()+(n?" · "+n+" points":"");
+    const row=document.createElement("div"); row.className="tk-row";
+    const load=document.createElement("button"); load.className="chip"; load.textContent="Load";
+    const del=document.createElement("button"); del.className="chip tk-del"; del.textContent="Delete";
+    row.appendChild(load); row.appendChild(del);
+    card.appendChild(nm); card.appendChild(meta); card.appendChild(row);
+    grid.appendChild(card);
+    requestAnimationFrame(()=>drawMini(cv,t.data&&t.data.raw));
+
+    load.addEventListener("click",()=>{
+      if(!takeTrack(t.data)){ tkSay("That one wouldn't load.",true); return; }
+      /* A host swapping circuit has to take the party with them, or they
+         would be racing something nobody else has. */
+      if(NET.status==="in"&&NET.id===NET.hostId)netSendTrack();
+      $("tkName").value=t.name;
+      showTracks(false);
+      msg("Loaded “"+t.name+"”.");
+    });
+
+    /* Two presses, in the button itself. A circuit is a few minutes of
+       drawing, and a stray tap should not be able to spend them. */
+    let armed=false, armT=0;
+    del.addEventListener("click",async()=>{
+      if(!armed){
+        armed=true; del.classList.add("arm"); del.textContent="Sure?";
+        clearTimeout(armT);
+        armT=setTimeout(()=>{ armed=false; del.classList.remove("arm"); del.textContent="Delete"; },3000);
+        return;
+      }
+      clearTimeout(armT);
+      del.disabled=true; del.textContent="…";
+      try{
+        await api("/api/tracks/delete",{method:"POST",token:ACCT.token,body:{id:t.id}});
+        TK.list=TK.list.filter(x=>x.id!==t.id);
+        tkRender(); tkSay("Deleted.");
+      }catch(e){ tkSay(e.message,true); del.disabled=false; del.textContent="Delete"; }
+    });
+  });
+}
+
+async function tkLoad(force){
+  if(!acctIn()){ TK.list=[]; TK.loaded=false; tkRender(); return; }
+  if(TK.loaded&&!force){ tkRender(); return; }
+  tkSay("Fetching your circuits…");
+  try{
+    const r=await api("/api/tracks",{token:ACCT.token});
+    TK.list=r.tracks||[]; TK.loaded=true;
+    tkSay("");
+  }catch(e){ tkSay(e.message,true); }
+  tkRender();
+}
+
+function showTracks(on){
+  $("tracks").hidden=!on;
+  $("editor").hidden=on;
+  document.body.classList.toggle("shelving",on);
+  if(on){
+    tkSay("");
+    /* A name to save under, so the common case is one press: whatever you
+       last loaded, or a number that is not already on the shelf. */
+    if(!$("tkName").value.trim()&&acctIn())$("tkName").value=tkSuggest();
+    tkLoad(false);
+  }else fitPad();
+}
+function tkSuggest(){
+  const used=new Set(TK.list.map(t=>t.name.toLowerCase()));
+  for(let i=1;i<200;i++){ const n="Circuit "+i; if(!used.has(n.toLowerCase()))return n; }
+  return "Circuit";
+}
+
+$("btnTracks").addEventListener("click",()=>showTracks(true));
+$("tkBack").addEventListener("click",()=>showTracks(false));
+$("tkSignIn").addEventListener("click",()=>{ showTracks(false); showAuth(true); });
+addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("tracks").hidden)showTracks(false); });
+
+$("tkSave").addEventListener("click",async()=>{
+  const name=$("tkName").value.trim();
+  const data=trackData();
+  if(!data){ tkSay("There's no circuit on the board to save.",true); return; }
+  if(!name){ tkSay("Give it a name first.",true); $("tkName").focus(); return; }
+  /* Saving over a name replaces that circuit, so say so before doing it. */
+  const clash=TK.list.find(t=>t.name.toLowerCase()===name.toLowerCase());
+  if(clash&&!$("tkSave").dataset.armed){
+    $("tkSave").dataset.armed="1";
+    $("tkSave").textContent="Replace “"+name+"”?";
+    tkSay("You already have one by that name.");
+    setTimeout(()=>{ delete $("tkSave").dataset.armed; $("tkSave").textContent="Save the circuit on the board"; },4000);
+    return;
+  }
+  delete $("tkSave").dataset.armed;
+  $("tkSave").disabled=true; $("tkSave").textContent="Saving…";
+  tkSay("");
+  try{
+    const r=await api("/api/tracks/save",{method:"POST",token:ACCT.token,body:{name,data}});
+    TK.list=TK.list.filter(t=>t.id!==r.track.id);
+    TK.list.unshift(r.track);
+    tkRender();
+    tkSay(r.replaced?"Replaced “"+r.track.name+"”.":"Saved.");
+  }catch(e){ tkSay(e.message,true); }
+  finally{ $("tkSave").disabled=false; $("tkSave").textContent="Save the circuit on the board"; }
 });
 
 function netSay(msg){ $("netHint").textContent=msg; }
@@ -4528,16 +4780,22 @@ function netSlot(){
   ids.sort((a,b)=>(+a)-(+b));
   return Math.max(0,ids.indexOf(NET.id));
 }
-function netTakeTrack(d){
-  if(!d||!d.raw||!d.raw.length)return;
+/* Taking a circuit that was built elsewhere — over the wire from a host, or
+   off your own shelf. Both are the same act: the points and the settings
+   replace what is on the board, and your car stays yours. */
+function takeTrack(d){
+  if(!d||!d.raw||!d.raw.length)return false;
   ED.raw=d.raw.map(a=>({x:a[0],y:a[1]}));
   const keep=ED.opts.car, keepC=ED.opts.color;
-  ED.opts=Object.assign({},d.opts);
+  ED.opts=Object.assign({},OPTS0,d.opts);
   ED.opts.car=keep; ED.opts.color=keepC;      // your car stays yours
   ED.fit=1;
   rebuild(); syncSliders(); solidUI();
   pressGroup($("themes"),"theme",ED.opts.theme);
-  netSay("Circuit received from the host.");
+  return true;
+}
+function netTakeTrack(d){
+  if(takeTrack(d)) netSay("Circuit received from the host.");
 }
 $("btnHost").addEventListener("click",()=>{
   netOpen(()=>{ NET.status="joining"; netSend({t:"host",token:ACCT.token,name:"Host",car:ED.opts.car,colour:ED.opts.color}); });

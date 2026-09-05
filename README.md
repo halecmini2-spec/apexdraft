@@ -50,6 +50,24 @@ The name comes from the session token rather than from the client, so a
 signed-in driver races under their own name and nobody else can turn up
 wearing it.
 
+### Saved circuits
+
+**Tracks** in the top bar is a shelf of circuits you have kept. Name the one
+on the board and save it; load one back and it replaces what you are drawing,
+keeping your car and colour. Hosting a party and loading one sends it to
+everyone, since the circuit is the host's to set.
+
+Each is drawn from its own points in the list, because a row of names tells
+you nothing about which lap is which. Thirty per account, and saving over a
+name you have used replaces that circuit rather than leaving you two you
+can't tell apart — it asks first.
+
+They live with the account, so they are there on whatever you next sit down
+at. That also means they need one: signed out, the page says so rather than
+keeping them somewhere that won't last.
+
+### The small print
+
 There is **no verification email and no password reset**, and the UI says so
 where you choose a password. Passwords are hashed with scrypt and a random
 salt per account; sessions are stored as a hash of the token, so a copy of

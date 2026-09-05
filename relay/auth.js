@@ -127,13 +127,14 @@ function json(res, code, obj) {
   res.end(JSON.stringify(obj));
 }
 
-function readBody(req) {
+function readBody(req, max) {
+  const cap = max || MAX_BODY;
   return new Promise((resolve, reject) => {
     let n = 0;
     const parts = [];
     req.on("data", (c) => {
       n += c.length;
-      if (n > MAX_BODY) { reject(new Error("too big")); req.destroy(); return; }
+      if (n > cap) { reject(new Error("too big")); req.destroy(); return; }
       parts.push(c);
     });
     req.on("end", () => {
@@ -287,4 +288,9 @@ function makeAuth(store) {
   return { route, userFor, cors };
 }
 
-module.exports = { makeAuth, hash, verify, nameProblem, emailProblem, passProblem };
+module.exports = {
+  makeAuth, hash, verify, nameProblem, emailProblem, passProblem,
+  /* shared with the saved-circuit routes, which answer on the same server
+     and so have to answer the same way */
+  json, readBody, cors, clientIp, overRate,
+};

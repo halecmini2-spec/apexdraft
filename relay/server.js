@@ -12,12 +12,14 @@ const http = require("http");
 const { WebSocketServer } = require("ws");
 const { open } = require("./store");
 const { makeAuth } = require("./auth");
+const { makeTracks } = require("./tracks");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
    what name goes on your car, so that it is yours and stays yours. */
 const store = open();
 const auth = makeAuth(store);
+const tracks = makeTracks(store, auth.userFor);
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;
@@ -94,9 +96,11 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  /* The account desk. It answers on the same service because it is the same
-     small amount of work, and because one address is one thing to wake. */
-  auth.route(req, res, url)
+  /* The account desk, and the shelf of saved circuits beside it. They answer
+     on the same service because it is the same small amount of work, and
+     because one address is one thing to wake. */
+  const handle = url.pathname.startsWith("/api/tracks") ? tracks.route : auth.route;
+  handle(req, res, url)
     .then((handled) => { if (!handled) res.writeHead(404).end(); })
     .catch((e) => {
       console.error("api:", e && e.message);

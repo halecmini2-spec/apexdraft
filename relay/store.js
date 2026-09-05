@@ -21,13 +21,14 @@ const path = require("path");
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [] };
+  let db = { users: [], sessions: [], tracks: [] };
   let writing = null, again = false;
 
   try {
     db = JSON.parse(fs.readFileSync(file, "utf8"));
     db.users = db.users || [];
     db.sessions = db.sessions || [];
+    db.tracks = db.tracks || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -87,6 +88,27 @@ function fileStore(file) {
       if (db.sessions.length !== before) await save();
     },
     async count() { return db.users.length; },
+
+    /* Newest first, which is the order they are wanted in. */
+    async tracks(userId) {
+      return db.tracks.filter((t) => t.user_id === userId)
+                      .sort((a, b) => b.created - a.created);
+    },
+    async trackNamed(userId, lower) {
+      return db.tracks.find((t) => t.user_id === userId && t.name.toLowerCase() === lower) || null;
+    },
+    async putTrack(t) {
+      const i = db.tracks.findIndex((x) => x.id === t.id);
+      if (i >= 0) db.tracks[i] = t; else db.tracks.push(t);
+      await save();
+      return t;
+    },
+    async dropTrack(userId, id) {
+      const before = db.tracks.length;
+      db.tracks = db.tracks.filter((t) => !(t.id === id && t.user_id === userId));
+      if (db.tracks.length !== before) await save();
+      return db.tracks.length !== before;
+    },
   };
 }
 
@@ -126,6 +148,22 @@ function pgStore(url) {
           expires    BIGINT NOT NULL
         )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS sessions_expires ON sessions(expires)`);
+      /* Circuits somebody wants to keep. The data is the same shape that goes
+         down the wire to a party, held as text: the server has no reason to
+         look inside a circuit, only to hand it back. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS tracks (
+          id         TEXT PRIMARY KEY,
+          user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name       TEXT NOT NULL,
+          name_lower TEXT NOT NULL,
+          data       TEXT NOT NULL,
+          created    BIGINT NOT NULL
+        )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS tracks_user ON tracks(user_id)`);
+      /* One name, one circuit: saving over a name you have used replaces it
+         rather than leaving you two of them to tell apart. */
+      await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracks_user_name ON tracks(user_id,name_lower)`);
     },
     userByName: (lower) => one(`SELECT * FROM users WHERE name_lower=$1`, [lower]),
     userByEmail: (lower) => one(`SELECT * FROM users WHERE email_lower=$1`, [lower]),
@@ -151,6 +189,28 @@ function pgStore(url) {
     async count() {
       const r = await one(`SELECT COUNT(*)::int AS n FROM users`);
       return r ? r.n : 0;
+    },
+
+    async tracks(userId) {
+      return (await pool.query(
+        `SELECT * FROM tracks WHERE user_id=$1 ORDER BY created DESC`, [userId]
+      )).rows;
+    },
+    trackNamed: (userId, lower) =>
+      one(`SELECT * FROM tracks WHERE user_id=$1 AND name_lower=$2`, [userId, lower]),
+    async putTrack(t) {
+      await pool.query(
+        `INSERT INTO tracks (id,user_id,name,name_lower,data,created)
+         VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (user_id,name_lower)
+         DO UPDATE SET data=EXCLUDED.data, name=EXCLUDED.name, created=EXCLUDED.created`,
+        [t.id, t.user_id, t.name, t.name_lower, t.data, t.created]
+      );
+      return t;
+    },
+    async dropTrack(userId, id) {
+      const r = await pool.query(`DELETE FROM tracks WHERE user_id=$1 AND id=$2`, [userId, id]);
+      return r.rowCount > 0;
     },
   };
 }
