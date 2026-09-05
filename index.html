@@ -2695,7 +2695,12 @@ function updateCamera(dt){
     const back=(G.camMode===0?9.2:6.4)*(mob?0.72:1);
     const up  =(G.camMode===0?3.5:2.6)*(mob?0.80:1);
     const tx=CAR.x-fx*back, tz=CAR.z-fz*back;
-    const ty=Math.max(heightAt(G.T,tx,tz)+1.2,CAR.y+up);
+    /* The hint again. This samples the ground behind the car to keep the
+       camera above it, and underneath a flyover that point is as near the
+       deck as it is the road — so it would find the deck, clamp the camera
+       to seven metres up and throw the view into the underside of the
+       bridge for the moment you passed through. */
+    const ty=Math.max(heightAt(G.T,tx,tz,null,CAR.y)+1.2,CAR.y+up);
     if(!camInit){ cam.position.set(tx,ty,tz); camInit=true; }
     const k=1-Math.exp(-(6.5+speed*0.05)*dt);
     cam.position.x+=(tx-cam.position.x)*k;
