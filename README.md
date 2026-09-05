@@ -19,6 +19,23 @@ Open `index.html` in any modern browser, or host it as-is.
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
 
+## Racing other people
+
+**Host** a party and you get a four-character code. Anyone who enters it joins
+you, and the circuit you have drawn is sent to them — they don't need to draw
+anything. Everyone drives their own car on their own machine; you see each
+other live, and you drive through each other rather than colliding, so two
+machines can never disagree about a crash.
+
+The relay that carries the messages is in [`relay/`](relay/): a small
+websocket server that hands out codes and passes messages between players in
+a room. It knows nothing about racing and stores nothing — a room exists
+while someone is in it and is forgotten when the last player leaves.
+
+It is deployed alongside the game by the same blueprint. The page finds it by
+name (`apexdraft` → `apexdraft-relay`), and `?relay=ws://localhost:8080`
+points it somewhere else for local work.
+
 ## Hosting
 
 It's a single self-contained file. Drop `index.html` onto any static host

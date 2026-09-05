@@ -18,3 +18,15 @@ services:
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
+
+  # The game itself stays static and free. Only the party relay needs a
+  # process, and all it does is pass messages between players in a room —
+  # it holds no state beyond who is currently connected.
+  - type: web
+    name: apexdraft-relay
+    runtime: node
+    rootDir: relay
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health

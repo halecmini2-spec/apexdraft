@@ -79,6 +79,19 @@ button{font-family:inherit;color:inherit}
 .chip:hover{border-color:var(--faint);color:var(--ink)}
 .chip[aria-pressed="true"]{background:var(--amber-glow);border-color:var(--amber);color:var(--amber)}
 
+.codein{
+  width:100%;box-sizing:border-box;background:var(--panel2);border:1px solid var(--line);
+  border-radius:2px;padding:9px 10px;color:var(--ink);font-family:var(--mono);
+  font-size:19px;letter-spacing:.34em;text-transform:uppercase;text-align:center;
+}
+.codein:focus{outline:none;border-color:var(--amber)}
+.codeout{
+  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  background:var(--panel2);border:1px solid var(--amber-deep);border-radius:2px;
+  padding:8px 12px;margin-bottom:8px;
+}
+.codeout .k{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.codeout b{font-family:var(--mono);font-size:22px;letter-spacing:.22em;color:var(--amber)}
 .swatches{display:flex;gap:8px}
 .sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
 .sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--ground) inset}
@@ -416,6 +429,29 @@ body.touchcap .touchonly{display:block}
             <button class="chip" data-theme="alpine" aria-pressed="true">Alpine</button>
             <button class="chip" data-theme="desert">Desert</button>
             <button class="chip" data-theme="dusk">Dusk</button>
+          </div>
+        </div>
+
+        <div class="grp">
+          <h2>Party</h2>
+          <p class="hint" id="netHint">Race live with other people. The host draws
+             the circuit and shares a code.</p>
+          <div class="chips" id="netBtns">
+            <button class="chip" id="btnHost">Host</button>
+            <button class="chip" id="btnJoin">Join</button>
+          </div>
+          <div id="netJoinBox" hidden>
+            <input id="netCode" class="codein" maxlength="4" placeholder="CODE"
+                   autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <div class="chips" style="margin-top:6px">
+              <button class="chip" id="btnJoinGo">Join party</button>
+              <button class="chip" id="btnJoinCancel">Cancel</button>
+            </div>
+          </div>
+          <div id="netLive" hidden>
+            <div class="codeout"><span class="k">Code</span><b id="netShow">----</b></div>
+            <p class="hint" id="netWho">Waiting for players…</p>
+            <div class="chips"><button class="chip" id="btnLeave">Leave party</button></div>
           </div>
         </div>
 
@@ -2191,6 +2227,9 @@ function disposeTree(obj){
 function buildWorld(T){
   initRenderer();
   const TH=THEMES[T.opts.theme]||THEMES.alpine;
+  /* peers' cars live in the scene, so they go with it — drop the references
+     before it is disposed or the next frame reuses a freed mesh */
+  if(typeof NET!=="undefined") for(const p of NET.peers.values()) p.mesh=null;
   if(G.scene){ disposeTree(G.scene); }
   if(G.envMap){ G.envMap.dispose(); G.envMap=null; }   // render target, not in the graph
   const scene=new THREE.Scene();
@@ -2993,6 +3032,7 @@ function frame(now){
   if(G.acc>0.5)G.acc=0;
 
   updateCarMesh();
+  netTick(); netUpdateCars();
   if(G.smoke)updateSmoke(dt);
   updateCamera(dt);
   updateHUD(dt);
@@ -3403,6 +3443,189 @@ function onSlider(id,key,fn){
   });
 }
 onSlider("sWidth","width"); onSlider("sHills","hills"); onSlider("sSmooth","smooth");
+
+/* =====================================================================
+   PARTY
+   The relay knows nothing about racing. It hands out a code, remembers who
+   is in which room, and passes messages along; every car is simulated by
+   the machine driving it. Other players are drawn from the positions they
+   send and are not collided with, so two machines can never disagree about
+   a crash — there is nothing to disagree about.
+   ===================================================================== */
+const NET={
+  ws:null, id:null, code:null, hostId:null, peers:new Map(),
+  status:"off", sendAt:0, wantTrack:false
+};
+const NET_RATE=1000/15;              // position updates per second
+const NET_LAG=120;                   // render remote cars this far in the past
+
+/* Same host as the page by default, with the service name the blueprint
+   gives the relay. ?relay= overrides it for a local or staging server. */
+function relayURL(){
+  const q=new URLSearchParams(location.search).get("relay");
+  if(q) return q;
+  const h=location.hostname;
+  if(!h||h==="localhost"||h==="127.0.0.1") return "ws://localhost:8080";
+  /* the blueprint names the relay after the site, so apexdraft.onrender.com
+     is served by apexdraft-relay.onrender.com */
+  const parts=h.split(".");
+  parts[0]+="-relay";
+  return "wss://"+parts.join(".");
+}
+function netSay(msg){ $("netHint").textContent=msg; }
+function netUI(){
+  const on=NET.status==="in";
+  $("netBtns").hidden=on||NET.status==="joining";
+  $("netLive").hidden=!on;
+  if(on){
+    $("netShow").textContent=NET.code||"----";
+    const n=NET.peers.size;
+    $("netWho").textContent = n
+      ? n+(n===1?" other driver":" other drivers")+" · "+
+        (NET.id===NET.hostId?"you are hosting":"hosted by someone else")
+      : (NET.id===NET.hostId
+          ? "Share the code. Anyone who joins gets your circuit."
+          : "Waiting for the host's circuit…");
+  }
+}
+function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
+
+function netOpen(then){
+  if(NET.ws&&NET.ws.readyState<=1){ then&&then(); return; }
+  let url;
+  try{ url=relayURL(); }catch(e){ netSay("Could not work out the relay address."); return; }
+  netSay("Connecting…");
+  let ws;
+  try{ ws=new WebSocket(url); }catch(e){ netSay("Could not reach the party relay."); return; }
+  NET.ws=ws;
+  ws.onopen=()=>{ then&&then(); };
+  ws.onclose=()=>{
+    const wasIn=NET.status==="in";
+    NET.status="off"; NET.ws=null; NET.peers.clear(); netDropCars(); netUI();
+    netSay(wasIn?"Party ended — the connection dropped."
+                :"Race live with other people. The host draws the circuit and shares a code.");
+  };
+  ws.onerror=()=>{
+    /* The free relay sleeps when nobody has used it, so the first connection
+       of the day can take a while to answer rather than failing outright. */
+    netSay("No answer from the relay. If it has been idle it may be waking up — try again in a moment.");
+  };
+  ws.onmessage=ev=>{
+    let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+    netHandle(m);
+  };
+}
+function netHandle(m){
+  if(m.t==="err"){ netSay(m.m||"That didn't work."); NET.status="off"; netUI(); return; }
+  if(m.t==="hosted"||m.t==="joined"){
+    NET.id=m.id; NET.code=m.code; NET.status="in";
+    NET.hostId=m.t==="hosted"?m.id:m.hostId;
+    NET.peers.clear();
+    (m.peers||[]).forEach(p=>NET.peers.set(p.id,{name:p.name,car:p.car,colour:p.colour,buf:[]}));
+    if(m.t==="hosted") netSendTrack();
+    netUI();
+    return;
+  }
+  if(m.t==="peer"){ NET.peers.set(m.id,{name:m.name,car:m.car,colour:m.colour,buf:[]}); netUI(); return; }
+  if(m.t==="gone"){ netDropCar(m.id); NET.peers.delete(m.id); netUI(); return; }
+  if(m.t==="host"){ NET.hostId=m.id; netUI(); return; }
+  if(m.t==="want-track"){ netSendTrack(); return; }
+  if(m.t==="meta"){ const p=NET.peers.get(m.id); if(p){p.name=m.name;p.car=m.car;p.colour=m.colour;netDropCar(m.id);} netUI(); return; }
+  if(m.t==="track"){ netTakeTrack(m.data); return; }
+  if(m.t==="state"){
+    const p=NET.peers.get(m.id); if(!p)return;
+    p.buf.push({t:performance.now(),p:m.p});
+    if(p.buf.length>4)p.buf.shift();
+    return;
+  }
+}
+function netSendTrack(){
+  if(NET.id!==NET.hostId||!ED.raw)return;
+  /* Points rounded to the whole pad unit: the circuit is metres wide, and it
+     roughly halves what goes down the wire. */
+  const raw=ED.raw.map(p=>[Math.round(p.x),Math.round(p.y)]);
+  netSend({t:"track",data:{raw,opts:ED.opts}});
+}
+function netTakeTrack(d){
+  if(!d||!d.raw||!d.raw.length)return;
+  ED.raw=d.raw.map(a=>({x:a[0],y:a[1]}));
+  const keep=ED.opts.car, keepC=ED.opts.color;
+  ED.opts=Object.assign({},d.opts);
+  ED.opts.car=keep; ED.opts.color=keepC;      // your car stays yours
+  ED.fit=1;
+  rebuild(); syncSliders();
+  pressGroup($("themes"),"theme",ED.opts.theme);
+  netSay("Circuit received from the host.");
+}
+$("btnHost").addEventListener("click",()=>{
+  netOpen(()=>{ NET.status="joining"; netSend({t:"host",name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
+});
+$("btnJoin").addEventListener("click",()=>{ $("netJoinBox").hidden=false; $("netCode").focus(); });
+$("btnJoinCancel").addEventListener("click",()=>{ $("netJoinBox").hidden=true; });
+$("btnJoinGo").addEventListener("click",()=>{
+  const code=($("netCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  if(code.length<4){ netSay("A party code is four characters."); return; }
+  $("netJoinBox").hidden=true;
+  netOpen(()=>{ NET.status="joining"; netSend({t:"join",code,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
+});
+$("btnLeave").addEventListener("click",()=>{
+  netSend({t:"bye"});
+  if(NET.ws)NET.ws.close();
+});
+
+/* ---- other people's cars ----
+   One mesh per peer, built the first time they are heard from and thrown
+   away when they leave. Positions arrive about fifteen times a second, so
+   they are played back a fraction behind live and interpolated between the
+   last two — the alternative is a car that teleports on every packet. */
+function netDropCar(id){
+  const p=NET.peers.get(id);
+  if(p&&p.mesh){ if(G.scene)G.scene.remove(p.mesh); disposeTree(p.mesh); p.mesh=null; }
+}
+function netDropCars(){ for(const id of NET.peers.keys()) netDropCar(id); }
+function netUpdateCars(){
+  if(!G.scene)return;
+  const now=performance.now()-NET_LAG;
+  for(const [id,p] of NET.peers){
+    if(!p.buf.length)continue;
+    if(!p.mesh){
+      p.mesh=buildCar(p.colour||"#8FA3A0",p.car||"gt");
+      p.mesh.traverse(o=>{ if(o.isMesh){o.castShadow=true;} });
+      G.scene.add(p.mesh);
+    }
+    let a=p.buf[0], b=p.buf[p.buf.length-1];
+    for(let i=0;i<p.buf.length-1;i++){
+      if(p.buf[i].t<=now&&p.buf[i+1].t>=now){ a=p.buf[i]; b=p.buf[i+1]; break; }
+    }
+    const span=Math.max(1,b.t-a.t);
+    const u=clamp((now-a.t)/span,0,1);
+    const A=a.p, B=b.p;
+    p.mesh.position.set(lerp(A[0],B[0],u),lerp(A[1],B[1],u),lerp(A[2],B[2],u));
+    let dy=B[3]-A[3];
+    while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU;   // never spin the long way
+    p.mesh.rotation.order="YXZ";
+    p.mesh.rotation.y=A[3]+dy*u;
+    p.mesh.rotation.x=lerp(A[4],B[4],u);
+    p.mesh.rotation.z=lerp(A[5],B[5],u);
+    const w=p.mesh.userData.wheels, sp=p.mesh.userData.spin||1;
+    if(w){ const st=-lerp(A[6],B[6],u)*0.44;
+      for(let i=0;i<4;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<2?st:0;
+        w[i].rotation.x=lerp(A[7],B[7],u)*sp; } }
+  }
+}
+function netTick(){
+  if(NET.status!=="in")return;
+  const now=performance.now();
+  if(now-NET.sendAt<NET_RATE)return;
+  NET.sendAt=now;
+  const c=G.car;
+  netSend({t:"state",p:[
+    +CAR.x.toFixed(2),+CAR.y.toFixed(2),+CAR.z.toFixed(2),
+    +CAR.yaw.toFixed(3),
+    +(c?c.rotation.x:0).toFixed(3), +(c?c.rotation.z:0).toFixed(3),
+    +CAR.steer.toFixed(2), +CAR.wheelSpin.toFixed(2)
+  ]});
+}
 
 /* ---- corner banking ---- */
 $("sBank").addEventListener("input",()=>{
