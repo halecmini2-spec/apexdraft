@@ -143,13 +143,43 @@ button{font-family:inherit;color:inherit}
   font-size:19px;letter-spacing:.34em;text-transform:uppercase;text-align:center;
 }
 .codein:focus{outline:none;border-color:var(--amber)}
+/* ---- party ----
+   In a lobby the panel turns red. It is the one state where what you do
+   affects other people, and it should not look like every other setting. */
+:root{--party:#FF4B3A; --party-deep:#8E2418; --party-glow:rgba(255,75,58,.14)}
 .codeout{
-  display:flex;align-items:baseline;justify-content:space-between;gap:10px;
-  background:var(--panel2);border:1px solid var(--amber-deep);border-radius:2px;
-  padding:8px 12px;margin-bottom:8px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:linear-gradient(180deg,rgba(255,75,58,.10),rgba(255,75,58,.03));
+  border:1px solid var(--party-deep);border-radius:3px;
+  padding:9px 12px 11px;margin-bottom:9px;
 }
-.codeout .k{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
-.codeout b{font-family:var(--mono);font-size:22px;letter-spacing:.22em;color:var(--amber)}
+.codeout .k{font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+.codeout b{
+  font-family:var(--mono);font-size:30px;line-height:1.05;letter-spacing:.26em;
+  color:var(--party);text-indent:.26em;   /* the tracking pushes it off-centre */
+  text-shadow:0 0 18px rgba(255,75,58,.35);
+}
+/* who else is here, in the colour of the car they are driving */
+.whos{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.who{
+  display:flex;align-items:center;gap:5px;background:var(--panel2);
+  border:1px solid var(--line);border-radius:999px;padding:3px 9px 3px 5px;
+  font-size:11px;color:var(--dim);max-width:100%;
+}
+.who i{width:9px;height:9px;border-radius:50%;flex:0 0 9px;box-shadow:0 0 0 1px rgba(0,0,0,.5) inset}
+.who b{font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who.me{border-color:var(--party-deep);background:var(--party-glow)}
+/* a lobby is live, and says so */
+.livedot{
+  display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--party);
+  margin-left:5px;vertical-align:middle;box-shadow:0 0 0 3px rgba(255,75,58,.18);
+  animation:pulse 1.9s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+/* while you are in one, the party controls follow the same red */
+body.inparty #solidBox .chip{border-color:var(--party-deep);color:#F0B7AF}
+body.inparty #solidBox .chip:hover{border-color:var(--party);color:var(--ink)}
+body.inparty #netHint{color:#C79289}
 .swatches{display:flex;gap:8px}
 .sw{width:30px;height:30px;border-radius:50%;border:2px solid var(--line);cursor:pointer;padding:0}
 .sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 3px var(--ground) inset}
@@ -407,6 +437,13 @@ body.standalone .touchonly{display:none}
   .hint{font-size:11px;line-height:1.35}
   .chip{padding:6px 8px;font-size:11px}
   .touchonly2{display:inline-block}
+  /* the party panel earns its space, but not that much of it */
+  .codeout{padding:6px 10px 8px;margin-bottom:7px}
+  .codeout b{font-size:25px;letter-spacing:.2em;text-indent:.2em}
+  .codeout .k{font-size:8px}
+  .whos{gap:4px;margin-bottom:6px}
+  .who{font-size:10px;padding:2px 7px 2px 4px;gap:4px}
+  .who i{width:8px;height:8px;flex:0 0 8px}
   /* Pinned rather than inherited from the pointer:coarse block above, so the
      height the rail has to fit is the same number on every phone. Still a
      comfortable grab: the thumb alone is 20px and the whole row is live. */
@@ -525,7 +562,7 @@ body.standalone .touchonly{display:none}
         </div>
 
         <div class="grp">
-          <h2>Party</h2>
+          <h2>Party <span class="livedot" id="netDot" hidden></span></h2>
           <p class="hint" id="netHint">Race live with other people. The host draws
              the circuit and shares a code.</p>
           <div class="chips" id="netBtns">
@@ -541,7 +578,11 @@ body.standalone .touchonly{display:none}
             </div>
           </div>
           <div id="netLive" hidden>
-            <div class="codeout"><span class="k">Code</span><b id="netShow">----</b></div>
+            <div class="codeout">
+              <span class="k">Party code</span>
+              <b id="netShow">----</b>
+            </div>
+            <div class="whos" id="netWhos"></div>
             <p class="hint" id="netWho">Waiting for players…</p>
             <div class="chips" id="solidBox">
               <button class="chip" id="btnSolid">Contact <span class="s" id="solidState">Off</span></button>
@@ -3775,14 +3816,36 @@ function netUI(){
   $("netBtns").hidden=on;
   $("btnHost").disabled=busy; $("btnJoin").disabled=busy;
   $("netLive").hidden=!on;
+  $("netDot").hidden=!on;
+  $("netHint").hidden=on;        // the status line below says it better
+  document.body.classList.toggle("inparty",on);
   if(on){
     $("netShow").textContent=NET.code||"----";
+    /* Everyone in the room as a chip in the colour of the car they are
+       driving, so the grid you are about to line up on is legible before you
+       get there — and so a name is attached to whoever just went past. */
+    const who=$("netWhos");
+    who.innerHTML="";
+    const chip=(name,colour,me)=>{
+      const el=document.createElement("span");
+      el.className="who"+(me?" me":"");
+      const dot=document.createElement("i");
+      dot.style.background=colour||"#8FA3A0";
+      const b=document.createElement("b");
+      b.textContent=name;
+      el.appendChild(dot); el.appendChild(b);
+      who.appendChild(el);
+    };
+    chip(NET.id===NET.hostId?"You (host)":"You",ED.opts.color,true);
+    for(const p of NET.peers.values()) chip(p.name||"Driver",p.colour,false);
+
     const n=NET.peers.size;
     $("netWho").textContent = n
-      ? n+(n===1?" other driver":" other drivers")+" · "+
-        (NET.id===NET.hostId?"you are hosting":"hosted by someone else")
+      ? (NET.id===NET.hostId
+          ? "They have your circuit. Drive when you're ready."
+          : "On the host's circuit. Drive when you're ready.")
       : (NET.id===NET.hostId
-          ? "Share the code. Anyone who joins gets your circuit."
+          ? "Share the code — whoever joins gets your circuit."
           : "Waiting for the host's circuit…");
   }
 }
@@ -3839,6 +3902,10 @@ function netOpen(then){
 function netHandle(m){
   if(m.t==="err"){ netSay(m.m||"That didn't work."); NET.status="off"; netUI(); return; }
   if(m.t==="hosted"||m.t==="joined"){
+    /* a party adds a code, a roster and a status line to a rail that was
+       already full, so bring it into view rather than leaving it to be
+       found by scrolling */
+    setTimeout(()=>{ try{ $("netLive").scrollIntoView({block:"nearest",behavior:"smooth"}); }catch(e){} },60);
     NET.id=m.id; NET.code=m.code; NET.status="in";
     NET.hostId=m.t==="hosted"?m.id:m.hostId;
     NET.peers.clear();
