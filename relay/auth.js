@@ -188,6 +188,14 @@ function makeAuth(store) {
 
     if (req.method === "OPTIONS") { cors(res); res.writeHead(204).end(); return true; }
 
+    /* Said once, here, rather than as a 500 on whichever query happened to
+       run first. The rest of the game is unaffected, so say that too. */
+    if (store.ready === false) {
+      return json(res, 503, {
+        error: "Accounts are unavailable just now. You can still host and join a party.",
+      }), true;
+    }
+
     const ip = clientIp(req);
 
     /* --- is this username free? --- */

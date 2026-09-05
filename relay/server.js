@@ -230,4 +230,31 @@ setInterval(() => {
   }
 }, 20_000);
 
+/* The tables have to be made before the first request can use them, and
+   nothing was making them: every signup answered 500 because users did not
+   exist. The store is not ready until this has run, and the account desk
+   says so plainly rather than blaming the request.
+
+   Parties do not touch the store at all, so the server listens either way. A
+   database that is slow to come up, or down altogether, must not take the
+   racing down with it — and Render's health check needs an answer regardless. */
+store.ready = false;
+(async () => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await store.init();
+      store.ready = true;
+      console.log("accounts ready (" + store.kind + ")");
+      return;
+    } catch (e) {
+      console.error("account store attempt " + attempt + ":", e && e.message);
+      if (attempt >= 5) {
+        console.error("Accounts are unavailable. Parties still work.");
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
+  }
+})();
+
 server.listen(PORT, () => console.log("apexdraft relay listening on " + PORT));
