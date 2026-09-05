@@ -3615,6 +3615,15 @@ function netUpdateCars(){
   const now=performance.now()-NET_LAG;
   for(const [id,p] of NET.peers){
     if(!p.buf.length)continue;
+    /* A player whose connection simply dies is not reported gone until the
+       relay's keepalive notices, which can take the better part of a minute.
+       Rather than leave their car parked on the racing line, take it away
+       once it has stopped saying anything — if they come back, the next
+       packet builds it again. */
+    if(performance.now()-p.buf[p.buf.length-1].t>4000){
+      if(p.mesh) netDropCar(id);
+      continue;
+    }
     if(!p.mesh){
       p.mesh=buildCar(p.colour||"#8FA3A0",p.car||"gt");
       p.mesh.traverse(o=>{ if(o.isMesh){o.castShadow=true;} });
