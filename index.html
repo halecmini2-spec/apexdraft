@@ -21,6 +21,15 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
+/* The notch and the home bar. viewport-fit=cover puts the page under them
+   deliberately, so the picture reaches every edge — but anything you need to
+   read or press has to be kept out from under the glass. */
+:root{
+  --sal:env(safe-area-inset-left,0px);
+  --sar:env(safe-area-inset-right,0px);
+  --sat:env(safe-area-inset-top,0px);
+  --sab:env(safe-area-inset-bottom,0px);
+}
 :root{
   --ground:#0A0F10; --panel:#111A1B; --panel2:#162122; --raise:#1B2829;
   --line:#22302F; --line-soft:#1A2526;
@@ -79,6 +88,10 @@ button{font-family:inherit;color:inherit}
 .rail{
   width:322px;flex:0 0 322px;background:var(--panel);
   border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;
+  /* The rail is against the left edge, which in one of the two landscape
+     orientations is exactly where the notch is. Pad it out from under the
+     glass rather than letting the controls hide behind it. */
+  padding-left:var(--sal);
 }
 /* The settings stay beside the board at every size — stacking them under it
    cost the board its height and pushed the controls off screen. Narrow the
@@ -190,7 +203,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
   background:#2A1210;border:1px solid #E2482B;color:#FFD9D1;border-radius:2px;
   padding:11px 16px;font:400 12.5px/1.55 var(--ui, sans-serif)}
 .board-tools{
-  position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:2;flex-wrap:wrap;justify-content:flex-end;
+  position:absolute;top:calc(14px + var(--sat));right:calc(14px + var(--sar));display:flex;gap:6px;z-index:2;flex-wrap:wrap;justify-content:flex-end;
 }
 .tool{
   background:rgba(17,26,27,.9);border:1px solid var(--line);color:var(--dim);
@@ -222,7 +235,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums}
 .hud > *{pointer-events:none}
 
-.tower{position:absolute;left:16px;top:16px;min-width:186px}
+.tower{position:absolute;left:calc(16px + var(--sal));top:calc(16px + var(--sat));min-width:186px}
 .tower .row{
   display:flex;justify-content:space-between;align-items:baseline;gap:14px;
   background:rgba(9,14,15,.82);border-left:2px solid var(--line);
@@ -245,7 +258,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .sec.green{border-top-color:var(--green)} .sec.green .t{color:var(--green)}
 .sec.amber{border-top-color:var(--amber)} .sec.amber .t{color:var(--amber)}
 
-.speedo{position:absolute;right:18px;bottom:18px;text-align:right}
+.speedo{position:absolute;right:calc(18px + var(--sar));bottom:calc(18px + var(--sab));text-align:right}
 .speedo .n{
   font-family:var(--mono);font-size:62px;font-weight:600;line-height:.86;letter-spacing:-.04em;
   color:var(--ink);text-shadow:0 2px 18px rgba(0,0,0,.6)}
@@ -257,7 +270,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 
 /* Right-hand side on everything, the same square in the same place, so the
    glance is the same movement whichever screen it is. */
-.mapbox{position:absolute;right:16px;bottom:16px;background:rgba(9,14,15,.78);
+.mapbox{position:absolute;right:calc(16px + var(--sar));bottom:calc(16px + var(--sab));background:rgba(9,14,15,.78);
   border:1px solid var(--line);padding:7px;backdrop-filter:blur(4px)}
 #minimap{display:block;width:150px;height:150px}
 
@@ -279,7 +292,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .lights i{width:26px;height:26px;border-radius:50%;background:#1A0B0B;border:2px solid #2A1414;display:block}
 .lights i.lit{background:var(--red);border-color:#FF7B60;box-shadow:0 0 18px rgba(226,72,43,.8)}
 
-.keys{position:absolute;right:18px;top:16px;text-align:right;font-size:10.5px;color:var(--faint);letter-spacing:.06em;line-height:1.8}
+.keys{position:absolute;right:calc(18px + var(--sar));top:calc(16px + var(--sat));text-align:right;font-size:10.5px;color:var(--faint);letter-spacing:.06em;line-height:1.8}
 .keys kbd{font-family:var(--mono);background:rgba(22,33,34,.9);border:1px solid var(--line);
   border-radius:2px;padding:1px 5px;color:var(--dim);font-size:10px}
 
@@ -297,26 +310,29 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
    with a thumb on the throttle and a thumb on the steering only one of them
    ever lit up. This follows the state the car is actually being given. */
 .touch button.held{background:rgba(255,176,32,.34);border-color:var(--amber);color:var(--amber)}
-#tLeft,#tRight,#tBrake,#tGas{bottom:24px;width:98px;height:98px;border-radius:50%;font-size:24px}
-#tLeft{left:20px}  #tRight{left:130px}
-#tBrake{right:130px;font-size:13px} #tGas{right:20px;font-size:13px}
-#tMenu{left:50%;transform:translateX(-50%);top:10px;width:52px;height:34px;
+#tLeft,#tRight,#tBrake,#tGas{bottom:calc(24px + var(--sab));width:98px;height:98px;border-radius:50%;font-size:24px}
+#tLeft{left:calc(20px + var(--sal))}  #tRight{left:calc(130px + var(--sal))}
+#tBrake{right:calc(130px + var(--sar));font-size:13px} #tGas{right:calc(20px + var(--sar));font-size:13px}
+#tMenu{left:50%;transform:translateX(-50%);top:calc(10px + var(--sat));width:52px;height:34px;
   border-radius:8px;font-size:15px}
 body.touchmode .touch{display:block}
 body.touchmode .keys{display:none}
 /* clear the bottom of the screen for thumbs — HUD moves to the top */
-body.touchmode .speedo{bottom:auto;top:12px;right:14px}
+body.touchmode .speedo{bottom:auto;top:calc(12px + var(--sat));right:calc(14px + var(--sar))}
 body.touchmode .speedo .n{font-size:44px}
 /* below the speedo, clear of the pedals in the bottom corners */
-body.touchmode .mapbox{top:100px;bottom:auto;left:auto;right:14px;padding:5px}
+body.touchmode .mapbox{top:calc(100px + var(--sat));bottom:auto;left:auto;right:calc(14px + var(--sar));padding:5px}
 body.touchmode #minimap{width:118px;height:118px}
 body.touchmode .tower{transform:scale(.86);transform-origin:top left}
 @media (max-height:430px){
-  #tLeft,#tRight,#tBrake,#tGas{width:84px;height:84px;bottom:16px}
-  #tLeft{left:14px} #tRight{left:106px} #tBrake{right:106px} #tGas{right:14px}
+  /* these override the base positions, so they have to carry the insets too
+     or a landscape phone puts the steering under its own notch */
+  #tLeft,#tRight,#tBrake,#tGas{width:84px;height:84px;bottom:calc(16px + var(--sab))}
+  #tLeft{left:calc(14px + var(--sal))} #tRight{left:calc(106px + var(--sal))}
+  #tBrake{right:calc(106px + var(--sar))} #tGas{right:calc(14px + var(--sar))}
   /* small, not gone: knowing the next corner matters more on the screen
      with the least room for it */
-  body.touchmode .mapbox{top:86px;bottom:auto;right:12px;padding:4px}
+  body.touchmode .mapbox{top:calc(86px + var(--sat));bottom:auto;right:calc(12px + var(--sar));padding:4px}
   body.touchmode #minimap{width:92px;height:92px}
 }
 .touchonly2{display:none}
