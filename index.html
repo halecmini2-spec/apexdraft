@@ -106,12 +106,6 @@ button{font-family:inherit;color:inherit}
      board gets the whole screen on a phone held sideways */
   body.railoff .rail{display:none}
 }
-.brand{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:baseline}
-.brand h1{
-  margin:0;font-size:19px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-}
-.brand h1 span{color:var(--amber)}
-.brand small{font-family:var(--mono);font-size:10px;color:var(--faint);letter-spacing:.08em}
 
 .rail-scroll{flex:1;min-height:0;overflow-y:auto;padding:6px 20px 12px}
 .rail-scroll::-webkit-scrollbar{width:8px}
@@ -181,6 +175,10 @@ button{font-family:inherit;color:inherit}
 }
 .lb-brand{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
 .lb-brand span{color:var(--amber)}
+/* The rail used to carry the wordmark and the version. It only ever showed
+   them when you were alone, and the bar is there when you are alone now. */
+.lb-ver{font-family:var(--mono);font-size:9.5px;color:var(--faint);letter-spacing:.08em;margin-left:-8px}
+body.inparty .lb-ver{display:none}
 .lb-role{
   font-size:9px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;
   color:var(--party);border:1px solid var(--party-deep);border-radius:2px;
@@ -234,9 +232,39 @@ button{font-family:inherit;color:inherit}
    whichever of the three jobs is in front of you. Nothing is duplicated: the
    sliders, the car chips and the board are the same elements in all three. */
 
-/* SOLO — the track is the job. The party is one button until it is not. */
-body[data-mode="solo"] #lobbybar{display:none}
+/* SOLO — the track is the job, and the bar is the one strip of the screen
+   that is not about drawing it. The party lives there: same place every
+   time, reading as an invitation rather than as another track setting. */
+body[data-mode="solo"] #lobbybar{
+  background:linear-gradient(180deg,rgba(255,176,32,.055),rgba(10,15,16,0));
+  border-bottom-color:var(--line);
+}
+body[data-mode="solo"] .lb-role,
+body[data-mode="solo"] .lb-roster,
+body[data-mode="solo"] .lb-code,
+body[data-mode="solo"] .lb-count,
+body[data-mode="solo"] #lbLeave,
+body[data-mode="solo"] .grp-lobby{display:none}
 body[data-mode="solo"] #netLive{display:none}
+/* Taken up: in a lobby the invitation is the lobby. */
+body.inparty .lb-party{display:none}
+
+.lb-party{display:flex;align-items:center;gap:11px;margin-left:auto;min-width:0}
+.lb-party .hint{margin:0;text-align:right;max-width:46vw;font-size:11.5px;line-height:1.35}
+.lb-party .chips{margin:0;flex:0 0 auto}
+.lb-party #netJoinBox{display:flex;align-items:center;gap:9px}
+/* A code typed into a bar, not a panel: same font, a third of the height. */
+.lb-party .codein{width:112px;padding:6px 8px;font-size:15px;letter-spacing:.26em;text-indent:.26em}
+.lb-party .joingo{margin-top:0}
+/* The one button that opens a door the game does not otherwise have, so it
+   is allowed to look like a door rather than like a checkbox. */
+.chip.go-party{border-color:var(--amber-deep);color:var(--amber);background:var(--amber-glow)}
+.chip.go-party:hover{background:var(--amber);border-color:var(--amber);color:#120E04}
+.chip.go-party:disabled:hover{background:var(--amber-glow);border-color:var(--amber-deep);color:var(--amber)}
+
+/* Racing is not the moment to be reminded whose party it is: the bar would
+   sit across the top of the track, which is the last place there is room. */
+body.driving #lobbybar{display:none}
 
 /* GUEST — the host owns the circuit, so everything that edits one goes away
    rather than sitting there greyed out and inviting a try. */
@@ -246,13 +274,11 @@ body[data-mode="guest"] .grp-env,
 body[data-mode="guest"] .grp-intro,
 body[data-mode="guest"] .board-tools{display:none}
 body[data-mode="guest"] #pad{cursor:default}
-body[data-mode="guest"] .brand{display:none}          /* the bar carries it */
 /* their circuit is a picture, so give it more of the screen than an editor
    needs — there is nothing on the left to reach for */
 body[data-mode="guest"] .rail{width:clamp(210px,26vw,300px);flex:0 0 clamp(210px,26vw,300px)}
 
 /* HOST — the editor in full, with the lobby beside it. */
-body[data-mode="host"] .brand{display:none}
 body[data-mode="host"] .go{background:var(--party);color:#1A0603}
 body[data-mode="host"] .go:hover{background:#FF6553}
 
@@ -507,8 +533,6 @@ body.standalone .touchonly{display:none}
    Deliberately last in the sheet: a media query adds no specificity, so an
    override placed above the rule it targets simply loses. */
 @media (max-width:860px){
-  .brand{padding:12px 13px 10px;gap:8px}
-  .brand h1{font-size:16px;letter-spacing:.1em}
   .rail-scroll{padding:4px 13px 10px}
   .rail-foot{padding:11px 13px 13px}
   /* The stats floated over the board, the scarcest space on a phone. */
@@ -554,7 +578,6 @@ body.standalone .touchonly{display:none}
    there is width to spare in landscape, only height is scarce. */
 @media (max-width:860px) and (max-height:560px){
   .rail{width:min(46vw,404px);flex:0 0 min(46vw,404px)}
-  .brand{display:none}
   .grp-intro{display:none}
   .rail-scroll{column-count:2;column-gap:14px;padding:6px 12px 8px}
   .grp{padding:5px 0;break-inside:avoid;-webkit-column-break-inside:avoid}
@@ -585,7 +608,11 @@ body.standalone .touchonly{display:none}
 @media (max-width:600px){
   .lb-count{display:none}
   .lb-code .k{display:none}
-  #lobbybar{gap:10px}
+  #lobbybar{gap:10px;flex-wrap:wrap}
+  /* Wrap rather than truncate. The status line is where a failed join says
+     why, and a phone is exactly where you cannot afford to lose that. */
+  .lb-party{flex-wrap:wrap;justify-content:flex-end;gap:7px}
+  .lb-party .hint{max-width:100%}
 }
 @media (max-width:860px){
   body.inparty #netLive .codeout,
@@ -599,8 +626,11 @@ body.standalone .touchonly{display:none}
    worth more than making it twice. */
 @media (max-width:860px) and (max-height:560px){
   #lobbybar{padding-top:4px;padding-bottom:4px;gap:10px}
-  .lb-brand{display:none}
+  .lb-brand,.lb-ver{display:none}
   .lb-code b{font-size:17px}
+  /* the invitation keeps its full width once the wordmark has stood down */
+  .lb-party .hint{max-width:52vw;font-size:11px}
+  .lb-party .chip{padding:5px 9px;font-size:11px}
   /* body.touchcap .touchonly is what shows this, and that outranks a bare
      .foot-note.touchonly however far down the sheet it sits. */
   body.touchcap .foot-note.touchonly{display:none}
@@ -634,11 +664,14 @@ body.standalone .touchonly{display:none}
 </script>
 <div id="app">
   <!-- ===================== EDITOR ===================== -->
-  <!-- Only in a lobby. It carries what a lobby makes you care about: which
-       role you are, the code you are reading out, and how many of you there
-       are. Solo never sees it and keeps the wordmark in the rail. -->
+  <!-- Always there. In a lobby it carries what a lobby makes you care about:
+       which role you are, the code you are reading out, and how many of you
+       there are. Alone it carries the way into one, which is the one thing
+       that was impossible to find at the bottom of a column of sliders,
+       looking like another setting. -->
   <div id="lobbybar" hidden>
     <span class="lb-brand">Apex<span>Draft</span></span>
+    <small class="lb-ver">v4.0</small>
     <span class="lb-role" id="lbRole">Host</span>
     <!-- the grid at a glance, so a host building a circuit can see who has
          turned up without leaving the tools to go and look -->
@@ -646,14 +679,30 @@ body.standalone .touchonly{display:none}
     <div class="lb-code"><span class="k">Lobby code</span><b id="lbCode">----</b></div>
     <span class="lb-count" id="lbCount">1 driver</span>
     <button class="chip" id="lbLeave">Leave lobby</button>
+
+    <!-- Solo only. netHint is the status line as well as the invitation, so
+         it has to travel with the buttons: connecting, the relay waking up,
+         and every reason a join failed are all said here. Leaving it behind
+         in the rail is how you get a button that does nothing visible. -->
+    <div class="lb-party" id="lbParty">
+      <p class="hint" id="netHint">Race live with other people</p>
+      <div class="chips" id="netBtns">
+        <button class="chip go-party" id="btnHost">Host a party</button>
+        <button class="chip" id="btnJoin">Join</button>
+      </div>
+      <div id="netJoinBox" hidden>
+        <input id="netCode" class="codein" maxlength="4" placeholder="CODE"
+               autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <div class="chips joingo">
+          <button class="chip go-party" id="btnJoinGo">Join party</button>
+          <button class="chip" id="btnJoinCancel">Cancel</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <section id="editor" class="screen">
     <aside class="rail">
-      <div class="brand">
-        <h1>Apex<span>Draft</span></h1>
-        <small>v4.0</small>
-      </div>
       <div class="rail-scroll">
         <!-- One line, not four. The board prints the rest as you draw, and
              every row given back here is a row of car selection above the
@@ -705,22 +754,10 @@ body.standalone .touchonly{display:none}
           </div>
         </div>
 
+        <!-- What is left once the invitation has moved to the bar: the things
+             you only have once you are in a party. -->
         <div class="grp grp-lobby" id="grpLobby">
           <h2>Party <span class="livedot" id="netDot" hidden></span></h2>
-          <p class="hint" id="netHint">Race live with other people. The host draws
-             the circuit and shares a code.</p>
-          <div class="chips" id="netBtns">
-            <button class="chip" id="btnHost">Host</button>
-            <button class="chip" id="btnJoin">Join</button>
-          </div>
-          <div id="netJoinBox" hidden>
-            <input id="netCode" class="codein" maxlength="4" placeholder="CODE"
-                   autocomplete="off" autocapitalize="characters" spellcheck="false">
-            <div class="chips" style="margin-top:6px">
-              <button class="chip" id="btnJoinGo">Join party</button>
-              <button class="chip" id="btnJoinCancel">Cancel</button>
-            </div>
-          </div>
           <div id="netLive" hidden>
             <div class="codeout">
               <span class="k">Party code</span>
@@ -3933,10 +3970,12 @@ function fsUI(){
    ===================================================================== */
 const NET={
   ws:null, id:null, code:null, hostId:null, peers:new Map(),
-  status:"off", sendAt:0, wantTrack:false
+  status:"off", sendAt:0, wantTrack:false, left:false
 };
 const PUBLIC_RELAY="wss://apexdraft-relay.onrender.com";
-const NET_IDLE="Race live with other people. The host draws the circuit and shares a code.";
+/* Sits in a bar an inch high now, so it says the offer and stops. What
+   hosting means is one press away and obvious once you are there. */
+const NET_IDLE="Race live with other people";
 const NET_RATE=1000/15;              // position updates per second
 const NET_LAG=120;                   // render remote cars this far in the past
 
@@ -3961,7 +4000,7 @@ function relayURL(){
 function netSay(msg){ $("netHint").textContent=msg; }
 function netUI(){
   const on=NET.status==="in", busy=NET.status==="opening"||NET.status==="joining";
-  $("netBtns").hidden=on;
+  $("netBtns").hidden=on||!$("netJoinBox").hidden;
   $("btnHost").disabled=busy; $("btnJoin").disabled=busy;
   $("netLive").hidden=!on;
   $("netDot").hidden=!on;
@@ -3975,7 +4014,10 @@ function netUI(){
   const mode=!on?"solo":(host?"host":"guest");
   document.body.dataset.mode=mode;
 
-  $("lobbybar").hidden=!on;
+  /* Shown in every mode now, and it changes what it says rather than
+     appearing and disappearing. It starts hidden only so that the first
+     paint cannot catch it before the mode above is known. */
+  $("lobbybar").hidden=false;
   if(on){
     $("lbRole").textContent=host?"Host":"In a lobby";
     $("lbCode").textContent=NET.code||"----";
@@ -4089,9 +4131,9 @@ function netOpen(then){
     NET.ws=null; NET.status="off"; NET.peers.clear(); netDropCars(); netUI();
     /* an error already explains itself; do not replace it with the idle text */
     if(NET.err) netSay(NET.err);
-    else if(wasIn) netSay("Party ended — the connection dropped.");
+    else if(wasIn&&!NET.left) netSay("Party ended — the connection dropped.");
     else netSay(NET_IDLE);
-    NET.err=null;
+    NET.err=null; NET.left=false;
   };
   ws.onmessage=ev=>{
     let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
@@ -4170,16 +4212,27 @@ function netTakeTrack(d){
 $("btnHost").addEventListener("click",()=>{
   netOpen(()=>{ NET.status="joining"; netSend({t:"host",name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
 });
-$("btnJoin").addEventListener("click",()=>{ $("netJoinBox").hidden=false; $("netCode").focus(); });
-$("btnJoinCancel").addEventListener("click",()=>{ $("netJoinBox").hidden=true; });
+/* In a bar the two live side by side, and a Join beside a Join party reads
+   as a choice rather than as a step, so entering a code takes the space the
+   buttons were using. */
+function joinBox(open){
+  $("netJoinBox").hidden=!open;
+  $("netBtns").hidden=open||NET.status==="in";
+  if(open)$("netCode").focus();
+}
+$("btnJoin").addEventListener("click",()=>joinBox(true));
+$("btnJoinCancel").addEventListener("click",()=>joinBox(false));
 $("btnJoinGo").addEventListener("click",()=>{
   const code=($("netCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   if(code.length<4){ netSay("A party code is four characters."); return; }
-  $("netJoinBox").hidden=true;
+  joinBox(false);
   netOpen(()=>{ NET.status="joining"; netSend({t:"join",code,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
 });
 $("lbLeave").addEventListener("click",()=>{ $("btnLeave").click(); });
 $("btnLeave").addEventListener("click",()=>{
+  /* Walking out and being thrown out arrive at the same close event. Only
+     you know which it was, and the bar has to say so honestly. */
+  NET.left=true;
   netSend({t:"bye"});
   if(NET.ws)NET.ws.close();
 });
