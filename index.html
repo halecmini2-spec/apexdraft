@@ -3935,6 +3935,9 @@ $("btnReverse").addEventListener("click",()=>{
    track, because that is the moment the browser chrome starts costing you
    road. Answered once and never asked again. */
 function a2hsWanted(){
+  /* Once answered it is gone for good, which makes it impossible to look at
+     again — so ?a2hs brings it back regardless, for checking the wording. */
+  if(new URLSearchParams(location.search).has("a2hs"))return true;
   if(store.get("ad.a2hs",false))return false;              // already answered
   if(!touchUIOn())return false;                            // nothing to gain on a desktop
   const standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)
