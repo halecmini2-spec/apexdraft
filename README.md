@@ -66,6 +66,31 @@ They live with the account, so they are there on whatever you next sit down
 at. That also means they need one: signed out, the page says so rather than
 keeping them somewhere that won't last.
 
+### Fastest laps
+
+Every circuit has its own leaderboard — a lap time means nothing except
+against the same layout, so one big list would just crown the shortest
+scribble. Pause mid-race to see it: everyone who has driven that circuit,
+their best lap and what car they set it in.
+
+The circuit is identified by what it is made of rather than by who saved it,
+so two people who drew — or were sent — the same layout land on the same
+board without anybody publishing anything. The key is taken from the drawing
+and the settings that shape it, measured from the circuit's own corner so
+that re-centring it on a differently shaped board doesn't move it to a
+different board. Change the width, the elevation or the smoothing and it is a
+different circuit, because it is a different lap; change the scenery and it
+is not.
+
+While you race other people there is a live order of the room under the
+timing tower, fed by everyone's improvements as they set them.
+
+Times need an account to appear, but the board is readable without one.
+
+**A lap time is a claim.** The physics run in the browser, so the server
+cannot referee one, and all it checks is that a time is plausible. Treat the
+board as a scoreboard among people you know rather than as a record book.
+
 ### The small print
 
 There is **no verification email and no password reset**, and the UI says so

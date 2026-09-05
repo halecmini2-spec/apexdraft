@@ -21,7 +21,7 @@ const path = require("path");
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [], tracks: [] };
+  let db = { users: [], sessions: [], tracks: [], laps: [] };
   let writing = null, again = false;
 
   try {
@@ -29,6 +29,7 @@ function fileStore(file) {
     db.users = db.users || [];
     db.sessions = db.sessions || [];
     db.tracks = db.tracks || [];
+    db.laps = db.laps || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -109,6 +110,25 @@ function fileStore(file) {
       if (db.tracks.length !== before) await save();
       return db.tracks.length !== before;
     },
+
+    /* One row per person per circuit: their best, not every lap they drove.
+       Returns the time that ended up standing, which is the only answer that
+       does not depend on how a driver counts a row it decided not to
+       change. */
+    async putLap(l) {
+      const i = db.laps.findIndex((x) => x.circuit === l.circuit && x.user_id === l.user_id);
+      if (i >= 0) {
+        if (l.ms < db.laps[i].ms) db.laps[i] = l;
+      } else db.laps.push(l);
+      await save();
+      const now = db.laps.find((x) => x.circuit === l.circuit && x.user_id === l.user_id);
+      return now ? now.ms : null;
+    },
+    async board(circuit, limit) {
+      return db.laps.filter((l) => l.circuit === circuit)
+                    .sort((a, b) => a.ms - b.ms)
+                    .slice(0, limit);
+    },
   };
 }
 
@@ -164,6 +184,20 @@ function pgStore(url) {
       /* One name, one circuit: saving over a name you have used replaces it
          rather than leaving you two of them to tell apart. */
       await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracks_user_name ON tracks(user_id,name_lower)`);
+      /* Fastest laps, one row per person per circuit. The name is copied in
+         rather than joined for: a board is read far more often than it is
+         written, and a username never changes. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS laps (
+          circuit TEXT NOT NULL,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name    TEXT NOT NULL,
+          ms      BIGINT NOT NULL,
+          car     TEXT NOT NULL,
+          at      BIGINT NOT NULL,
+          PRIMARY KEY (circuit, user_id)
+        )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS laps_board ON laps(circuit,ms)`);
     },
     userByName: (lower) => one(`SELECT * FROM users WHERE name_lower=$1`, [lower]),
     userByEmail: (lower) => one(`SELECT * FROM users WHERE email_lower=$1`, [lower]),
@@ -211,6 +245,29 @@ function pgStore(url) {
     async dropTrack(userId, id) {
       const r = await pool.query(`DELETE FROM tracks WHERE user_id=$1 AND id=$2`, [userId, id]);
       return r.rowCount > 0;
+    },
+
+    async putLap(l) {
+      /* Only if it beats what is already there. The condition is in the
+         statement rather than in a read-then-write, so two laps finishing at
+         once cannot leave the slower one standing. */
+      await pool.query(
+        `INSERT INTO laps (circuit,user_id,name,ms,car,at) VALUES ($1,$2,$3,$4,$5,$6)
+         ON CONFLICT (circuit,user_id)
+         DO UPDATE SET ms=EXCLUDED.ms, car=EXCLUDED.car, at=EXCLUDED.at, name=EXCLUDED.name
+         WHERE laps.ms > EXCLUDED.ms`,
+        [l.circuit, l.user_id, l.name, l.ms, l.car, l.at]
+      );
+      /* Reading back what stands beats counting rows: a DO UPDATE that
+         declined to fire is not reported the same way everywhere. */
+      const r = await one(`SELECT ms FROM laps WHERE circuit=$1 AND user_id=$2`, [l.circuit, l.user_id]);
+      return r ? Number(r.ms) : null;
+    },
+    async board(circuit, limit) {
+      return (await pool.query(
+        `SELECT name,ms,car,at FROM laps WHERE circuit=$1 ORDER BY ms ASC LIMIT $2`,
+        [circuit, limit]
+      )).rows;
     },
   };
 }

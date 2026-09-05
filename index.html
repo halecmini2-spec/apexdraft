@@ -592,6 +592,38 @@ body.shelving #lobbybar{display:none}
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 #auth .go:disabled{background:var(--raise);color:var(--faint)}
 
+/* ============ fastest laps ============
+   Two places, one set of numbers: a live order of the room while you drive,
+   and the whole board when you stop. */
+.standings{margin-top:9px;background:rgba(9,14,15,.82);border-left:2px solid var(--party-deep);backdrop-filter:blur(4px)}
+.standings .sr{display:flex;align-items:baseline;gap:8px;padding:4px 10px;font-size:11px}
+.standings .sr .p{color:var(--faint);font-size:9.5px;width:12px;flex:0 0 12px}
+.standings .sr .n{color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.standings .sr .t{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.standings .sr.me .n,.standings .sr.me .t{color:var(--ink)}
+.standings .sr.lead .t{color:var(--purple)}
+
+.times{margin:0 0 18px;border:1px solid var(--line);border-radius:2px}
+.ti-head{
+  display:flex;justify-content:space-between;align-items:baseline;
+  padding:7px 11px;border-bottom:1px solid var(--line);
+  font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);
+}
+.ti-n{letter-spacing:.06em}
+/* Capped, with a scroll: the pause menu is a menu, not a page. */
+.ti-list{max-height:150px;overflow-y:auto}
+.ti-row{display:flex;align-items:baseline;gap:9px;padding:5px 11px;font-size:12px}
+.ti-row+.ti-row{border-top:1px solid var(--line-soft)}
+.ti-row .p{color:var(--faint);font-size:10px;width:16px;flex:0 0 16px;font-family:var(--mono)}
+.ti-row .n{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ti-row .c{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.ti-row .t{font-family:var(--mono);color:var(--ink)}
+.ti-row.me{background:var(--amber-glow)}
+.ti-row.me .n{color:var(--amber)}
+.ti-row:first-child .t{color:var(--purple)}
+.ti-note{margin:0!important;padding:8px 11px;font-size:11px!important;color:var(--faint)!important;
+  border-top:1px solid var(--line-soft);line-height:1.5!important}
+
 /* ============ the shelf ============
    Circuits are shapes, so the list is shapes: a name alone tells you nothing
    about which lap it was. Each one is drawn from the points it was saved
@@ -965,6 +997,10 @@ body.shelving #lobbybar{display:none}
           <div class="sec" id="sec2"><span class="k">S2</span><span class="t">—.———</span></div>
           <div class="sec" id="sec3"><span class="k">S3</span><span class="t">—.———</span></div>
         </div>
+        <!-- who is quickest, while you are still out there. Inside the tower
+             so it flows under the timing rather than being pinned to a guess
+             at how tall they are. -->
+        <div class="standings" id="standings" hidden></div>
       </div>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
@@ -993,6 +1029,16 @@ body.shelving #lobbybar{display:none}
       <div class="card">
         <h3>Paused</h3>
         <p id="pauseSub">Alpine circuit · 4.1 km · 14 corners</p>
+
+        <!-- Everyone who has driven this exact circuit, not just whoever is
+             in the room. Two people who drew the same layout get the same
+             board, so it is worth beating. -->
+        <div class="times" id="pTimes">
+          <div class="ti-head"><span>Fastest laps</span><span class="ti-n" id="tiCount"></span></div>
+          <div class="ti-list" id="tiList"></div>
+          <p class="ti-note" id="tiNote"></p>
+        </div>
+
         <div class="btns">
           <button class="pbtn primary" id="pResume">Resume <span class="s">Esc</span></button>
           <button class="pbtn" id="pReset">Recover car <span class="s">R</span></button>
@@ -3309,9 +3355,14 @@ function completeLap(ms){
     store.set("ad.best."+trackKey(T),ms);
     store.set("ad.bsec."+trackKey(T),CAR.bestSectors);
     showFlash("Fastest lap","#B24FE8",fmtTime(ms));
+    /* Only improvements travel. Everyone else is keeping your best, not a
+       list of every lap you have driven. */
+    if(NET.status==="in")netSend({t:"lap",ms,lap:CAR.lapNo});
+    lbPost(ms);
   } else {
     showFlash("Lap "+CAR.lapNo,"#E6EEEC",fmtTime(ms));
   }
+  standingsUI();
   CAR.lapNo++;
   CAR.curMs=0; CAR.lapDist=0; CAR.secIdx=0;   // sector times stay on screen until overwritten
 }
@@ -3706,7 +3757,12 @@ function togglePause(force){
   const show=force!==undefined?force:p.hidden;
   p.hidden=!show;
   G.running=!show;
-  if(show){ for(const k in keys)keys[k]=0; touch.l=touch.r=touch.gas=touch.brake=0; }
+  if(show){
+    for(const k in keys)keys[k]=0; touch.l=touch.r=touch.gas=touch.brake=0;
+    /* Drawn from what is already known, then refreshed: a pause menu should
+       not sit blank while a sleeping server is woken. */
+    timesUI(); lbFetch(false);
+  }
   if(!show){ G.lastT=performance.now(); }
   if(show&&AU.ctx)AU.master.gain.setTargetAtTime(0,AU.ctx.currentTime,0.05);
   else if(AU.master)AU.master.gain.setTargetAtTime(SOUND?0.5:0,AU.ctx?AU.ctx.currentTime:0,0.05);
@@ -4413,6 +4469,125 @@ $("auOut").addEventListener("click",async()=>{
 });
 
 /* =====================================================================
+   FASTEST LAPS
+   ===================================================================== */
+/* A lap time means nothing on its own: it is a time around one particular
+   circuit. So a board is kept per circuit, and the circuit is named by what
+   it is made of rather than by who saved it — two people who drew, or were
+   sent, the same layout land on the same board without anybody publishing
+   anything.
+   The key is taken from the drawing and the settings that shape it, not from
+   the built geometry: the inputs are exact numbers that survive the wire,
+   where trigonometry on two different browsers need not agree to the last
+   digit. Theme is left out because it changes the scenery, not the lap. */
+function circuitKey(){
+  const d=trackData();
+  if(!d)return null;
+  const o=d.opts||{};
+  /* Measured from its own corner, not from the board's. A circuit is
+     re-centred whenever the board changes shape — a different window, a
+     phone turned sideways, a guest whose board is not the host's — and the
+     lap is identical after it. Hashing the points where they happen to sit
+     made every one of those a different board, which is how this was found:
+     an empty leaderboard on the circuit that had just been driven. */
+  let mx=Infinity,my=Infinity;
+  for(const p of d.raw){ if(p[0]<mx)mx=p[0]; if(p[1]<my)my=p[1]; }
+  const s=d.raw.map(p=>Math.round((p[0]-mx)*10)+","+Math.round((p[1]-my)*10)).join(";")
+    +"|w"+(+o.width||0)+"|h"+(+o.hills||0)+"|s"+(+o.smooth||0)+"|e"+(+o.seed||0)
+    +"|b"+((o.banks||[]).map(b=>b==null?"-":+b).join(","));
+  /* Two independent 32-bit passes, printed together: one is small enough
+     that two circuits would collide onto one board. */
+  let a=0x811c9dc5,b=0x9e3779b9;
+  for(let i=0;i<s.length;i++){
+    const c=s.charCodeAt(i);
+    a=Math.imul(a^c,16777619)>>>0;
+    b=Math.imul(b+c,2246822519)>>>0; b=((b<<13)|(b>>>19))>>>0;
+  }
+  return ("0000000"+a.toString(16)).slice(-8)+("0000000"+b.toString(16)).slice(-8);
+}
+
+const LB={key:null,board:[],at:0,busy:false};
+
+/* Only ever a claim: the physics run here, on your machine, so the server
+   cannot referee a lap and does not pretend to. */
+async function lbFetch(force){
+  const key=LB.key;
+  if(!key)return;
+  if(!force&&LB.at&&Date.now()-LB.at<20000)return;
+  if(LB.busy)return;
+  LB.busy=true;
+  try{
+    const r=await api("/api/laps?circuit="+encodeURIComponent(key));
+    if(LB.key===key){ LB.board=r.board||[]; LB.at=Date.now(); }
+  }catch(e){ /* the panel says what it has */ }
+  finally{ LB.busy=false; }
+  timesUI();
+}
+async function lbPost(ms){
+  const key=LB.key;
+  if(!key||!acctIn())return;
+  try{
+    const r=await api("/api/laps",{method:"POST",token:ACCT.token,
+      body:{circuit:key,ms:Math.round(ms),car:ED.opts.car||"gt"}});
+    if(LB.key===key){ LB.board=r.board||LB.board; LB.at=Date.now(); }
+    timesUI();
+  }catch(e){ /* a lap is not worth interrupting a race over */ }
+}
+
+/* The order of the room, live, while you are still driving it. Peers send
+   their improvements over the relay, so this is everyone out there now. */
+function standingsUI(){
+  const el=$("standings");
+  const party=NET.status==="in";
+  el.hidden=!party;
+  if(!party)return;
+  const rows=[{name:myName(),ms:CAR&&CAR.bestMs!=null?CAR.bestMs:null,me:true}];
+  for(const [id,p] of NET.peers) rows.push({name:p.name||"Driver",ms:p.bestMs==null?null:p.bestMs,me:false});
+  /* Nobody has a time yet is a real state, and it sorts last. */
+  rows.sort((x,y)=>(x.ms==null)-(y.ms==null)||(x.ms-y.ms));
+  const lead=rows.length&&rows[0].ms!=null?rows[0].ms:null;
+  el.innerHTML="";
+  rows.forEach((r,i)=>{
+    const d=document.createElement("div");
+    d.className="sr"+(r.me?" me":"")+(i===0&&r.ms!=null?" lead":"");
+    const p=document.createElement("span"); p.className="p"; p.textContent=String(i+1);
+    const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
+    const t=document.createElement("span"); t.className="t";
+    t.textContent = r.ms==null ? "—"
+      : (i===0||lead==null ? fmtTime(r.ms) : "+"+((r.ms-lead)/1000).toFixed(3));
+    d.appendChild(p); d.appendChild(n); d.appendChild(t);
+    el.appendChild(d);
+  });
+}
+
+function timesUI(){
+  const list=$("tiList"), note=$("tiNote"), me=acctIn()?ACCT.user.name:null;
+  list.innerHTML="";
+  $("tiCount").textContent=LB.board.length?LB.board.length+(LB.board.length===1?" driver":" drivers"):"";
+  if(!LB.board.length){
+    note.textContent = LB.key
+      ? (acctIn()?"No times on this circuit yet. Set one.":"No times on this circuit yet.")
+      : "Draw a circuit and the board follows it.";
+  }else{
+    const lead=LB.board[0].ms;
+    LB.board.forEach((r,i)=>{
+      const d=document.createElement("div");
+      d.className="ti-row"+(me&&r.name===me?" me":"");
+      const p=document.createElement("span"); p.className="p"; p.textContent=(i+1)+".";
+      const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
+      const c=document.createElement("span"); c.className="c";
+      const cm=CAR_MODELS.find(x=>x.id===r.car); c.textContent=cm?cm.label:(r.car||"");
+      const t=document.createElement("span"); t.className="t";
+      t.textContent=i===0?fmtTime(r.ms):"+"+((r.ms-lead)/1000).toFixed(3);
+      d.appendChild(p); d.appendChild(n); d.appendChild(c); d.appendChild(t);
+      list.appendChild(d);
+    });
+    note.textContent = acctIn() ? "" : "Sign in and your times go on the board too.";
+  }
+  note.hidden=!note.textContent;
+}
+
+/* =====================================================================
    SAVED CIRCUITS
    ===================================================================== */
 /* What gets kept is exactly what a host sends a party — the points and the
@@ -4752,6 +4927,14 @@ function netHandle(m){
     if(p.buf.length>4)p.buf.shift();
     return;
   }
+  /* Somebody out there went quicker. */
+  if(m.t==="lap"){
+    const p=NET.peers.get(m.id); if(!p)return;
+    const ms=+m.ms;
+    if(Number.isFinite(ms)&&ms>0&&(p.bestMs==null||ms<p.bestMs))p.bestMs=ms;
+    standingsUI();
+    return;
+  }
 }
 function netSendTrack(){
   if(NET.id!==NET.hostId||!ED.raw)return;
@@ -5057,6 +5240,16 @@ $("btnDrive").addEventListener("click",()=>{
 });
 function driveNow(){
   if(!ED.track)return;
+  /* Which board these laps belong to. A different circuit is a different
+     board, and everybody's times start again with it — including the ones
+     the room set on the last one. */
+  const k=circuitKey();
+  if(k!==LB.key){
+    LB.key=k; LB.board=[]; LB.at=0;
+    for(const p of NET.peers.values())p.bestMs=null;
+  }
+  lbFetch(true);
+  standingsUI();
   applyTouchUI();
   initAudio(); setSound(SOUND);
   $("editor").hidden=true;
