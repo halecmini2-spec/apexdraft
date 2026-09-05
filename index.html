@@ -672,6 +672,53 @@ function buildCircuit(raw,opts){
   let minY=Infinity; for(let i=0;i<N;i++)minY=Math.min(minY,Y[i]);
   for(let i=0;i<N;i++)Y[i]-=minY;
 
+  /* ---- flyovers ----
+     Where the loop runs back over itself the two roads used to be drawn at
+     whatever height the elevation harmonics happened to give them, and you
+     drove straight through the junction. Find each place the lap comes back
+     near itself a long way round from where it left, and lift one of the two
+     over the other with enough headroom to pass underneath.
+
+     OV records how much each point was raised. Everything else — the ground,
+     the barriers, the deck geometry — reads it back, because the lift is the
+     only thing that distinguishes a bridge from a hill. */
+  const HW0=opts.width/2;
+  const OV=new Float32Array(N);        // how high the deck stands over the ground
+  const CLEAR=7.2;                       // headroom under the deck, metres
+  {
+    const near2=(HW0*2.3)*(HW0*2.3);
+    const seen=new Uint8Array(N);
+    for(let i=0;i<N;i++){
+      if(seen[i])continue;
+      let bj=-1, bd=near2;
+      for(let j=0;j<N;j++){
+        let ad=Math.abs(i-j); ad=Math.min(ad,N-ad);
+        if(ad<45)continue;               // adjacent road, not a crossing
+        const dd=(X[i]-X[j])*(X[i]-X[j])+(Z[i]-Z[j])*(Z[i]-Z[j]);
+        if(dd<bd){ bd=dd; bj=j; }
+      }
+      if(bj<0)continue;
+      /* claim both approaches so one junction is not lifted several times */
+      for(let t=-50;t<=50;t++){ seen[(i+t+N*4)%N]=1; seen[(bj+t+N*4)%N]=1; }
+      /* whichever is already higher goes over — least earth moved */
+      const hi=Y[i]>=Y[bj]?i:bj, lo=hi===i?bj:i;
+      const have=Y[hi]-Y[lo];
+      const rise=Math.max(0,CLEAR-have);
+      /* Nothing to build if the lie of the land already separates them. A
+         crossing where the harmonics put one road on a hill and the other in
+         the valley reads perfectly well as it is; only the ones that would
+         otherwise pass through each other need a structure. */
+      if(rise<=0.05)continue;
+      const ramp=30;                     // long enough to stay driveable
+      for(let t=-ramp;t<=ramp;t++){
+        const k=(hi+t+N*4)%N;
+        let w=1-Math.abs(t)/ramp; w=w*w*(3-2*w);
+        OV[k]=Math.max(OV[k],rise*w);
+      }
+    }
+    for(let i=0;i<N;i++)Y[i]+=OV[i];
+  }
+
   /* tangents, right vectors, curvature */
   const TX=new Float32Array(N),TZ=new Float32Array(N),TY=new Float32Array(N);
   const RX=new Float32Array(N),RZ=new Float32Array(N);
@@ -688,6 +735,31 @@ function buildCircuit(raw,opts){
   }
   const Ks=new Float32Array(N);
   for(let i=0;i<N;i++){let s=0,w=0;for(let d=-6;d<=6;d++){const j=(i+d+N*2)%N;const ww=1-Math.abs(d)/8;s+=K[j]*ww;w+=ww;}Ks[i]=s/w;}
+
+  /* Start the lap on a straight. The line used to fall wherever the drawing
+     happened to begin, which was as often as not mid-corner — you launched
+     into a turn, the grid sat on the apex and the first split landed
+     somewhere meaningless. Score every point by how straight the road is for
+     a good stretch either side, take the flattest, and rotate every
+     per-point array so it becomes index 0.
+
+     Y is rotated with its point rather than recomputed, so the elevation
+     stays exactly where it was in the world; only the arclength is
+     renumbered from the new line. Everything downstream — corners, banking,
+     stats, the bucket grid — is built after this and simply sees the new
+     ordering. */
+  let startI=0, flattest=Infinity;
+  for(let i=0;i<N;i++){
+    let s=0;
+    for(let d=-20;d<=20;d++) s+=Math.abs(Ks[(i+d+N*2)%N])*(1-Math.abs(d)/26);
+    if(s<flattest){ flattest=s; startI=i; }
+  }
+  if(startI>0){
+    const roll=a=>{ const o=a.slice(); for(let i=0;i<N;i++) a[i]=o[(i+startI)%N]; };
+    roll(X);roll(Y);roll(Z);roll(TX);roll(TY);roll(TZ);roll(RX);roll(RZ);roll(K);roll(Ks);roll(OV);
+    S[0]=0;
+    for(let i=1;i<N;i++) S[i]=S[i-1]+Math.hypot(X[i]-X[i-1],Z[i]-Z[i-1]);
+  }
 
   /* corner detection: runs of sustained curvature, numbered from the line.
      This has to happen before banking now, because banking is applied per
@@ -784,7 +856,7 @@ function buildCircuit(raw,opts){
   }
 
   const T={
-    N,X,Y,Z,TX,TY,TZ,RX,RZ,K:Ks,B:Bs,S,len,halfW,crosses,
+    N,X,Y,Z,TX,TY,TZ,RX,RZ,K:Ks,B:Bs,S,len,halfW,crosses,OV,
     corners:merged, opts:Object.assign({},opts),
     bounds:{minX,maxX,minZ,maxZ},
     grid:{CELL,gx0,gz0,gw,gh,buckets},
@@ -838,7 +910,7 @@ function nearest(T,x,z,hintI){
   const s=(bt===0? T.S[bi] : (j===0? lerp(T.S[bi],T.len,bt) : lerp(T.S[bi],T.S[j],bt)));
   let tx=lerp(T.TX[bi],T.TX[j],bt), tz=lerp(T.TZ[bi],T.TZ[j],bt);
   const tl=Math.hypot(tx,tz)||1; tx/=tl; tz/=tl;
-  return {i:bi,t:bt,d,y,bank,s,tx,tz,rx:rx/rl,rz:rz/rl,ty:lerp(T.TY[bi],T.TY[j],bt),k:lerp(T.K[bi],T.K[j],bt)};
+  return {i:bi,t:bt,d,y,bank,s,tx,tz,rx:rx/rl,rz:rz/rl,ty:lerp(T.TY[bi],T.TY[j],bt),k:lerp(T.K[bi],T.K[j],bt),lift:T.OV?lerp(T.OV[bi],T.OV[j],bt):0};
 }
 
 /* surface height anywhere in the world (road, verge, or open country) */
@@ -851,9 +923,14 @@ function terrainBase(T,x,z){
 function heightAt(T,x,z,np){
   const p=np||nearest(T,x,z);
   const ad=Math.abs(p.d);
+  /* On a flyover the verge has nowhere to go: the deck stops at its edge and
+     the ground carries on underneath at the height it would have had anyway.
+     So a lifted section gets a narrow shoulder and the open ground ignores
+     the lift entirely — otherwise the terrain would rise with the bridge and
+     bury the road passing beneath it. */
   const edge=T.halfW+7.5;                       // road + kerb + verge
   const roadY=p.y+Math.sin(p.bank)*clamp(p.d,-edge,edge);
-  if(ad<=edge)return roadY-smoothstep(T.halfW+1.5,edge,ad)*0.9;   // verge falls away
+  if(ad<=edge)return roadY-smoothstep(T.halfW+1.5,edge,ad)*0.9;
   const edgeY=roadY-0.9;
   /* open country, lifted toward the road so the circuit sits in its landscape */
   const raw=terrainBase(T,x,z);
@@ -1133,7 +1210,13 @@ function buildTerrain(T,TH){
        and the road is 27 m wide, so only two or three vertices span it — a
        straight chord between them easily rises above a banked, curving road.
        0.8 m of clearance is more than any chord error. */
-    const h=heightAt(T,x,z,np)-0.8*smoothstep(edge+14,edge-2,Math.abs(np.d));
+    /* The ground follows the road everywhere, which is exactly what a bridge
+       must not do: the deck would sit on a ridge of its own terrain with the
+       road below buried inside it. Over a span, drop the ground by the height
+       the deck is standing, so it passes underneath and the road above is
+       left in the air for buildBridges to prop up. */
+    const cut=np.lift||0;
+    const h=heightAt(T,x,z,np)-0.8*smoothstep(edge+14,edge-2,Math.abs(np.d))-cut;
     const k=j*W+i;
     Ht[k]=h; Dt[k]=Math.abs(np.d);
     pos[k*3]=x; pos[k*3+1]=h; pos[k*3+2]=z;
@@ -1206,8 +1289,19 @@ function buildBarriers(T,TH){
     for(let k=0;k<N;k++){
       const a=k, b=(k+1)%N;
       const o=off*side;
-      const ax=T.X[a]+T.RX[a]*o, az=T.Z[a]+T.RZ[a]*o, ay=heightAt(T,ax,az);
-      const bx=T.X[b]+T.RX[b]*o, bz=T.Z[b]+T.RZ[b]*o, by=heightAt(T,bx,bz);
+      const ax=T.X[a]+T.RX[a]*o, az=T.Z[a]+T.RZ[a]*o;
+      const bx=T.X[b]+T.RX[b]*o, bz=T.Z[b]+T.RZ[b]*o;
+      /* Where the circuit doubles back on itself the rail for this stretch
+         lands on the tarmac of another one, and two runs of armco grow
+         through each other. Ask what is actually underneath: if it is a
+         different part of the lap, and close enough to its centreline to be
+         road, there is no room for a barrier here. The collision corridor is
+         unaffected — it follows whichever centreline is nearest, so the gap
+         is only ever in the geometry, never in what you can drive through. */
+      const nq=nearest(T,ax,az);
+      let gap=Math.abs(nq.i-a); gap=Math.min(gap,N-gap);
+      if(gap>26&&Math.abs(nq.d)<hw+3.4){ T.wall[a]=0; continue; }
+      const ay=heightAt(T,ax,az), by=heightAt(T,bx,bz);
       /* subtle weathering so a 4 km rail isn't one flat tone */
       const c=(Math.floor(T.S[a]/4.3)%2)?cSteel:cSteelB;
       for(let p=0;p<WBEAM.length-1;p++){
@@ -1286,6 +1380,65 @@ function buildBarriers(T,TH){
     fitInstancedBounds(im);
     grp.add(im);
   }
+  return grp;
+}
+
+/* ---- flyover structure ----
+   The elevation gives the deck; this gives it something to stand on. A fascia
+   closes the drop at each shoulder, and piers march down to whatever the
+   ground is doing underneath — which, because heightAt subtracts the lift out
+   there, is the land the other road is running across. */
+function buildBridges(T,TH){
+  if(!T.OV)return null;
+  const N=T.N, off=T.halfW+7.5, grp=new THREE.Group();
+  let any=false; for(let i=0;i<N;i++) if(T.OV[i]>0.4){ any=true; break; }
+  if(!any)return null;
+  const pos=[],col=[],idx=[]; let v=0;
+  const cDeck=SRGB(0x3A4144), cPier=SRGB(0x4A5154);
+  const quad=(p1,p2,p3,p4,c)=>{
+    pos.push(p1[0],p1[1],p1[2], p2[0],p2[1],p2[2], p3[0],p3[1],p3[2], p4[0],p4[1],p4[2]);
+    for(let i=0;i<4;i++)col.push(c.r,c.g,c.b);
+    idx.push(v,v+1,v+2, v,v+2,v+3); v+=4;
+  };
+  for(let side=-1;side<=1;side+=2){
+    for(let k=0;k<N;k++){
+      const a=k, b=(k+1)%N;
+      if(T.OV[a]<0.4&&T.OV[b]<0.4)continue;
+      const o=off*side;
+      const ax=T.X[a]+T.RX[a]*o, az=T.Z[a]+T.RZ[a]*o;
+      const bx=T.X[b]+T.RX[b]*o, bz=T.Z[b]+T.RZ[b]*o;
+      const at=T.Y[a]+0.2, bt=T.Y[b]+0.2;                  // deck top
+      const ab=at-Math.max(1.1,T.OV[a]*0.92);              // fascia depth
+      const bb=bt-Math.max(1.1,T.OV[b]*0.92);
+      quad([ax,at,az],[bx,bt,bz],[bx,bb,bz],[ax,ab,az],cDeck);
+    }
+  }
+  /* piers, on the deeper half of each span so they read as supports */
+  for(let k=0;k<N;k+=6){
+    if(T.OV[k]<2.0)continue;
+    /* down to the cut ground, not the ground the deck pretends to sit on */
+    const gy=heightAt(T,T.X[k],T.Z[k])-T.OV[k];
+    const top=T.Y[k]-1.0, h=top-gy;
+    if(h<1.5)continue;
+    for(const sx of [-1,1]){
+      const px=T.X[k]+T.RX[k]*(T.halfW*0.55*sx), pz=T.Z[k]+T.RZ[k]*(T.halfW*0.55*sx);
+      const w=1.15;
+      const rx=T.RX[k]*w, rz=T.RZ[k]*w, tx=T.TX[k]*w, tz=T.TZ[k]*w;
+      const c=[[px-rx-tx,pz-rz-tz],[px+rx-tx,pz+rz-tz],[px+rx+tx,pz+rz+tz],[px-rx+tx,pz-rz+tz]];
+      for(let e=0;e<4;e++){
+        const p=c[e], q=c[(e+1)%4];
+        quad([p[0],top,p[1]],[q[0],top,q[1]],[q[0],gy,q[1]],[p[0],gy,p[1]],cPier);
+      }
+    }
+  }
+  if(!pos.length)return null;
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute("color",new THREE.Float32BufferAttribute(col,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+    vertexColors:true,side:THREE.DoubleSide,roughness:0.85,metalness:0.05}));
+  m.castShadow=true; m.receiveShadow=true; grp.add(m);
   return grp;
 }
 
@@ -2020,6 +2173,7 @@ function buildWorld(T){
   const road=buildRoad(T,TH); scene.add(road);
   const terrain=buildTerrain(T,TH); scene.add(terrain);
   const bar=buildBarriers(T,TH); if(bar)scene.add(bar);
+  const brg=buildBridges(T,TH); if(brg)scene.add(brg);
   const sl=buildStartLine(T,TH); scene.add(sl);
   scene.add(buildScatter(T,TH));
 
