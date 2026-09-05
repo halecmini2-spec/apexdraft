@@ -46,8 +46,13 @@ function roomPeers(room, exceptId) {
 }
 
 function broadcast(room, obj, exceptId) {
+  /* players holds the sockets themselves, so this is the socket, not a
+     wrapper around one. Reading a .ws off it threw on every broadcast — and
+     since that happened inside the message handler it took the whole relay
+     down with it, which is why a host stopped hearing anything the moment
+     somebody joined. */
   for (const p of room.players.values()) {
-    if (p.id !== exceptId) send(p.ws, obj);
+    if (p.id !== exceptId) send(p, obj);
   }
 }
 
@@ -92,6 +97,12 @@ wss.on("connection", (ws) => {
     let m;
     try { m = JSON.parse(buf); } catch (e) { return; }
     if (!m || typeof m.t !== "string") return;
+    /* One unexpected message must never be able to take the relay down for
+       everyone in every room, which is exactly what the broadcast bug did. */
+    try { handle(ws, m); } catch (e) { console.error("handler:", e && e.message); }
+  });
+
+  function handle(ws, m) {
 
     if (m.t === "host") {
       leave(ws);
@@ -153,7 +164,7 @@ wss.on("connection", (ws) => {
       return;
     }
     if (m.t === "bye") { leave(ws); return; }
-  });
+  }
 
   ws.on("close", () => leave(ws));
   ws.on("error", () => leave(ws));

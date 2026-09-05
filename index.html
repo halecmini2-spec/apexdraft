@@ -77,6 +77,8 @@ button{font-family:inherit;color:inherit}
   transition:border-color .12s,color .12s,background .12s;
 }
 .chip:hover{border-color:var(--faint);color:var(--ink)}
+.chip:disabled{opacity:.45;cursor:default}
+.chip:disabled:hover{border-color:var(--line);color:var(--dim)}
 .chip[aria-pressed="true"]{background:var(--amber-glow);border-color:var(--amber);color:var(--amber)}
 
 .codein{
@@ -3456,6 +3458,7 @@ const NET={
   ws:null, id:null, code:null, hostId:null, peers:new Map(),
   status:"off", sendAt:0, wantTrack:false
 };
+const NET_IDLE="Race live with other people. The host draws the circuit and shares a code.";
 const NET_RATE=1000/15;              // position updates per second
 const NET_LAG=120;                   // render remote cars this far in the past
 
@@ -3474,8 +3477,9 @@ function relayURL(){
 }
 function netSay(msg){ $("netHint").textContent=msg; }
 function netUI(){
-  const on=NET.status==="in";
-  $("netBtns").hidden=on||NET.status==="joining";
+  const on=NET.status==="in", busy=NET.status==="opening"||NET.status==="joining";
+  $("netBtns").hidden=on;
+  $("btnHost").disabled=busy; $("btnJoin").disabled=busy;
   $("netLive").hidden=!on;
   if(on){
     $("netShow").textContent=NET.code||"----";
@@ -3490,25 +3494,48 @@ function netUI(){
 }
 function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
 
+/* The relay is a free service and sleeps when nobody has used it for a
+   while, so the first connection of the day genuinely can take the better
+   part of a minute to answer. Say so, keep saying so, and never leave the
+   button looking like it did nothing — an earlier version set an error on
+   the socket error and then wiped it on the close that always follows, so
+   every failure looked exactly like being ignored. */
 function netOpen(then){
-  if(NET.ws&&NET.ws.readyState<=1){ then&&then(); return; }
+  if(NET.ws&&NET.ws.readyState===1){ then&&then(); return; }
+  if(NET.status==="opening") return;                 // one attempt at a time
   let url;
   try{ url=relayURL(); }catch(e){ netSay("Could not work out the relay address."); return; }
-  netSay("Connecting…");
   let ws;
-  try{ ws=new WebSocket(url); }catch(e){ netSay("Could not reach the party relay."); return; }
-  NET.ws=ws;
-  ws.onopen=()=>{ then&&then(); };
+  try{ ws=new WebSocket(url); }
+  catch(e){ netSay("Could not open a connection to "+url); return; }
+
+  NET.ws=ws; NET.status="opening"; NET.opened=false; NET.err=null;
+  netSay("Connecting to the party relay…");
+  netUI();
+
+  /* progress, because a silent 50 seconds is indistinguishable from broken */
+  const t1=setTimeout(()=>{ if(NET.status==="opening")
+    netSay("Waking the relay — it sleeps when idle, so this first connection can take up to a minute."); },2500);
+  const t2=setTimeout(()=>{ if(NET.status==="opening")
+    netSay("Still waking the relay… hang on."); },20000);
+  const kill=setTimeout(()=>{
+    if(NET.status!=="opening")return;
+    NET.err="The relay did not answer. It may still be starting up — give it a moment and try again.";
+    try{ ws.close(); }catch(e){}
+  },75000);
+  const done=()=>{ clearTimeout(t1); clearTimeout(t2); clearTimeout(kill); };
+
+  ws.onopen=()=>{ done(); NET.opened=true; netSay("Connected."); then&&then(); };
+  ws.onerror=()=>{ if(!NET.opened) NET.err="Could not reach the relay at "+url+"."; };
   ws.onclose=()=>{
+    done();
     const wasIn=NET.status==="in";
-    NET.status="off"; NET.ws=null; NET.peers.clear(); netDropCars(); netUI();
-    netSay(wasIn?"Party ended — the connection dropped."
-                :"Race live with other people. The host draws the circuit and shares a code.");
-  };
-  ws.onerror=()=>{
-    /* The free relay sleeps when nobody has used it, so the first connection
-       of the day can take a while to answer rather than failing outright. */
-    netSay("No answer from the relay. If it has been idle it may be waking up — try again in a moment.");
+    NET.ws=null; NET.status="off"; NET.peers.clear(); netDropCars(); netUI();
+    /* an error already explains itself; do not replace it with the idle text */
+    if(NET.err) netSay(NET.err);
+    else if(wasIn) netSay("Party ended — the connection dropped.");
+    else netSay(NET_IDLE);
+    NET.err=null;
   };
   ws.onmessage=ev=>{
     let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
