@@ -85,7 +85,10 @@ button{font-family:inherit;color:inherit}
    rail instead; the padding it claws back is set after .rail-foot below, so
    those overrides land after the base rules they replace. */
 @media (max-width:860px){
-  .rail{width:clamp(170px,40vw,322px);flex:0 0 clamp(170px,40vw,322px)}
+  /* Every point given back here is board, but the rail still has to hold
+     all its controls without scrolling. Measured: 190px is the floor in a
+     tab — at 180 the content wraps past the bottom. */
+  .rail{width:clamp(190px,36vw,310px);flex:0 0 clamp(190px,36vw,310px)}
 }
 .brand{padding:18px 20px 14px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:baseline}
 .brand h1{
@@ -350,6 +353,11 @@ body.touchcap .touchonly{display:block}
 @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(360%)}}
 @media (prefers-reduced-motion:reduce){.loading .bar i{animation:none;width:100%}}
 
+/* Running from the home screen there is no browser chrome above the game,
+   and no reason to still be advertising how to get rid of it — that is a
+   whole line of the rail handed back to the board. */
+body.standalone .touchonly{display:none}
+
 /* ============ mobile ============
    Deliberately last in the sheet: a media query adds no specificity, so an
    override placed above the rule it targets simply loses. */
@@ -379,6 +387,15 @@ body.touchcap .touchonly{display:block}
   input[type=range]::-webkit-slider-thumb{width:20px;height:20px;margin-top:-8.5px}
   input[type=range]::-moz-range-thumb{width:20px;height:20px}
 }
+/* On the home screen the tip about adding it to the home screen is gone,
+   and that line is worth about 40px of rail, which goes to the board.
+   Portrait only: in landscape the rail is short of height, not width, and
+   the two columns below already answer that — squeezing it there would
+   cramp the controls and win nothing. Measured to still fit at 152. */
+@media (max-width:860px) and (min-height:561px){
+  body.standalone .rail{width:clamp(152px,30vw,300px);flex:0 0 clamp(152px,30vw,300px)}
+}
+
 /* A landscape phone leaves the rail barely 330px of height, which one column
    cannot hold. Widen it a little and let the groups flow into two columns —
    there is width to spare in landscape, only height is scarce. */
@@ -4026,6 +4043,7 @@ $("pBack").addEventListener("click",()=>{
   /* a phone has no Esc key, so the menu needs a button of its own */
   $("tMenu").addEventListener("click",e=>{e.preventDefault();togglePause(true);});
   if(IS_TOUCH)document.body.classList.add("touchcap");
+  if(a2hsInstalled()) document.body.classList.add("standalone");
   applyTouchUI();
   $("soundState").textContent=SOUND?"On":"Off";
   $("soundState").className="s "+(SOUND?"on":"off");
