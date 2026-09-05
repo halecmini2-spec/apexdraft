@@ -18,6 +18,14 @@ services:
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
+      # The whole game is one file, so there is nothing here worth holding on
+      # to for long. max-age=0 makes the browser revalidate every load — it
+      # still gets a 304 and no download when nothing has changed — and the
+      # short s-maxage stops the CDN serving yesterday's build for minutes
+      # after a deploy.
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, s-maxage=30, must-revalidate
 
   # The game itself stays static and free. Only the party relay needs a
   # process, and all it does is pass messages between players in a room —
