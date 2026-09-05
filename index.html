@@ -324,6 +324,12 @@ body.touchcap .touchonly{display:block}
 .pause h3{margin:0 0 4px;font-size:15px;letter-spacing:.18em;text-transform:uppercase}
 .pause p{margin:0 0 20px;font-size:12.5px;color:var(--dim);line-height:1.6}
 .pause .btns{display:flex;flex-direction:column;gap:8px}
+/* sits above the loading panel, since it is asked before the world is built */
+.sheet{z-index:9}
+.sheet .card p{margin:0 0 10px;font-size:13px;line-height:1.5;color:var(--dim)}
+.sheet .card p b{color:var(--ink)}
+ul.plain{margin:0 0 14px;padding:0 0 0 18px;font-size:12.5px;line-height:1.7;color:var(--dim)}
+ul.plain li{margin:0}
 .pbtn{
   background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:12px 14px;
   text-align:left;font-size:13px;letter-spacing:.04em;cursor:pointer;color:var(--ink);
@@ -540,6 +546,19 @@ body.touchcap .touchonly{display:block}
   </section>
 
   <!-- ===================== DRIVE ===================== -->
+  <div class="pause sheet" id="a2hs" hidden>
+    <div class="card">
+      <h3>Add it to your home screen</h3>
+      <p id="a2hsHow">Tap the share button, then <b>Add to Home Screen</b>.</p>
+      <ul class="plain">
+        <li>Plays fullscreen, with no address bar taking a slice of the road</li>
+        <li>Opens in one tap, like an app</li>
+        <li>Keeps your circuits and your best laps</li>
+      </ul>
+      <div class="btns"><button class="pbtn primary" id="a2hsOk">OK, let me drive</button></div>
+    </div>
+  </div>
+
   <section id="drive" class="screen" hidden>
     <canvas id="view"></canvas>
     <div class="hud">
@@ -3915,7 +3934,37 @@ $("btnReverse").addEventListener("click",()=>{
 });
 
 /* ---- enter / leave the car ---- */
+/* Worth offering once, to the people it can actually help: a phone that is
+   not already running this from the home screen. Asked on the way out to the
+   track, because that is the moment the browser chrome starts costing you
+   road. Answered once and never asked again. */
+function a2hsWanted(){
+  if(store.get("ad.a2hs",false))return false;              // already answered
+  if(!touchUIOn())return false;                            // nothing to gain on a desktop
+  const standalone=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)
+                   ||navigator.standalone===true;
+  return !standalone;
+}
+function a2hsShow(){
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)
+            ||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  $("a2hsHow").innerHTML = ios
+    ? 'Tap the share button at the bottom of Safari, then <b>Add to Home Screen</b>.'
+    : 'Open the browser menu, then <b>Install app</b> or <b>Add to Home screen</b>.';
+  $("a2hs").hidden=false;
+}
+$("a2hsOk").addEventListener("click",()=>{
+  store.set("ad.a2hs",true);
+  $("a2hs").hidden=true;
+  driveNow();
+});
+
 $("btnDrive").addEventListener("click",()=>{
+  if(!ED.track)return;
+  if(a2hsWanted()){ a2hsShow(); return; }                  // OK carries on into driveNow
+  driveNow();
+});
+function driveNow(){
   if(!ED.track)return;
   applyTouchUI();
   initAudio(); setSound(SOUND);
@@ -3943,7 +3992,7 @@ $("btnDrive").addEventListener("click",()=>{
                        document.body.classList.remove("driving"); fitPad(); },2200);
     }
   }));
-});
+}
 $("pResume").addEventListener("click",()=>togglePause(false));
 $("pReset").addEventListener("click",()=>{ resetCar(false); togglePause(false); });
 $("pFull").addEventListener("click",()=>{ fsToggle(); setTimeout(fsUI,120); });
