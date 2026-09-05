@@ -326,10 +326,10 @@ body.touchcap .touchonly{display:block}
 .pause .btns{display:flex;flex-direction:column;gap:8px}
 /* sits above the loading panel, since it is asked before the world is built */
 .sheet{z-index:9}
-.sheet .card p{margin:0 0 10px;font-size:13px;line-height:1.5;color:var(--dim)}
+.sheet .card p{margin:0 0 9px;font-size:13px;line-height:1.5;color:var(--dim)}
+.sheet .card p:last-of-type{margin-bottom:14px}
 .sheet .card p b{color:var(--ink)}
-ul.plain{margin:0 0 14px;padding:0 0 0 18px;font-size:12.5px;line-height:1.7;color:var(--dim)}
-ul.plain li{margin:0}
+
 .pbtn{
   background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:12px 14px;
   text-align:left;font-size:13px;letter-spacing:.04em;cursor:pointer;color:var(--ink);
@@ -548,14 +548,10 @@ ul.plain li{margin:0}
   <!-- ===================== DRIVE ===================== -->
   <div class="pause sheet" id="a2hs" hidden>
     <div class="card">
-      <h3>Add it to your home screen</h3>
+      <h3>Play fullscreen</h3>
+      <p>Add it to your home screen and the address bar goes — all screen, no browser.</p>
       <p id="a2hsHow">Tap the share button, then <b>Add to Home Screen</b>.</p>
-      <ul class="plain">
-        <li>Plays fullscreen, with no address bar taking a slice of the road</li>
-        <li>Opens in one tap, like an app</li>
-        <li>Keeps your circuits and your best laps</li>
-      </ul>
-      <div class="btns"><button class="pbtn primary" id="a2hsOk">OK, let me drive</button></div>
+      <div class="btns"><button class="pbtn primary" id="a2hsOk">OK</button></div>
     </div>
   </div>
 
