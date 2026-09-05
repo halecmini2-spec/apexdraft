@@ -1954,7 +1954,7 @@ const CAR_MODELS=[
    around the same circuit are not the same record. */
 const CAR_PERF={
   gt:     {power:1.00, top:1.00, grip:1.00},
-  formula:{power:1.26, top:1.20, grip:1.22},
+  formula:{power:1.26, top:1.20, grip:1.32},
   yaris:  {power:0.72, top:0.74, grip:0.84},
   /* a kart has almost no top end but corners on rails: slow down the
      straights, quickest thing here through anything tight */
@@ -2516,11 +2516,12 @@ function bindTouch(id,prop){
 const SURF={
   road  :{mu:1.00,grip:1.00,power:1.00,brake:1.00,drag0:0.25,dragV:0.013},
   kerb  :{mu:0.86,grip:0.85,power:0.95,brake:0.85,drag0:0.90,dragV:0.020},
-  /* Paved run-off between the kerb and the barrier. It was being treated as
-     grass, which capped you at ~60 km/h and made running wide feel like a
-     punishment rather than a mistake. It's asphalt — dusty and slower than the
-     racing line, but you can still drive on it. */
-  runoff:{mu:0.84,grip:0.86,power:0.80,brake:0.88,drag0:1.10,dragV:0.026},
+  /* Paved run-off between the kerb and the barrier. Grass once capped you at
+     60km/h out here, which made running wide a punishment rather than a
+     mistake; asphalt at 184km/h made it a shortcut. It sits between the two
+     now — you can drive on it, and you will lose time for doing so. About
+     150km/h flat out, and noticeably less grip to lean on. */
+  runoff:{mu:0.71,grip:0.74,power:0.65,brake:0.79,drag0:1.95,dragV:0.036},
   grass :{mu:0.52,grip:0.55,power:0.60,brake:0.62,drag0:4.00,dragV:0.060}
 };
 
@@ -4096,6 +4097,14 @@ function a2hsInstalled(){
   return (window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)
          ||navigator.standalone===true;
 }
+/* A phone, as opposed to anything that merely has a touchscreen. Both have
+   to hold: a laptop with a touch screen is coarse-pointered but far too big,
+   and a desktop is neither. */
+function isHandheld(){
+  const coarse=window.matchMedia&&window.matchMedia("(pointer:coarse)").matches;
+  const small=Math.min(screen.width||9999,screen.height||9999)<=900;
+  return !!coarse&&small;
+}
 let a2hsSeen=false;
 function a2hsWanted(){
   /* Answered it is gone for the rest of the visit, which makes it impossible
@@ -4106,7 +4115,11 @@ function a2hsWanted(){
      stops it for good, because then there is nothing left to suggest. */
   if(a2hsInstalled())return false;
   if(a2hsSeen)return false;                                // once a visit, not once a lap
-  if(!touchUIOn())return false;                            // nothing to gain on a desktop
+  /* touchUIOn only says whether the on-screen pedals are up, which is a
+     setting and is true of any touchscreen — a touch laptop included. A home
+     screen is a phone thing, so ask whether this is a phone: a coarse pointer
+     on a small screen. Anything else is never offered it. */
+  if(!isHandheld())return false;
   return true;
 }
 function a2hsShow(){
