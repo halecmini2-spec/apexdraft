@@ -276,7 +276,10 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
   font-family:var(--ui);font-weight:600;letter-spacing:.06em;
   -webkit-tap-highlight-color:transparent;
 }
-.touch button:active{background:rgba(255,176,32,.34);border-color:var(--amber);color:var(--amber)}
+/* .held, not :active — a browser only ever marks one element active, so
+   with a thumb on the throttle and a thumb on the steering only one of them
+   ever lit up. This follows the state the car is actually being given. */
+.touch button.held{background:rgba(255,176,32,.34);border-color:var(--amber);color:var(--amber)}
 #tLeft,#tRight,#tBrake,#tGas{bottom:24px;width:98px;height:98px;border-radius:50%;font-size:24px}
 #tLeft{left:20px}  #tRight{left:130px}
 #tBrake{right:130px;font-size:13px} #tGas{right:20px;font-size:13px}
@@ -2364,6 +2367,7 @@ addEventListener("keyup",e=>{keys[e.code]=0;});
 function releaseAllInput(){
   for(const k in keys)keys[k]=0;
   touch.l=touch.r=touch.gas=touch.brake=0;
+  document.querySelectorAll(".touch button.held").forEach(b=>b.classList.remove("held"));
 }
 /* Long-press context menu and the iOS pinch gestures are not events the
    game ever wants; the CSS stops most of it, these stop the rest. Typing a
@@ -2402,11 +2406,13 @@ function bindTouch(id,prop){
   const on=e=>{
     e.preventDefault();
     pid=e.pointerId; touch[prop]=1;
+    el.classList.add("held");
     try{ el.setPointerCapture(e.pointerId); }catch(err){}
   };
   const off=e=>{
     if(e&&pid!=null&&e.pointerId!=null&&e.pointerId!==pid)return;  // another finger
     touch[prop]=0;
+    el.classList.remove("held");
     if(pid!=null){ try{ el.releasePointerCapture(pid); }catch(err){} pid=null; }
   };
   el.addEventListener("pointerdown",on);
