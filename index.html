@@ -1310,7 +1310,9 @@ function buildBarriers(T,TH){
       const nq=nearest(T,ax,az);
       let gap=Math.abs(nq.i-a); gap=Math.min(gap,N-gap);
       if(gap>26&&Math.abs(nq.d)<hw+3.4){ T.wall[a]=0; continue; }
-      const ay=heightAt(T,ax,az), by=heightAt(T,bx,bz);
+      /* hint with the road this rail belongs to, or on a flyover it resolves
+         to whatever is passing underneath and the rail drops off the deck */
+      const ay=heightAt(T,ax,az,null,T.Y[a]), by=heightAt(T,bx,bz,null,T.Y[b]);
       /* subtle weathering so a 4 km rail isn't one flat tone */
       const c=(Math.floor(T.S[a]/4.3)%2)?cSteel:cSteelB;
       for(let p=0;p<WBEAM.length-1;p++){
@@ -1414,7 +1416,7 @@ function buildBridges(T,TH){
      flyover grew a 6.6m skirt down each side — which is the concrete you
      met head-on driving underneath, and why there was nothing to see
      through. A deck edge is a beam, not a wall. */
-  const BEAM=0.75;
+  const BEAM=1.0, TOP=0.35;
   for(let side=-1;side<=1;side+=2){
     for(let k=0;k<N;k++){
       const a=k, b=(k+1)%N;
@@ -1422,9 +1424,21 @@ function buildBridges(T,TH){
       const o=off*side;
       const ax=T.X[a]+T.RX[a]*o, az=T.Z[a]+T.RZ[a]*o;
       const bx=T.X[b]+T.RX[b]*o, bz=T.Z[b]+T.RZ[b]*o;
-      const at=T.Y[a]-0.35, bt=T.Y[b]-0.35;                // just under the surface
+      const at=T.Y[a]-TOP, bt=T.Y[b]-TOP;                  // just under the surface
       quad([ax,at,az],[bx,bt,bz],[bx,bt-BEAM,bz],[ax,at-BEAM,az],cDeck);
     }
+  }
+  /* Soffit. Two edge beams alone left daylight between them and the thing
+     read as a pair of rails rather than a bridge; closing the underside is
+     what makes it a slab you could believe carries a road. */
+  for(let k=0;k<N;k++){
+    const a=k, b=(k+1)%N;
+    if(T.OV[a]<0.4&&T.OV[b]<0.4)continue;
+    const ay=T.Y[a]-TOP-BEAM, by=T.Y[b]-TOP-BEAM;
+    quad([T.X[a]+T.RX[a]*off,ay,T.Z[a]+T.RZ[a]*off],
+         [T.X[b]+T.RX[b]*off,by,T.Z[b]+T.RZ[b]*off],
+         [T.X[b]-T.RX[b]*off,by,T.Z[b]-T.RZ[b]*off],
+         [T.X[a]-T.RX[a]*off,ay,T.Z[a]-T.RZ[a]*off],cDeck);
   }
   /* Piers, kept well clear of the headroom: slim, well spaced, tucked in
      under the middle of the deck so they never break its surface and never
@@ -1432,11 +1446,11 @@ function buildBridges(T,TH){
   for(let k=0;k<N;k+=14){
     if(T.OV[k]<3.0)continue;
     const gy=heightAt(T,T.X[k],T.Z[k])-T.OV[k];
-    const top=T.Y[k]-BEAM-0.5, h=top-gy;
+    const top=T.Y[k]-TOP-BEAM, h=top-gy;
     if(h<2.0)continue;                                     // too shallow to bother
     for(const sx of [-1,1]){
-      const px=T.X[k]+T.RX[k]*(T.halfW*0.42*sx), pz=T.Z[k]+T.RZ[k]*(T.halfW*0.42*sx);
-      const w=0.8;
+      const px=T.X[k]+T.RX[k]*(T.halfW*0.55*sx), pz=T.Z[k]+T.RZ[k]*(T.halfW*0.55*sx);
+      const w=1.05;
       const rx=T.RX[k]*w, rz=T.RZ[k]*w, tx=T.TX[k]*w, tz=T.TZ[k]*w;
       const c=[[px-rx-tx,pz-rz-tz],[px+rx-tx,pz+rz-tz],[px+rx+tx,pz+rz+tz],[px-rx+tx,pz-rz+tz]];
       for(let e=0;e<4;e++){
@@ -2573,7 +2587,7 @@ function step(dt){
 
   /* re-project after the barrier may have moved us: kerb detection and lap
      timing below both need the corrected position */
-  const np2=nearest(T,CAR.x,CAR.z);
+  const np2=nearest(T,CAR.x,CAR.z,null,CAR.y);
 
   /* ---- vertical ----
      The car sits on the surface. Full stop. There is no ballistic state and no
@@ -2581,7 +2595,11 @@ function step(dt){
      stuck off the floor. Two earlier attempts at "has it launched?" both turned
      ordinary road undulation into hopping; these gradients are gentle enough
      that jumps were never worth the failure modes. */
-  const surfY=heightAt(T,CAR.x,CAR.z);
+  /* the height hint matters most here: this is the line that decides which
+     road the car is standing on, and without it a flyover put you on the
+     deck when you were underneath it and on the road below when you were on
+     top of it */
+  const surfY=heightAt(T,CAR.x,CAR.z,np2,CAR.y);
   CAR.y=surfY;
   CAR.vy=0;
   CAR.grounded=true;
@@ -2735,7 +2753,7 @@ function updateCarMesh(){
   /* contact shadow stays on the ground and fades as the car leaves it */
   const b=G.blob;
   if(b){
-    const surf=heightAt(T,CAR.x,CAR.z);
+    const surf=heightAt(T,CAR.x,CAR.z,null,CAR.y);
     const lift=Math.max(0,CAR.y-surf);
     b.position.set(CAR.x,surf+0.05,CAR.z);
     b.rotation.order="YXZ";
