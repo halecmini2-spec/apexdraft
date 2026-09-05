@@ -453,7 +453,10 @@ body.touchcap .touchonly{display:block}
           <div id="netLive" hidden>
             <div class="codeout"><span class="k">Code</span><b id="netShow">----</b></div>
             <p class="hint" id="netWho">Waiting for players…</p>
-            <div class="chips"><button class="chip" id="btnLeave">Leave party</button></div>
+            <div class="chips" id="solidBox">
+              <button class="chip" id="btnSolid">Contact <span class="s" id="solidState">Off</span></button>
+              <button class="chip" id="btnLeave">Leave party</button>
+            </div>
           </div>
         </div>
 
@@ -2634,6 +2637,7 @@ function step(dt){
     CAR.hitX=ex; CAR.hitZ=ez; CAR.hitY=heightAt(T,ex,ez);
     CAR.scrape=Math.max(CAR.scrape,Math.hypot(CAR.vx,CAR.vz));
   }
+  netCollide();
   if(worst>1.5&&CAR.hitCool<=0){
     G.shake=Math.min(0.9,worst/26); thud(worst); CAR.hitCool=0.16;
   }
@@ -3556,7 +3560,7 @@ function netHandle(m){
     NET.peers.clear();
     (m.peers||[]).forEach(p=>NET.peers.set(p.id,{name:p.name,car:p.car,colour:p.colour,buf:[]}));
     if(m.t==="hosted") netSendTrack();
-    netUI();
+    netUI(); solidUI();
     return;
   }
   if(m.t==="peer"){ NET.peers.set(m.id,{name:m.name,car:m.car,colour:m.colour,buf:[]}); netUI(); return; }
@@ -3586,7 +3590,7 @@ function netTakeTrack(d){
   ED.opts=Object.assign({},d.opts);
   ED.opts.car=keep; ED.opts.color=keepC;      // your car stays yours
   ED.fit=1;
-  rebuild(); syncSliders();
+  rebuild(); syncSliders(); solidUI();
   pressGroup($("themes"),"theme",ED.opts.theme);
   netSay("Circuit received from the host.");
 }
@@ -3605,6 +3609,47 @@ $("btnLeave").addEventListener("click",()=>{
   netSend({t:"bye"});
   if(NET.ws)NET.ws.close();
 });
+/* Contact is a rule of the party, not a personal preference: if one car is
+   solid and the other is not, one of you gets shoved and the other feels
+   nothing. The host sets it and it travels with the circuit, so everyone in
+   a room is playing the same game. */
+$("btnSolid").addEventListener("click",()=>{
+  if(NET.id!==NET.hostId){ netSay("Only the host can change contact."); return; }
+  ED.opts.solid=!ED.opts.solid;
+  store.set("ad.opts",ED.opts);
+  solidUI(); netSendTrack();
+});
+function solidUI(){
+  const on=!!ED.opts.solid, host=NET.id===NET.hostId;
+  $("solidState").textContent=on?"On":"Off";
+  $("solidState").className="s "+(on?"on":"off");
+  $("btnSolid").disabled=!host;
+  $("btnSolid").title=host?"":"Only the host can change this";
+}
+
+/* Other cars are solid only when the party says so. Both machines push
+   themselves out of the overlap rather than one being told where to go, so
+   there is no authority to argue over — each of you feels the same shunt
+   from your own side of it. */
+function netCollide(){
+  if(!ED.opts.solid||NET.status!=="in")return;
+  const R=2.3;                                  // two cars, roughly
+  for(const p of NET.peers.values()){
+    if(!p.mesh)continue;
+    const m=p.mesh.position;
+    if(Math.abs(CAR.y-m.y)>2.5)continue;         // one of you is on the flyover
+    const dx=CAR.x-m.x, dz=CAR.z-m.z;
+    const d=Math.hypot(dx,dz);
+    if(d>=R||d<1e-4)continue;
+    const nx=dx/d, nz=dz/d;
+    CAR.x+=nx*(R-d); CAR.z+=nz*(R-d);
+    const vin=CAR.vx*nx+CAR.vz*nz;
+    if(vin<0){                                   // closing: bounce off
+      CAR.vx-=nx*vin*1.45; CAR.vz-=nz*vin*1.45;
+      if(-vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-vin/30); thud(-vin); CAR.hitCool=0.16; }
+    }
+  }
+}
 
 /* ---- other people's cars ----
    One mesh per peer, built the first time they are heard from and thrown
@@ -3642,7 +3687,13 @@ function netUpdateCars(){
     const span=Math.max(1,b.t-a.t);
     const u=clamp((now-a.t)/span,0,1);
     const A=a.p, B=b.p;
-    p.mesh.position.set(lerp(A[0],B[0],u),lerp(A[1],B[1],u),lerp(A[2],B[2],u));
+    /* Height comes from our own road, not the wire. Straight-line
+       interpolation between two packets 60ms apart cuts the corner
+       vertically — under a crest the car sinks into the tarmac, through a
+       dip it floats above it. Their height still decides which road they are
+       on, so a car on a flyover stays on the flyover. */
+    const gx=lerp(A[0],B[0],u), gz=lerp(A[2],B[2],u), gh=lerp(A[1],B[1],u);
+    p.mesh.position.set(gx, G.T?heightAt(G.T,gx,gz,null,gh):gh, gz);
     let dy=B[3]-A[3];
     while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU;   // never spin the long way
     p.mesh.rotation.order="YXZ";
@@ -3653,6 +3704,14 @@ function netUpdateCars(){
     if(w){ const st=-lerp(A[6],B[6],u)*0.44;
       for(let i=0;i<4;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<2?st:0;
         w[i].rotation.x=lerp(A[7],B[7],u)*sp; } }
+    /* Somebody else's Yaris has to squash too. It is a property of the car,
+       not of who is driving it, and there is no point sending it — the shape
+       is a function of the clock, so each machine can work it out. */
+    const bp=p.mesh.userData.bop, bd=p.mesh.userData.body;
+    if(bp&&bd){
+      const q=Math.tanh(Math.sin(performance.now()/1000*bp.freq)*2.8);
+      bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx);
+    }
   }
 }
 function netTick(){
@@ -3751,6 +3810,7 @@ $("pBack").addEventListener("click",()=>{
   pressGroup($("themes"),"theme",ED.opts.theme);
   pressGroup($("colors"),"color",ED.opts.color);
   pressGroup($("cars"),"car",ED.opts.car);
+  solidUI();
   syncSliders();
   const saved=store.get("ad.raw",null);
   ED.raw = (saved&&saved.length>8) ? saved : shapeLoop(DEFAULT_SHAPE);
