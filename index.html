@@ -550,7 +550,12 @@ body.inparty #btnAccount{display:none}
 body[data-mode="guest"] .lb-acct{display:none}
 /* These pages carry their own heading and are the only thing up. */
 body.authing #lobbybar,
-body.shelving #lobbybar{display:none}
+body.shelving #lobbybar,
+body.admining #lobbybar{display:none}
+#adminScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
+#adminScreen .ad-list{max-height:none;margin-top:6px}
+#adminScreen .auth-sub.bad{color:var(--party)}
+#adminScreen .tk-head .chips{display:flex;gap:8px;flex:0 0 auto}
 
 /* ============ the account desk ============
    A page, not a dialog. It is the only thing on the screen while it is up,
@@ -882,6 +887,7 @@ body.shelving #lobbybar{display:none}
 
     <div class="lb-acct" id="lbAcct">
       <button class="chip" id="btnTracks">Tracks</button>
+      <button class="chip on" id="btnAdmin" hidden>Admin</button>
       <button class="chip" id="btnAccount">Sign in</button>
     </div>
   </div>
@@ -1134,16 +1140,6 @@ body.shelving #lobbybar{display:none}
         <p class="awho">Signed in as <b id="auWhoName">—</b></p>
         <p class="amail" id="auWhoMail">—</p>
         <button class="chip" id="auOut">Sign out</button>
-
-        <!-- Only for accounts named in ADMIN_USERS on the relay. Everything
-             here removes something; nothing here creates or edits. -->
-        <div id="authAdmin" hidden>
-          <div class="ad-head"><span>Admin</span><button class="chip" id="adRefresh">Refresh</button></div>
-          <p class="amsg" id="adMsg"></p>
-          <div class="ad-list" id="adUsers"></div>
-          <p class="ahint">Deleting an account takes its saved circuits and lap times with it.
-            Times on the leaderboard can be removed one at a time from the pause menu.</p>
-        </div>
       </div>
 
       <button class="chip aback" id="auBack">Back to the track</button>
@@ -1153,6 +1149,29 @@ body.shelving #lobbybar{display:none}
   <!-- ===================== SAVED CIRCUITS ===================== -->
   <!-- A saved circuit is the same thing a host sends a party: the points and
        the settings. So the shelf is a list of those, drawn small. -->
+  <!-- ===================== ADMIN ===================== -->
+  <!-- Only for accounts named in ADMIN_USERS on the relay, and only reachable
+       through a button that exists for them alone. Everything here removes
+       something; nothing here creates or edits. -->
+  <section id="adminScreen" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head">
+        <div>
+          <h1 class="auth-brand">Admin <span>desk</span></h1>
+          <p class="auth-sub" id="adMsg">Every account, and what it holds</p>
+        </div>
+        <div class="chips">
+          <button class="chip" id="adRefresh">Refresh</button>
+          <button class="chip" id="adBack">Back to the track</button>
+        </div>
+      </div>
+      <div class="ad-list" id="adUsers"></div>
+      <p class="ahint">Deleting an account takes its saved circuits and lap times with it.
+        Times on a leaderboard are removed one at a time from the pause menu while
+        you are on that circuit, or the whole board at once.</p>
+    </div>
+  </section>
+
   <section id="tracks" class="screen" hidden>
     <div class="tk-wrap">
       <div class="tk-head">
@@ -5366,10 +5385,21 @@ const isAdminHere=()=>acctIn()&&!!ACCT.user.admin;
 function adSay(m,bad){ const e=$("adMsg"); e.textContent=m||""; e.classList.toggle("bad",!!bad); }
 function adminUI(){
   const on=isAdminHere();
-  $("authAdmin").hidden=!on;
+  $("btnAdmin").hidden=!on;             // the button exists for the named few
   $("tiWipe").hidden=!on;
-  if(on&&!AD.list.length)adLoad();
+  if(!on&&!$("adminScreen").hidden)showAdmin(false);   // the flag went away under you
 }
+function showAdmin(on){
+  if(on&&!isAdminHere())return;
+  $("adminScreen").hidden=!on;
+  $("editor").hidden=on;
+  document.body.classList.toggle("admining",on);
+  if(on){ AD.list=[]; adLoad(); }       // always fresh: this is a page you act from
+  else fitPad();
+}
+$("btnAdmin").addEventListener("click",()=>showAdmin(true));
+$("adBack").addEventListener("click",()=>showAdmin(false));
+addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("adminScreen").hidden)showAdmin(false); });
 async function adLoad(){
   if(!isAdminHere())return;
   adSay("Fetching accounts…");
