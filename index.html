@@ -4560,6 +4560,20 @@ function rebuild(){
   store.set("ad.raw",ED.raw); store.set("ad.opts",ED.opts);
   syncBank();                      // corner count may have changed
   renderPad(); updateReadout();
+  /* A host's circuit is everyone's circuit. It used to go out once, when
+     somebody joined, and never again — so every slider nudge and redraw
+     after that left the guests racing the version they had walked in on:
+     a different start line, and the other car out on the grass. */
+  netSendSoon();
+}
+
+/* Debounced, because a slider fires rebuild on every pixel of a drag and a
+   circuit is a few kilobytes. */
+let sendT=0, adopting=false;
+function netSendSoon(){
+  if(adopting||NET.status!=="in"||NET.id!==NET.hostId)return;
+  clearTimeout(sendT);
+  sendT=setTimeout(netSendTrack,250);
 }
 
 /* ---- pad rendering ---- */
@@ -4849,6 +4863,9 @@ const PUBLIC_RELAY="wss://apexdraft-relay.onrender.com";
    hosting means is one press away and obvious once you are there. */
 const NET_IDLE="Race live with other people";
 const NET_RATE=1000/15;              // position updates per second
+/* Bumped whenever a change to how a circuit is built would make two
+   versions disagree about the same points. */
+const NET_VER=3;
 const NET_LAG=120;                   // render remote cars this far in the past
 
 /* Same host as the page by default, with the service name the blueprint
@@ -5652,17 +5669,20 @@ function netSendTrack(){
   for(let i=0;i<raw.length;i++){
     if(raw[i][0]!==canon[i].x||raw[i][1]!==canon[i].y){ differs=true; break; }
   }
+  clearTimeout(sendT);                 // this is the send that was pending
   if(differs){
     /* Adopted back into the board's own scale rather than replacing it, so
        the host builds precisely the numbers it sent without the drawing
-       jumping out of its box on a board that had shrunk it. */
+       jumping out of its box on a board that had shrunk it. The rebuild
+       that does it must not queue another send, or it would never settle. */
     let cx=0,cy=0;
     for(const p of ED.raw){ cx+=p.x; cy+=p.y; }
     cx/=ED.raw.length; cy/=ED.raw.length;
     ED.raw=raw.map(a=>({x:cx+(a[0]-cx)*f, y:cy+(a[1]-cy)*f}));
-    rebuild();
+    adopting=true;
+    try{ rebuild(); } finally{ adopting=false; }
   }
-  netSend({t:"track",data:{raw,opts:ED.opts}});
+  netSend({t:"track",data:{v:NET_VER,raw,opts:ED.opts}});
 }
 
 /* Everyone's place on the grid. The relay hands out ids in join order, so
@@ -5690,7 +5710,13 @@ function takeTrack(d){
   return true;
 }
 function netTakeTrack(d){
-  if(takeTrack(d)) netSay("Circuit received from the host.");
+  if(!takeTrack(d))return;
+  /* Two machines on different versions of the game can build different
+     circuits from the same points — and a tab left open, or a home-screen
+     app, keeps the version it opened with. Say so, rather than leaving one
+     of you on the grass wondering why. */
+  if(d.v!==NET_VER) netSay("Circuit received — but the host is on an older version of the game. Ask them to refresh.");
+  else netSay("Circuit received from the host.");
 }
 $("btnHost").addEventListener("click",()=>{
   netOpen(()=>{ NET.status="joining"; netSend({t:"host",token:ACCT.token,name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
@@ -6094,7 +6120,13 @@ $("btnDrive").addEventListener("click",()=>{
   const m=document.body.dataset.mode;
   if(m==="guest")return;                                   // the host sends everyone out
   if(a2hsWanted()){ a2hsShow(); return; }                  // OK carries on into driveNow
-  if(m==="host") netSend({t:"go"});                        // take the room with you
+  if(m==="host"){
+    /* The circuit first, then the flag. Messages arrive in order on one
+       socket, so everyone builds the final circuit before they are sent
+       out onto it — however recently it was last touched. */
+    netSendTrack();
+    netSend({t:"go"});                                       // take the room with you
+  }
   driveNow();
 });
 function driveNow(){
