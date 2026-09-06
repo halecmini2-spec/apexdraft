@@ -3227,16 +3227,33 @@ function bodyKart(b,M){
   ball([0,0.628,-0.284],0.076,darkM,[1.5,0.8,1.1]);                         // neck brace
   limb([0,0.600,-0.290],[0,0.700,-0.268],0.068,0.074,suitM);
 
-  const shellM=new THREE.MeshStandardMaterial({color:SRGB(0xF2F4F5),roughness:0.30,metalness:0.10});
-  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.176,16,12),shellM);
-  helmet.position.set(0,0.808,-0.252); helmet.scale.set(1,0.98,1.05);
-  helmet.castShadow=true; b.add(helmet);
-  const visor=new THREE.Mesh(lens(0.244,0.096,0.10),M.glass);
-  visor.position.set(0,0.804,-0.104); visor.rotation.x=-0.06; b.add(visor);
-  const stripe=new THREE.Mesh(new THREE.TorusGeometry(0.1715,0.042,6,16,Math.PI),M.paint);
+  /* ---- the helmet, after an Arai CK-7 ----
+     Not a ball. The shell is an egg lying on its side — longer front to back
+     than it is wide, a little taller than either — with the chin bar
+     carrying the bottom of the face forward under the eyeport. The eyeport
+     itself is the other thing that says which helmet this is: wide and deep,
+     wrapping well round to the sides, with a dark seal around it. Both the
+     seal and the visor are cut from spheres a hair larger than the shell,
+     so they lie on it rather than being flat plates stuck to the front. */
+  const shellM=new THREE.MeshStandardMaterial({color:SRGB(0xF2F4F5),roughness:0.28,metalness:0.10});
+  const sealM =new THREE.MeshStandardMaterial({color:SRGB(0x0E1214),roughness:0.55,metalness:0.10});
+  const HR=0.176, HP=new THREE.Vector3(0,0.812,-0.262), HS=new THREE.Vector3(0.955,1.03,1.115);
+  const onShell=(m,k)=>{ m.position.copy(HP); m.scale.copy(HS).multiplyScalar(k||1); b.add(m); return m; };
+  const helmet=onShell(new THREE.Mesh(new THREE.SphereGeometry(HR,20,14),shellM));
+  helmet.castShadow=true;
+  /* chin bar: the lower front of the shell brought forward and squared off */
+  const chin=new THREE.Mesh(new THREE.SphereGeometry(HR*0.92,14,10),shellM);
+  chin.position.set(HP.x,HP.y-0.070,HP.z+0.046); chin.scale.set(0.86,0.62,0.96);
+  chin.castShadow=true; b.add(chin);
+  /* the eyeport: a dark seal, and the visor lying inside it */
+  onShell(new THREE.Mesh(new THREE.SphereGeometry(HR,18,8,Math.PI*0.5-1.32,2.64,1.13,0.78),sealM),1.032);
+  onShell(new THREE.Mesh(new THREE.SphereGeometry(HR,18,8,Math.PI*0.5-1.16,2.32,1.20,0.60),M.glass),1.048);
+  /* crown vent */
+  const vent=new THREE.Mesh(lens(0.075,0.026,0.02),sealM);
+  vent.position.set(0,HP.y+HR*0.96,HP.z+0.02); vent.rotation.x=Math.PI/2-0.30; b.add(vent);
+  /* the stripe over the crown, in the driver's colour */
+  const stripe=onShell(new THREE.Mesh(new THREE.TorusGeometry(HR*0.975,0.040,6,18,Math.PI),M.paint));
   stripe.rotation.y=Math.PI/2;
-  stripe.position.copy(helmet.position); stripe.scale.copy(helmet.scale);
-  b.add(stripe);
 
   const tailMats=addLamps(b,null,{w:0.12,h:0.055,y:0.225,z:-1.09,x:[0]});
   return {tailMats,
