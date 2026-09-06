@@ -5872,37 +5872,35 @@ const TAGV=new THREE.Vector3(), TAGD=new THREE.Vector3(), TAGR=new THREE.Vector3
 let tagCtx=null, tagW=0, tagH=0, tagDpr=1;
 
 function tagPill(c,x,y,name,dist,colour,edge,ang){
-  c.font='600 11.5px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
+  /* No box. A tag sits over the road ahead, and a panel there is a patch
+     of circuit you cannot see; the lettering carries a dark outline instead,
+     which reads over sky, tarmac and grass alike and hides nothing. */
+  c.font='600 12px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
   const nw=c.measureText(name).width;
   c.font='10px ui-monospace, "Cascadia Mono", Consolas, monospace';
   const dw=c.measureText(dist).width;
-  const padL=8, dot=7, gap=6, padR=9;
-  const w=padL+dot+gap+nw+gap+dw+padR, h=20;
+  const dot=7, gap=6;
+  const w=dot+gap+nw+gap+dw, h=16;
   let X=Math.round(x-w/2), Y=Math.round(y-h/2);
   /* Never off its own edge: a label you have to guess at is no label. */
-  X=Math.max(2,Math.min(tagW-w-2,X));
-  Y=Math.max(2,Math.min(tagH-h-2,Y));
+  X=Math.max(4,Math.min(tagW-w-4,X));
+  Y=Math.max(4,Math.min(tagH-h-4,Y));
 
-  c.beginPath();
-  const r=3;
-  c.moveTo(X+r,Y); c.arcTo(X+w,Y,X+w,Y+h,r); c.arcTo(X+w,Y+h,X,Y+h,r);
-  c.arcTo(X,Y+h,X,Y,r); c.arcTo(X,Y,X+w,Y,r); c.closePath();
-  c.fillStyle=edge?"rgba(9,14,15,.9)":"rgba(9,14,15,.76)";
-  c.fill();
-  c.lineWidth=1;
-  c.strokeStyle=edge?"rgba(255,255,255,.2)":"rgba(255,255,255,.1)";
-  c.stroke();
-
-  c.beginPath(); c.arc(X+padL+dot/2,Y+h/2,dot/2,0,TAU);
+  c.beginPath(); c.arc(X+dot/2,Y+h/2,dot/2,0,TAU);
   c.fillStyle=colour||"#8FA3A0"; c.fill();
+  c.lineWidth=1.5; c.strokeStyle="rgba(9,14,15,.85)"; c.stroke();
 
   c.textBaseline="middle";
-  c.font='600 11.5px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
-  c.fillStyle="#E6EEEC";
-  c.fillText(name,X+padL+dot+gap,Y+h/2+0.5);
+  c.lineJoin="round"; c.lineWidth=3;
+  c.strokeStyle=edge?"rgba(9,14,15,.95)":"rgba(9,14,15,.8)";
+  c.font='600 12px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
+  c.strokeText(name,X+dot+gap,Y+h/2+0.5);
+  c.fillStyle="#F2F7F5";
+  c.fillText(name,X+dot+gap,Y+h/2+0.5);
   c.font='10px ui-monospace, "Cascadia Mono", Consolas, monospace';
-  c.fillStyle="#7C918E";
-  c.fillText(dist,X+padL+dot+gap+nw+gap,Y+h/2+0.5);
+  c.strokeText(dist,X+dot+gap+nw+gap,Y+h/2+0.5);
+  c.fillStyle="#B9C9C6";
+  c.fillText(dist,X+dot+gap+nw+gap,Y+h/2+0.5);
 
   if(edge){
     /* A wedge on the outside, pointing the way you would have to look. */
@@ -5910,9 +5908,10 @@ function tagPill(c,x,y,name,dist,colour,edge,ang){
     c.translate(X+w/2,Y+h/2);
     c.rotate(ang);
     c.beginPath();
-    c.moveTo(0,h/2+9); c.lineTo(-5,h/2+1); c.lineTo(5,h/2+1);
+    c.moveTo(0,h/2+11); c.lineTo(-5,h/2+3); c.lineTo(5,h/2+3);
     c.closePath();
-    c.fillStyle="#B9C9C6"; c.fill();
+    c.fillStyle=colour||"#B9C9C6"; c.fill();
+    c.lineWidth=1.5; c.strokeStyle="rgba(9,14,15,.85)"; c.stroke();
     c.restore();
   }
 }
