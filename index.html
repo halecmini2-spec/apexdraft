@@ -1478,6 +1478,9 @@ body.admining #lobbybar{display:none}
             <button class="chip" data-car="kart">Kart</button>
           </div>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
+          <!-- A car's own music, made in the browser as it plays. The row
+               only appears when the car being driven has any. -->
+          <button class="pbtn" id="pMusic" hidden>Music <span class="s on" id="musicState">On</span></button>
           <!-- Only in a party, and only the host may turn it: if one car is
                solid and the other is not, one of you gets shoved and the
                other feels nothing. -->
@@ -4758,6 +4761,131 @@ function thud(v){
   g.gain.exponentialRampToValueAtTime(0.001,t+0.25);
   o.connect(g); g.connect(AU.master); o.start(t); o.stop(t+0.3);
 }
+/* ---- a car's own music ----
+   Written here, played by the browser: an original drill beat for the
+   Yaris — sliding 808s, a clapped snare on the three, rolling hats and a
+   dark piano line in F minor at 140 — sequenced a bar at a time on the
+   same audio context as the engine, through its own gain so the engine
+   switch and the music switch are separate things. Nothing is a file and
+   nothing is anybody's record; it is a beat in a style, not a copy of a
+   song. It stops the moment the car is not being driven. */
+let MUSIC=store.get("ad.music",true);
+const MU={kind:null,gain:null,timer:0,step:0,next:0,delay:null};
+const BPM=140, STEP=60/BPM/4;
+const NOTE=(n)=>440*Math.pow(2,(n-69)/12);
+/* F minor: F Ab C Db (i, III, v, VI) — the loop everything sits on */
+const DRILL={
+  /* 808 bass: [step, midi, slide-to midi or null, length in steps] over 4 bars */
+  bass:[[0,29,null,6],[7,29,32,3],[10,29,null,4],[16,32,null,6],[23,32,36,3],[26,32,null,4],
+        [32,36,null,6],[39,36,34,3],[42,36,null,4],[48,34,null,4],[54,34,29,4],[60,29,null,4]],
+  kick:[0,10,16,26,32,42,48,58],
+  snare:[8,24,40,56],                     // the three, every bar
+  ghost:[14,30,46,62],                    // the drill snare on the and of four
+  hat:[0,2,4,6,8,10,12,14],                // eighths, repeated per bar
+  roll:[7,15],                             // 32nd rolls into the next bar
+  open:[13],
+  /* the piano line, two bars, played twice */
+  keys:[[0,65,3],[3,68,3],[6,72,2],[8,73,3],[11,72,2],[13,68,3],[16,65,3],[19,68,3],[22,72,2],[24,77,3],[27,75,2],[29,72,3]],
+  bell:[[32,84,4],[38,80,4],[44,77,4],[52,80,6]],
+};
+const CAR_MUSIC={ yaris:DRILL };
+function musicUI(){
+  const row=$("pMusic"); if(!row)return;
+  const kind=G.T?G.T.opts.car:null;
+  row.hidden=!(kind&&CAR_MUSIC[kind]);
+  $("musicState").textContent=MUSIC?"On":"Off";
+  $("musicState").className="s "+(MUSIC?"on":"off");
+}
+function musicStop(){
+  clearInterval(MU.timer); MU.timer=0; MU.kind=null;
+  if(MU.gain&&AU.ctx){ MU.gain.gain.setTargetAtTime(0,AU.ctx.currentTime,0.05); }
+}
+function musicStart(kind){
+  if(!CAR_MUSIC[kind]){ musicStop(); musicUI(); return; }
+  if(MU.kind===kind&&MU.timer)return;
+  initAudio(); if(!AU.ctx)return;
+  const ctx=AU.ctx;
+  if(!MU.gain){
+    MU.gain=ctx.createGain(); MU.gain.gain.value=0; MU.gain.connect(ctx.destination);
+    /* a little room: a short feedback delay the keys and hats sit in */
+    const d=ctx.createDelay(1.0); d.delayTime.value=STEP*3;
+    const fb=ctx.createGain(); fb.gain.value=0.28; const wet=ctx.createGain(); wet.gain.value=0.22;
+    const hp=ctx.createBiquadFilter(); hp.type="highpass"; hp.frequency.value=900;
+    d.connect(fb); fb.connect(d); d.connect(hp); hp.connect(wet); wet.connect(MU.gain);
+    MU.delay=d;
+  }
+  MU.kind=kind; MU.step=0; MU.next=ctx.currentTime+0.08;
+  MU.gain.gain.setTargetAtTime(MUSIC&&G.running?0.42:0,ctx.currentTime,0.05);
+  clearInterval(MU.timer);
+  MU.timer=setInterval(musicTick,25);
+  musicUI();
+}
+function musicPause(paused){
+  if(!MU.gain||!AU.ctx)return;
+  MU.gain.gain.setTargetAtTime((paused||!MUSIC)?0:0.42,AU.ctx.currentTime,0.06);
+  if(!paused&&MUSIC&&AU.ctx.state==="suspended")AU.ctx.resume();
+}
+function setMusic(on){ MUSIC=on; store.set("ad.music",on); musicUI(); musicPause(!G.running); }
+/* one voice each, made fresh per hit and thrown away */
+function mu808(t,midi,slide,len){
+  const ctx=AU.ctx, o=ctx.createOscillator(), g=ctx.createGain(), sh=ctx.createWaveShaper();
+  const curve=new Float32Array(256); for(let i=0;i<256;i++){ const x=i/128-1; curve[i]=Math.tanh(x*2.2); } sh.curve=curve;
+  o.type="sine"; o.frequency.setValueAtTime(NOTE(midi),t);
+  if(slide!=null) o.frequency.exponentialRampToValueAtTime(NOTE(slide),t+len*STEP*0.85);
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.9,t+0.012); g.gain.exponentialRampToValueAtTime(0.0001,t+len*STEP);
+  o.connect(sh); sh.connect(g); g.connect(MU.gain); o.start(t); o.stop(t+len*STEP+0.05);
+}
+function muKick(t){
+  const ctx=AU.ctx, o=ctx.createOscillator(), g=ctx.createGain();
+  o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(42,t+0.09);
+  g.gain.setValueAtTime(0.8,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
+  o.connect(g); g.connect(MU.gain); o.start(t); o.stop(t+0.2);
+}
+let muNoise=null;
+function muBurst(t,hz,q,len,vol,toDelay){
+  const ctx=AU.ctx;
+  if(!muNoise){ muNoise=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate); const d=muNoise.getChannelData(0); for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; }
+  const src=ctx.createBufferSource(); src.buffer=muNoise; const f=ctx.createBiquadFilter(); f.type=q>0?"bandpass":"highpass"; f.frequency.value=hz; if(q>0)f.Q.value=q;
+  const g=ctx.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+len);
+  src.connect(f); f.connect(g); g.connect(MU.gain); if(toDelay&&MU.delay)g.connect(MU.delay); src.start(t); src.stop(t+len+0.02);
+}
+function muSnare(t,soft){
+  /* a clap: three quick bursts a few milliseconds apart, then the tail */
+  if(!soft){ for(let k=0;k<3;k++) muBurst(t+k*0.011,2400,0.9,0.05,0.9,false); }
+  muBurst(t+(soft?0:0.02),1900,0.7,soft?0.1:0.2,soft?0.5:1.1,true);
+  const ctx=AU.ctx, o=ctx.createOscillator(), g=ctx.createGain();
+  o.frequency.setValueAtTime(soft?210:190,t); o.frequency.exponentialRampToValueAtTime(120,t+0.06);
+  g.gain.setValueAtTime(soft?0.18:0.35,t); g.gain.exponentialRampToValueAtTime(0.0001,t+0.1);
+  o.connect(g); g.connect(MU.gain); o.start(t); o.stop(t+0.12);
+}
+function muHat(t,open){ muBurst(t,9000,0,open?0.22:0.035,open?0.22:0.2,false); }
+function muKey(t,midi,len,bell){
+  const ctx=AU.ctx, g=ctx.createGain();
+  for(const [type,mul,vol] of bell?[["sine",1,0.5],["sine",2.01,0.12]]:[["triangle",1,0.55],["sine",2,0.14]]){
+    const o=ctx.createOscillator(); o.type=type; o.frequency.value=NOTE(midi)*mul;
+    const og=ctx.createGain(); og.gain.value=vol; o.connect(og); og.connect(g); o.start(t); o.stop(t+len*STEP+0.6);
+  }
+  g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(bell?0.22:0.3,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+len*STEP*0.9+0.4);
+  g.connect(MU.gain); if(MU.delay)g.connect(MU.delay);
+}
+/* the sequencer: a step at a time, scheduled a tenth of a second ahead */
+function musicTick(){
+  const ctx=AU.ctx; if(!ctx||!MU.kind)return;
+  const P=CAR_MUSIC[MU.kind];
+  while(MU.next<ctx.currentTime+0.12){
+    const i=MU.step%64, b=i%16, t=MU.next;
+    for(const [st,m,sl,len] of P.bass) if(st===i) mu808(t,m,sl,len);
+    if(P.kick.indexOf(i)>=0) muKick(t);
+    if(P.snare.indexOf(i)>=0) muSnare(t,false);
+    if(P.ghost.indexOf(i)>=0) muSnare(t,true);
+    if(P.hat.indexOf(b)>=0) muHat(t,false);
+    if(P.open.indexOf(b)>=0) muHat(t,true);
+    if(P.roll.indexOf(b)>=0) for(let k=0;k<4;k++) muHat(t+k*STEP/4,false);
+    for(const [st,m,len] of P.keys) if(st===(i%32)) muKey(t,m,len,false);
+    for(const [st,m,len] of P.bell) if(st===i) muKey(t,m,len,true);
+    MU.next+=STEP; MU.step++;
+  }
+}
 function setSound(on){
   SOUND=on; store.set("ad.sound",on);
   $("soundState").textContent=on?"On":"Off";
@@ -4827,6 +4955,7 @@ function togglePause(force){
   if(!show){ G.lastT=performance.now(); }
   if(show&&AU.ctx)AU.master.gain.setTargetAtTime(0,AU.ctx.currentTime,0.05);
   else if(AU.master)AU.master.gain.setTargetAtTime(SOUND?0.5:0,AU.ctx?AU.ctx.currentTime:0,0.05);
+  if(typeof musicPause==="function"){ musicPause(show); if(show)musicUI(); }
 }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden&&G.running)togglePause(true); });
 /* =====================================================================
@@ -6447,6 +6576,7 @@ function garage(kind){
   G.perf=carPerf(kind);
   resetCar(true);
   paintSectors(true);
+  musicStart(kind);
   netMeta();
   garageUI();
   togglePause(false);
@@ -6992,6 +7122,7 @@ function driveNow(){
       $("loading").hidden=true;
       resize();
       startGame();
+      musicStart(ED.track.opts.car);
     }catch(err){
       $("loadLbl").textContent="Could not build that circuit — try a simpler loop.";
       console.error(err);
@@ -7004,6 +7135,7 @@ $("pResume").addEventListener("click",()=>togglePause(false));
 $("pReset").addEventListener("click",()=>{ resetCar(false); togglePause(false); });
 $("pFull").addEventListener("click",()=>{ fsToggle(); setTimeout(fsUI,120); });
 $("pSound").addEventListener("click",()=>setSound(!SOUND));
+$("pMusic").addEventListener("click",()=>setMusic(!MUSIC));
 $("pTouch").addEventListener("click",()=>{
   if(padOnly()){ flashPause("On a phone the controls stay on — there is nothing else to drive with."); return; }
   TOUCHUI=!touchUIOn(); store.set("ad.touchui",TOUCHUI); applyTouchUI();
@@ -7013,6 +7145,7 @@ $("pBack").addEventListener("click",()=>{
      as long as the party does, so the board offers the way straight back
      out — whether or not the host is out there just now. */
   G.running=false; togglePause(false); $("pause").hidden=true;
+  musicStop();
   $("drive").hidden=true; $("editor").hidden=false;
   document.body.classList.remove("driving");
   driveLabel();

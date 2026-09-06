@@ -27,6 +27,11 @@ Open `index.html` in any modern browser, or host it as-is.
   track, and there is a toggle in the pause menu. iPhone Safari has no
   Fullscreen API at all, so there the route is Add to Home Screen: the page
   is set up to launch standalone, with no browser around it.
+- **The Yaris has a beat.** An original drill track — sliding 808s, a
+  clapped snare, rolling hats, a dark piano line — synthesised in the
+  browser while it is driven; nothing is a file and nothing is anyone's
+  record. It stops with the pause menu and on the board, and has its own
+  switch in the pause menu, separate from the engine sound.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
