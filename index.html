@@ -776,6 +776,16 @@ body.shelving #lobbybar,
 body.admining #lobbybar{display:none}
 #adminScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 #adminScreen .ad-list{max-height:none;margin-top:6px}
+.ad-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin:4px 0 12px}
+.ad-tile{background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.ad-tile b{font-family:var(--mono);font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1}
+.ad-tile span{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.ad-tile.live b{color:var(--green)}
+.ad-chart{display:block;width:100%;height:130px;background:var(--panel2);border:1px solid var(--line);border-radius:2px}
+.ad-key i{display:inline-block;width:10px;height:8px;vertical-align:-1px;margin-right:4px}
+.ad-key .k-bar{background:var(--amber);opacity:.8}
+.ad-key .k-line{height:2px;background:#7FD1C4;vertical-align:2px}
+.ad-key .k-dot{width:7px;height:7px;border-radius:50%;background:var(--party)}
 #adminScreen .auth-sub.bad{color:var(--party)}
 #adminScreen .tk-head .chips{display:flex;gap:8px;flex:0 0 auto}
 
@@ -1462,6 +1472,24 @@ body.admining #lobbybar{display:none}
           <button class="chip" id="adBack">Back to the track</button>
         </div>
       </div>
+      <!-- How many came, how many played, and who is on right now. Counts
+           only: the page sends a random id it made up, and the server keeps
+           a number per day against it. -->
+      <div class="ad-stats" id="adStats">
+        <div class="ad-tiles">
+          <div class="ad-tile live"><b id="stPlayers">–</b><span>playing now</span></div>
+          <div class="ad-tile live"><b id="stRooms">–</b><span>parties open</span></div>
+          <div class="ad-tile"><b id="stToday">–</b><span>visits today</span></div>
+          <div class="ad-tile"><b id="stUniq">–</b><span>people today</span></div>
+          <div class="ad-tile"><b id="stPlays">–</b><span>parties today</span></div>
+          <div class="ad-tile"><b id="stAll">–</b><span>visits all time</span></div>
+          <div class="ad-tile"><b id="stAllU">–</b><span>people all time</span></div>
+          <div class="ad-tile"><b id="stAcct">–</b><span>accounts</span></div>
+        </div>
+        <canvas id="stChart" class="ad-chart"></canvas>
+        <p class="ahint ad-key"><i class="k-bar"></i> visits &nbsp; <i class="k-line"></i> different people &nbsp; <i class="k-dot"></i> parties started &nbsp;· last 30 days, UTC · live counts refresh every 15 s</p>
+      </div>
+      <div class="ad-head"><span>Accounts</span></div>
       <div class="ad-list" id="adUsers"></div>
       <p class="ahint">Deleting an account takes its saved circuits and lap times with it.
         Times on a leaderboard are removed one at a time from the pause menu while
@@ -5825,7 +5853,7 @@ function showAdmin(on){
   $("editor").hidden=on;
   document.body.classList.toggle("admining",on);
   if(on){ AD.list=[]; adLoad(); }       // always fresh: this is a page you act from
-  else fitPad();
+  else { clearTimeout(stTimer); fitPad(); }
 }
 $("btnAdmin").addEventListener("click",()=>showAdmin(true));
 $("adBack").addEventListener("click",()=>showAdmin(false));
@@ -5838,6 +5866,57 @@ async function adLoad(){
     AD.list=r.users||[]; adSay(AD.list.length+(AD.list.length===1?" account":" accounts"));
   }catch(e){ adSay(e.message,true); }
   adRender();
+  adStats();
+}
+/* The numbers. Live ones keep themselves fresh while the desk is open;
+   the history is fetched with them, since it is one request either way. */
+let stTimer=0;
+async function adStats(){
+  clearTimeout(stTimer);
+  if(!isAdminHere()||$("adminScreen").hidden)return;
+  try{
+    const r=await api("/api/admin/stats",{token:ACCT.token});
+    const n=(x)=>String(x==null?0:x);
+    const today=(r.days||[]).find(d=>d.day===r.today)||{hits:0,uniques:0,plays:0};
+    $("stPlayers").textContent=n(r.live.players); $("stRooms").textContent=n(r.live.rooms);
+    $("stToday").textContent=n(today.hits); $("stUniq").textContent=n(today.uniques); $("stPlays").textContent=n(today.plays);
+    $("stAll").textContent=n(r.totals.hits); $("stAllU").textContent=n(r.totals.uniques); $("stAcct").textContent=n(r.totals.accounts);
+    adChart(r.days||[],r.today);
+  }catch(e){ adSay(e.message,true); }
+  stTimer=setTimeout(adStats,15000);
+}
+function adChart(days,today){
+  const cv=$("stChart"), dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth||600, H=cv.clientHeight||130;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  const c=cv.getContext("2d"); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+  /* thirty days ending today, with zeros where nothing happened */
+  const by={}; for(const d of days) by[d.day]=d;
+  const end=new Date(today+"T00:00:00Z"), series=[];
+  for(let i=29;i>=0;i--){ const t=new Date(end.getTime()-i*86400000).toISOString().slice(0,10); series.push(by[t]||{day:t,hits:0,uniques:0,plays:0}); }
+  const padL=30,padR=8,padT=10,padB=20, gw=W-padL-padR, gh=H-padT-padB;
+  const max=Math.max(4,...series.map(d=>Math.max(d.hits,d.plays)));
+  const step=gw/30, bw=Math.max(2,step*0.55);
+  c.font="9.5px ui-monospace, Consolas, monospace"; c.textBaseline="middle";
+  /* gridlines and the scale */
+  c.strokeStyle="rgba(255,255,255,.07)"; c.fillStyle="#5E7371"; c.textAlign="right";
+  for(let k=0;k<=2;k++){ const v=Math.round(max*k/2), y=padT+gh-gh*k/2; c.beginPath(); c.moveTo(padL,y); c.lineTo(W-padR,y); c.stroke(); c.fillText(String(v),padL-5,y); }
+  /* visits as bars */
+  series.forEach((d,i)=>{
+    const x=padL+i*step+(step-bw)/2, h=gh*d.hits/max;
+    c.fillStyle=d.day===today?"#FFB020":"rgba(255,176,32,.6)";
+    if(h>0)c.fillRect(x,padT+gh-h,bw,h);
+  });
+  /* different people as a line */
+  c.strokeStyle="#7FD1C4"; c.lineWidth=1.6; c.beginPath();
+  series.forEach((d,i)=>{ const x=padL+i*step+step/2, y=padT+gh-gh*d.uniques/max; i?c.lineTo(x,y):c.moveTo(x,y); });
+  c.stroke();
+  /* parties started as dots */
+  c.fillStyle="#FF5A45";
+  series.forEach((d,i)=>{ if(!d.plays)return; const x=padL+i*step+step/2, y=padT+gh-gh*d.plays/max; c.beginPath(); c.arc(x,y,2.4,0,TAU); c.fill(); });
+  /* a date every week, and today */
+  c.fillStyle="#5E7371"; c.textAlign="center"; c.textBaseline="alphabetic";
+  series.forEach((d,i)=>{ if(i%7!==1&&i!==29)return; c.fillText(i===29?"today":d.day.slice(5),padL+i*step+step/2,H-6); });
 }
 function adRender(){
   const box=$("adUsers"); box.innerHTML="";
@@ -5868,6 +5947,7 @@ function adRender(){
   }
 }
 $("adRefresh").addEventListener("click",()=>{ AD.list=[]; adLoad(); });
+addEventListener("resize",()=>{ if(!$("adminScreen").hidden)adStats(); });
 /* Clearing a whole board asks first, in the button. */
 let wipeArm=0;
 $("tiWipe").addEventListener("click",async()=>{
@@ -6699,6 +6779,16 @@ $("pBack").addEventListener("click",()=>{
   /* a phone has no Esc key, so the menu needs a button of its own */
   $("tMenu").addEventListener("click",e=>{e.preventDefault();togglePause(true);});
   if(IS_TOUCH)document.body.classList.add("touchcap");
+  /* One small beacon per load so the desk can count visits: a random id
+     this browser made up and keeps, and nothing else. Not from a copy on
+     disk or a dev server — those are not visits. */
+  setTimeout(()=>{
+    const h=location.hostname;
+    if(!h||h==="localhost"||h==="127.0.0.1")return;
+    let vid=store.get("ad.vid",null);
+    if(!vid){ vid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,"0")).join(""); store.set("ad.vid",vid); }
+    try{ fetch(apiBase()+"/api/hit",{method:"POST",body:JSON.stringify({v:vid}),keepalive:true,headers:{"content-type":"text/plain"}}).catch(()=>{}); }catch(e){}
+  },1500);
   if(a2hsInstalled()) document.body.classList.add("standalone");
   updateCheck();                    // note the build we started on
   applyTouchUI();

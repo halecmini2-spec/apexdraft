@@ -131,6 +131,13 @@ There is deliberately no way to become an admin from inside the game, and an
 admin cannot delete their own account or another admin's from there. Every
 removal is logged on the relay with who did it.
 
+The desk also counts: who is playing right now, visits and different people
+today and all time, parties started, accounts, and a thirty-day chart. The
+page sends one beacon per load carrying a random id its browser made up and
+keeps; the relay stores a count per day against it. No address, no browser
+string, no path — enough to say how many came, and nothing about any one of
+them. Copies opened from disk or a dev server are not counted.
+
 ### The small print
 
 There is **no verification email and no password reset**, and the UI says so

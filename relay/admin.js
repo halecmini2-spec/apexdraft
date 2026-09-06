@@ -10,7 +10,7 @@
  */
 const { json, readBody, cors, isAdmin } = require("./auth");
 
-function makeAdmin(store, userFor) {
+function makeAdmin(store, userFor, liveNow) {
   function bearer(req) {
     const h = req.headers.authorization || "";
     return h.startsWith("Bearer ") ? h.slice(7).trim() : null;
@@ -30,6 +30,18 @@ function makeAdmin(store, userFor) {
         name: u.name, email: u.email, created: Number(u.created),
         tracks: Number(u.tracks), laps: Number(u.laps), admin: isAdmin(u),
       })) }), true;
+    }
+
+    /* How many came and how many played: today, the last thirty days, and
+       all time — plus who is on right now. */
+    if (url.pathname === "/api/admin/stats" && req.method === "GET") {
+      const since = new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
+      const st = await store.stats(since);
+      return json(res, 200, {
+        live: liveNow ? liveNow() : { players: 0, rooms: 0, racing: 0 },
+        today: new Date().toISOString().slice(0, 10),
+        days: st.days, totals: st.totals,
+      }), true;
     }
 
     if (req.method !== "POST") return json(res, 405, { error: "Not allowed." }), true;

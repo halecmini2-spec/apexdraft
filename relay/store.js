@@ -21,7 +21,7 @@ const path = require("path");
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [], tracks: [], laps: [] };
+  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {} };
   let writing = null, again = false;
 
   try {
@@ -30,6 +30,8 @@ function fileStore(file) {
     db.sessions = db.sessions || [];
     db.tracks = db.tracks || [];
     db.laps = db.laps || [];
+    db.visits = db.visits || {};
+    db.days = db.days || {};
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -161,6 +163,36 @@ function fileStore(file) {
       if (db.laps.length !== n) await save();
       return n - db.laps.length;
     },
+
+    /* ---- how many came, and how many played ---- */
+    async hit(day, vid) {
+      const d = db.visits[day] || (db.visits[day] = {});
+      d[vid] = (d[vid] || 0) + 1;
+      await save();
+    },
+    async playing(day, players) {
+      const d = db.days[day] || (db.days[day] = { plays: 0, peak: 0 });
+      d.plays++; d.peak = Math.max(d.peak, players | 0);
+      await save();
+    },
+    async stats(since) {
+      const days = {};
+      for (const [day, m] of Object.entries(db.visits)) {
+        if (day < since) continue;
+        const d = days[day] || (days[day] = { day, hits: 0, uniques: 0, plays: 0, peak: 0 });
+        for (const n of Object.values(m)) { d.hits += n; d.uniques++; }
+      }
+      for (const [day, x] of Object.entries(db.days)) {
+        if (day < since) continue;
+        const d = days[day] || (days[day] = { day, hits: 0, uniques: 0, plays: 0, peak: 0 });
+        d.plays = x.plays; d.peak = x.peak;
+      }
+      const all = new Set(); let hits = 0, plays = 0;
+      for (const m of Object.values(db.visits)) for (const [v, n] of Object.entries(m)) { all.add(v); hits += n; }
+      for (const x of Object.values(db.days)) plays += x.plays;
+      return { days: Object.values(days).sort((a, b) => a.day < b.day ? -1 : 1),
+               totals: { hits, uniques: all.size, plays, accounts: db.users.length } };
+    },
   };
 }
 
@@ -230,6 +262,22 @@ function pgStore(url) {
           PRIMARY KEY (circuit, user_id)
         )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS laps_board ON laps(circuit,ms)`);
+      /* Visits: one row per browser per day, with how many times it came.
+         Nothing about who — the id is a random one the browser made up. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS visits (
+          day TEXT NOT NULL,
+          vid TEXT NOT NULL,
+          n   INTEGER NOT NULL DEFAULT 1,
+          PRIMARY KEY (day, vid)
+        )`);
+      /* Parties started per day, and the most people connected at once. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS days (
+          day   TEXT PRIMARY KEY,
+          plays INTEGER NOT NULL DEFAULT 0,
+          peak  INTEGER NOT NULL DEFAULT 0
+        )`);
     },
     userByName: (lower) => one(`SELECT * FROM users WHERE name_lower=$1`, [lower]),
     userByEmail: (lower) => one(`SELECT * FROM users WHERE email_lower=$1`, [lower]),
@@ -323,6 +371,32 @@ function pgStore(url) {
     async wipeBoard(circuit) {
       const r = await pool.query(`DELETE FROM laps WHERE circuit=$1`, [circuit]);
       return r.rowCount;
+    },
+
+    /* ---- how many came, and how many played ---- */
+    async hit(day, vid) {
+      await pool.query(
+        `INSERT INTO visits (day,vid,n) VALUES ($1,$2,1)
+         ON CONFLICT (day,vid) DO UPDATE SET n=visits.n+1`, [day, vid]);
+    },
+    async playing(day, players) {
+      await pool.query(
+        `INSERT INTO days (day,plays,peak) VALUES ($1,1,$2)
+         ON CONFLICT (day) DO UPDATE SET plays=days.plays+1, peak=GREATEST(days.peak,EXCLUDED.peak)`,
+        [day, players | 0]);
+    },
+    async stats(since) {
+      const v = (await pool.query(
+        `SELECT day, SUM(n)::int AS hits, COUNT(*)::int AS uniques FROM visits WHERE day>=$1 GROUP BY day`, [since])).rows;
+      const p = (await pool.query(`SELECT day, plays, peak FROM days WHERE day>=$1`, [since])).rows;
+      const days = {};
+      for (const r of v) days[r.day] = { day: r.day, hits: r.hits, uniques: r.uniques, plays: 0, peak: 0 };
+      for (const r of p) { const d = days[r.day] || (days[r.day] = { day: r.day, hits: 0, uniques: 0, plays: 0, peak: 0 }); d.plays = r.plays; d.peak = r.peak; }
+      const t = await one(`SELECT COALESCE(SUM(n),0)::int AS hits, COUNT(DISTINCT vid)::int AS uniques FROM visits`);
+      const q = await one(`SELECT COALESCE(SUM(plays),0)::int AS plays FROM days`);
+      const a = await one(`SELECT COUNT(*)::int AS n FROM users`);
+      return { days: Object.values(days).sort((x, y) => x.day < y.day ? -1 : 1),
+               totals: { hits: t ? t.hits : 0, uniques: t ? t.uniques : 0, plays: q ? q.plays : 0, accounts: a ? a.n : 0 } };
     },
   };
 }

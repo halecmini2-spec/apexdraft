@@ -15,6 +15,7 @@ const { makeAuth } = require("./auth");
 const { makeTracks } = require("./tracks");
 const { makeLaps } = require("./laps");
 const { makeAdmin } = require("./admin");
+const { makeVisits } = require("./visits");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
@@ -23,7 +24,15 @@ const store = open();
 const auth = makeAuth(store);
 const tracks = makeTracks(store, auth.userFor);
 const laps = makeLaps(store, auth.userFor);
-const admin = makeAdmin(store, auth.userFor);
+const visits = makeVisits(store);
+/* What is happening right now, for the admin desk. A socket only connects
+   to host or join, so every socket is somebody in a party. */
+const liveNow = () => ({
+  players: wss ? wss.clients.size : 0,
+  rooms: rooms.size,
+  racing: [...rooms.values()].filter((r) => r.live).length,
+});
+const admin = makeAdmin(store, auth.userFor, liveNow);
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;
@@ -45,6 +54,12 @@ function makeCode() {
 }
 
 let nextId = 1;
+/* Counted in the store so the desk can show it across restarts; never
+   allowed to fail the thing it is counting. */
+function played() {
+  if (store.ready !== true) return;
+  store.playing(visits.today(), wss ? wss.clients.size : 0).catch((e) => console.error("played:", e && e.message));
+}
 const send = (ws, obj) => {
   if (ws.readyState === 1) {
     try { ws.send(JSON.stringify(obj)); } catch (e) { /* socket is going away */ }
@@ -103,7 +118,8 @@ const server = http.createServer((req, res) => {
   /* The account desk, and the shelf of saved circuits beside it. They answer
      on the same service because it is the same small amount of work, and
      because one address is one thing to wake. */
-  const handle = url.pathname.startsWith("/api/tracks") ? tracks.route
+  const handle = url.pathname === "/api/hit" ? visits.route
+                : url.pathname.startsWith("/api/tracks") ? tracks.route
                 : url.pathname.startsWith("/api/laps") ? laps.route
                 : url.pathname.startsWith("/api/admin") ? admin.route
                 : auth.route;
@@ -167,6 +183,7 @@ wss.on("connection", (ws) => {
       ws.car = m.car; ws.colour = m.colour;
       room.players.set(ws.id, ws);
       send(ws, { t: "hosted", code, id: ws.id });
+      played();
       return;
     }
 
@@ -188,6 +205,7 @@ wss.on("connection", (ws) => {
          case what it has is newer than what the room remembers. */
       send(ws, { t: "joined", code, id: ws.id, hostId: room.hostId, peers,
                  live: !!room.live, track: room.track || null });
+      played();
       broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
       /* Ask the host to re-send the circuit for the newcomer. */
       const host = room.players.get(room.hostId);
