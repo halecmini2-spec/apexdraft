@@ -2565,10 +2565,10 @@ function buildWheels(g,M,spec){
    behind the rear axle, so the mass sits at the back and the body says so. */
 function bodyGT(b,M){
   const shell=new THREE.Mesh(loft([
-    {z: 2.24,w:0.86,y0:0.20,y1:0.50,n:3.2},   // nose: blunt, not a wedge
-    {z: 2.00,w:1.00,y0:0.15,y1:0.50,n:3.4},
-    {z: 1.66,w:1.06,y0:0.13,y1:0.53,n:3.8},   // bonnet, low between the wings
-    {z: 1.22,w:1.07,y0:0.12,y1:0.575,n:4.2},
+    {z: 2.24,w:0.84,y0:0.20,y1:0.45,n:2.2},   // nose: blunt, not a wedge
+    {z: 2.00,w:1.00,y0:0.15,y1:0.455,n:2.3},  // an arc across, not a plate
+    {z: 1.66,w:1.06,y0:0.13,y1:0.485,n:2.4},  // bonnet, low between the wings
+    {z: 1.22,w:1.07,y0:0.12,y1:0.535,n:2.9},
     {z: 0.96,w:1.05,y0:0.12,y1:0.655,n:4.4},  // cowl: the screen starts early
     {z: 0.30,w:1.05,y0:0.11,y1:0.715,n:4.8},  // a high beltline, shallow glass
     {z:-0.30,w:1.07,y0:0.11,y1:0.765,n:5.0},
@@ -2595,6 +2595,20 @@ function bodyGT(b,M){
   /* The bonnet dips between two raised wing tops, with a round lamp let into
      the front of each. That trough is the front of this car; a flat bonnet
      with lights stuck on the corners is the front of any other. */
+  /* The bonnet between them is two metres of body and a cross-section that
+     shallow cannot be domed into anything you would notice — an arc over
+     that width is a flat plate however you shape it. So the relief is put
+     there rather than bent into it: a panel down the middle standing a
+     little proud, which lays a crease along each side of the bonnet and
+     gives the light something to break on. */
+  const bonnet=new THREE.Mesh(loft([
+    {z: 2.10,w:0.38,y0:0.30,y1:0.492,n:3.0},
+    {z: 1.84,w:0.45,y0:0.30,y1:0.520,n:3.2},
+    {z: 1.46,w:0.45,y0:0.30,y1:0.552,n:3.2},
+    {z: 1.12,w:0.40,y0:0.30,y1:0.588,n:3.2}
+  ],14),M.paint);
+  bonnet.castShadow=true; b.add(bonnet);
+
   for(const sx of [-0.74,0.74]){
     const crown=new THREE.Mesh(loft([
       {z: 2.00,w:0.20,y0:0.30,y1:0.645,n:3.2},
@@ -2626,8 +2640,8 @@ function bodyGT(b,M){
     k.box(0.34,0.04,0.09,-0.72,0.56-i*0.005,z,dark,-0.30);
     k.box(0.34,0.04,0.09, 0.72,0.56-i*0.005,z,dark,-0.30);
   }
-  k.box(0.30,0.04,0.34,-0.30,0.55,1.44,dark,-0.10);    // bonnet ducts
-  k.box(0.30,0.04,0.34, 0.30,0.55,1.44,dark,-0.10);
+  k.box(0.30,0.045,0.36,-0.235,0.567,1.46,dark,-0.09); // ducts, in the raised panel
+  k.box(0.30,0.045,0.36, 0.235,0.567,1.46,dark,-0.09);
 
   /* Intakes in front of the rear wheels, feeding an engine behind them. */
   k.box(0.07,0.20,0.52,-1.09,0.555,-0.52,dark);
