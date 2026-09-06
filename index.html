@@ -2756,6 +2756,45 @@ function bodyKart(b,M){
   k.box(0.86,0.06,0.16,0,0.30,-1.02,carbon);           // rear bumper
   b.add(k.mesh());
 
+  /* ---- the driver ----
+     A kart has nowhere to hide one: no roof, no doors, no bodywork above the
+     axle, so the seat looked occupied by nobody at all. Reclined into the
+     seat with the legs out in front and the arms up at the wheel, which is
+     the shape a kart driver actually makes.
+     The helmet takes the car's colour rather than the suit, because it is
+     the highest thing on the kart and the only part of it you can pick out
+     from three corners away — and in a party that colour is who you are. */
+  /* A shade the kart has nowhere else: the frame, the pods and the seat back
+     are all near-black, and a driver in the same value vanishes into them. */
+  const suit=0x3B454C, glove=0x11161A, strap=0x5A656B;
+  const d=trimKit();
+  d.box(0.38,0.46,0.30, 0,    0.50,-0.22, suit, -0.28);   // torso, laid back
+  d.box(0.48,0.16,0.26, 0,    0.70,-0.16, suit, -0.28);   // shoulders
+  d.box(0.15,0.09,0.13, 0,    0.79,-0.12, strap);         // neck brace
+  /* Up and out to the rim, angled so they read as two arms rather than one
+     bar laid across the front of him. */
+  d.box(0.11,0.11,0.50, -0.175,0.58, 0.07, suit, -0.34);
+  d.box(0.11,0.11,0.50,  0.175,0.58, 0.07, suit, -0.34);
+  d.box(0.10,0.10,0.10, -0.15, 0.50, 0.31, glove);        // hands on the wheel
+  d.box(0.10,0.10,0.10,  0.15, 0.50, 0.31, glove);
+  d.box(0.16,0.16,0.50, -0.125,0.275,0.18, suit, -0.11);  // thighs, out in front
+  d.box(0.16,0.16,0.50,  0.125,0.275,0.18, suit, -0.11);
+  d.box(0.14,0.12,0.22, -0.125,0.215,0.55, glove);        // feet at the pedals
+  d.box(0.14,0.12,0.22,  0.125,0.215,0.55, glove);
+  const dm=d.mesh();
+  dm.material.roughness=0.88; dm.material.metalness=0.04;  // cloth, not carbon
+  b.add(dm);
+
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.165,16,12),M.paint);
+  helmet.position.set(0,0.885,-0.09);
+  helmet.scale.set(1,0.97,1.04);
+  helmet.castShadow=true; b.add(helmet);
+  /* Across the middle of the shell, where a face is. Sitting it any higher
+     turns the whole thing into a headband. */
+  const visor=new THREE.Mesh(new THREE.BoxGeometry(0.235,0.072,0.10),M.glass);
+  visor.position.set(0,0.874,0.045);
+  b.add(visor);
+
   const tailMats=addLamps(b,null,{w:0.10,h:0.10,y:0.34,z:-1.06,x:[0]});
   return {tailMats,
     wheels:{r:0.20,tw:0.15,rR:0.23,twR:0.26,
