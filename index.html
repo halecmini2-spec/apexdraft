@@ -926,11 +926,11 @@ body.admining #lobbybar{display:none}
 .rail-more{position:relative;height:0;z-index:2}
 .rail-more span{position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:flex-end;justify-content:center;
   padding-bottom:6px;background:linear-gradient(to bottom,rgba(16,24,26,0),var(--panel) 75%);pointer-events:none}
-.rail-more i{pointer-events:auto;cursor:pointer;font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+.rail-more i{pointer-events:auto;cursor:pointer;font-style:normal;font-size:11px;white-space:nowrap;letter-spacing:.08em;text-transform:uppercase;
   color:var(--amber);background:var(--panel2);border:1px solid var(--amber-deep);border-radius:14px;padding:5px 11px;
   animation:nudge 1.6s ease-in-out infinite}
 @keyframes nudge{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
-.rail-more.h span{left:auto;right:0;width:64px;height:auto;top:auto;bottom:0;align-items:center;justify-content:flex-end;padding:0 6px 0 0;
+.rail-more.h span{left:auto;right:0;width:76px;height:auto;top:auto;bottom:0;align-items:center;justify-content:flex-end;padding:0 6px 0 0;
   background:linear-gradient(to right,rgba(16,24,26,0),var(--panel) 70%)}
 .rail-more.h i{animation-name:nudgeR}
 @keyframes nudgeR{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
@@ -5364,7 +5364,7 @@ function railMoreUI(){
   el.hidden=!(down||right);
   el.classList.toggle("h",!down&&right);
   el.dataset.dir=down?"down":"right";
-  $("railMoreBtn").textContent=down?"More settings ▾":"More settings ▸";
+  $("railMoreBtn").textContent=down?"More settings ▾":"More ▸";
   /* sideways: the strip stands the full height of the scrolling part */
   el.querySelector("span").style.height=(!down&&right)?sc.clientHeight+"px":"";
 }
