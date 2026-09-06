@@ -903,6 +903,38 @@ body.admining #lobbybar{display:none}
    Circuits are shapes, so the list is shapes: a name alone tells you nothing
    about which lap it was. Each one is drawn from the points it was saved
    with, which costs nothing and is the only label that means anything. */
+/* the garage */
+#garage{overflow-y:auto;padding:calc(16px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal))}
+.gar-wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.gar-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.gar-card{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px 11px;text-align:left;cursor:pointer;
+  display:flex;flex-direction:column;gap:3px;color:var(--dim);transition:border-color .12s,background .12s}
+.gar-card canvas{width:100%;height:auto;aspect-ratio:360/220;display:block;border-radius:2px;background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);margin-bottom:5px}
+.gar-card b{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.gar-card span{font-size:11px;line-height:1.4}
+.gar-card:hover{border-color:var(--faint)}
+.gar-card[aria-pressed="true"]{border-color:var(--amber);background:var(--amber-glow)}
+.gar-card[aria-pressed="true"] b{color:var(--amber)}
+.gar-colours{display:flex;align-items:center;gap:14px}
+.gar-colours .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.gar-go{max-width:360px;align-self:flex-start}
+.chip.gar-open{display:inline-flex;align-items:center;gap:8px}
+.chip.gar-open .dot{width:12px;height:12px;border-radius:50%;background:var(--amber);display:inline-block;border:1px solid rgba(255,255,255,.25)}
+/* the rail scrolls, and on a phone that is not obvious: a pill at the
+   bottom says so while there is more below */
+.rail-more{position:relative;height:0;z-index:2}
+.rail-more span{position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:6px;background:linear-gradient(to bottom,rgba(16,24,26,0),var(--panel) 75%);pointer-events:none}
+.rail-more i{pointer-events:auto;cursor:pointer;font-style:normal;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--amber);background:var(--panel2);border:1px solid var(--amber-deep);border-radius:14px;padding:5px 11px;
+  animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
+.rail-more.h span{left:auto;right:0;width:64px;height:auto;top:auto;bottom:0;align-items:center;justify-content:flex-end;padding:0 6px 0 0;
+  background:linear-gradient(to right,rgba(16,24,26,0),var(--panel) 70%)}
+.rail-more.h i{animation-name:nudgeR}
+@keyframes nudgeR{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+@media (prefers-reduced-motion:reduce){.rail-more i{animation:none}}
 #tracks{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .tk-wrap{max-width:880px;margin:0 auto}
 .tk-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px}
@@ -1212,7 +1244,7 @@ body.admining #lobbybar{display:none}
           </div>
         </div>
 
-        <div class="grp grp-env">
+        <div class="grp grp-env" id="grpEnv">
           <h2>Setting</h2>
           <div class="chips" id="themes">
             <button class="chip" data-theme="alpine" aria-pressed="true">Alpine</button>
@@ -1239,22 +1271,9 @@ body.admining #lobbybar{display:none}
           </div>
         </div>
 
-        <div class="grp grp-car" id="grpCar">
+        <div class="grp grp-gar">
           <h2>Car</h2>
-          <div class="chips" id="cars">
-            <button class="chip" data-car="gt" aria-pressed="true">GT</button>
-            <button class="chip" data-car="formula">Formula</button>
-            <button class="chip" data-car="yaris">Yaris</button>
-            <button class="chip" data-car="kart">Kart</button>
-          </div>
-          <div class="swatches" id="colors" style="margin-top:9px">
-            <button class="sw" data-color="#E2482B" style="background:#E2482B" aria-pressed="true" title="Rosso"></button>
-            <button class="sw" data-color="#F2C230" style="background:#F2C230" title="Giallo"></button>
-            <button class="sw" data-color="#2E7BE8" style="background:#2E7BE8" title="Blu"></button>
-            <button class="sw" data-color="#E8EDEC" style="background:#E8EDEC" title="Bianco"></button>
-            <button class="sw" data-color="#1B2427" style="background:#1B2427" title="Nero"></button>
-            <button class="sw" data-color="#2ED47A" style="background:#2ED47A" title="Verde"></button>
-          </div>
+          <button class="chip gar-open" id="btnGarage"><i class="dot" id="garDot"></i><span id="garWhat">GT</span> · change in the garage</button>
         </div>
         <!-- What this is, in words, at the end of the rail. Closed by default
              so the board stays a board; open for the person who scrolled down
@@ -1297,6 +1316,7 @@ body.admining #lobbybar{display:none}
           </dl>
         </details>
       </div>
+      <div class="rail-more" id="railMore" hidden><span><i id="railMoreBtn">More settings ▾</i></span></div>
       <div class="rail-foot">
         <button class="go" id="btnDrive">Drive it</button>
         <p class="foot-note">No account. Nothing to install.</p>
@@ -1329,6 +1349,39 @@ body.admining #lobbybar{display:none}
       <div class="btns"><button class="pbtn primary" id="a2hsOk">OK</button></div>
     </div>
   </div>
+
+  <!-- The garage: where a car and a colour are chosen, on the way out to
+       the track. Every car is drawn from its own model in the colour picked,
+       so what is chosen is what is driven. -->
+  <section id="garage" class="screen" hidden>
+    <div class="gar-wrap">
+      <div class="tk-head">
+        <div>
+          <h1 class="auth-brand">The <span>garage</span></h1>
+          <p class="auth-sub" id="garSub">Pick a car and a colour, then drive.</p>
+        </div>
+        <div class="chips"><button class="chip" id="garBack">Back to the board</button></div>
+      </div>
+      <div class="gar-cards" id="garCards">
+        <button class="gar-card" data-car="gt"><canvas width="360" height="220"></canvas><b>GT</b><span>Grip and pace. The all-rounder.</span></button>
+        <button class="gar-card" data-car="formula"><canvas width="360" height="220"></canvas><b>Formula</b><span>The fastest thing here, and the twitchiest.</span></button>
+        <button class="gar-card" data-car="yaris"><canvas width="360" height="220"></canvas><b>Yaris</b><span>Soft, forgiving, never quite settled.</span></button>
+        <button class="gar-card" data-car="kart"><canvas width="360" height="220"></canvas><b>Kart</b><span>No top end, enormous grip.</span></button>
+      </div>
+      <div class="gar-colours">
+        <span class="k">Colour</span>
+        <div class="swatches" id="colors">
+          <button class="sw" data-color="#E2482B" style="background:#E2482B" aria-pressed="true" title="Rosso"></button>
+          <button class="sw" data-color="#F2C230" style="background:#F2C230" title="Giallo"></button>
+          <button class="sw" data-color="#2E7BE8" style="background:#2E7BE8" title="Blu"></button>
+          <button class="sw" data-color="#E8EDEC" style="background:#E8EDEC" title="Bianco"></button>
+          <button class="sw" data-color="#1B2427" style="background:#1B2427" title="Nero"></button>
+          <button class="sw" data-color="#2ED47A" style="background:#2ED47A" title="Verde"></button>
+        </div>
+      </div>
+      <button class="go gar-go" id="garDrive">Drive it</button>
+    </div>
+  </section>
 
   <section id="drive" class="screen" hidden>
     <canvas id="view"></canvas>
@@ -5224,11 +5277,101 @@ $("colors").addEventListener("click",e=>{
   ED.opts.color=b.dataset.color; pressGroup($("colors"),"color",ED.opts.color);
   store.set("ad.opts",ED.opts); rebuild(); netMeta();
 });
-$("cars").addEventListener("click",e=>{
+$("garCards").addEventListener("click",e=>{
   const b=e.target.closest("[data-car]"); if(!b)return;
-  ED.opts.car=b.dataset.car; pressGroup($("cars"),"car",ED.opts.car);
-  store.set("ad.opts",ED.opts); rebuild(); netMeta();
+  ED.opts.car=b.dataset.car; pressGroup($("garCards"),"car",ED.opts.car);
+  store.set("ad.opts",ED.opts); rebuild(); netMeta(); garLabel();
 });
+/* the colour: every card is drawn again in it */
+$("colors").addEventListener("click",()=>{ if(!$("garage").hidden)garPictures(); garLabel(); });
+
+/* ---- the garage ----
+   Its own small renderer, so the pictures are the cars themselves: built
+   from the same models in the chosen colour, lit and framed the same way,
+   drawn once per opening and again when the colour changes. */
+const GAR={renderer:null,scene:null,camera:null,cache:{}};
+function garRenderer(){
+  if(GAR.renderer)return true;
+  try{
+    const cv=document.createElement("canvas"); cv.width=720; cv.height=440;
+    const r=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,preserveDrawingBuffer:true});
+    r.setPixelRatio(1); r.outputEncoding=THREE.sRGBEncoding; r.toneMapping=THREE.ACESFilmicToneMapping; r.toneMappingExposure=1.1;
+    r.setClearColor(0x000000,0);
+    const sc=new THREE.Scene();
+    sc.add(new THREE.HemisphereLight(SRGB(0xCFE3EE),SRGB(0x2A3330),0.95));
+    const sun=new THREE.DirectionalLight(SRGB(0xFFF2DD),1.35); sun.position.set(3.5,5,2.5); sc.add(sun);
+    const fill=new THREE.DirectionalLight(SRGB(0xB9D3E6),0.35); fill.position.set(-4,2,-3); sc.add(fill);
+    const cam=new THREE.PerspectiveCamera(28,720/440,0.1,50);
+    GAR.renderer=r; GAR.scene=sc; GAR.camera=cam;
+    return true;
+  }catch(e){ console.error(e); return false; }
+}
+function garPicture(kind,colour,cv){
+  if(!garRenderer())return;
+  const key=kind+"|"+colour;
+  let img=GAR.cache[key];
+  if(!img){
+    const car=buildCar(colour,kind);
+    car.rotation.y=-0.72;                        // three-quarter front
+    GAR.scene.add(car);
+    const box=new THREE.Box3().setFromObject(car), size=new THREE.Vector3(), c=new THREE.Vector3();
+    box.getSize(size); box.getCenter(c);
+    const span=Math.max(size.x,size.z)*1.05, d=span/Math.tan(GAR.camera.fov*Math.PI/360)*0.47+size.y*0.6;
+    GAR.camera.position.set(c.x+d*0.62,c.y+d*0.36,c.z+d*0.72);
+    GAR.camera.lookAt(c.x,c.y+size.y*0.02,c.z);
+    GAR.renderer.render(GAR.scene,GAR.camera);
+    img=document.createElement("canvas"); img.width=720; img.height=440;
+    img.getContext("2d").drawImage(GAR.renderer.domElement,0,0);
+    GAR.scene.remove(car); disposeTree(car);
+    /* a handful of colours times four cars is all it can ever be */
+    GAR.cache[key]=img;
+  }
+  const x=cv.getContext("2d"); x.clearRect(0,0,cv.width,cv.height); x.drawImage(img,0,0,cv.width,cv.height);
+}
+function garPictures(){
+  document.querySelectorAll("#garCards .gar-card").forEach(b=>{
+    try{ garPicture(b.dataset.car,ED.opts.color,b.querySelector("canvas")); }catch(e){ console.error(e); }
+  });
+}
+function garLabel(){
+  const m=CAR_MODELS.find(x=>x.id===ED.opts.car);
+  $("garWhat").textContent=m?m.label:"GT";
+  $("garDot").style.background=ED.opts.color;
+}
+function showGarage(on){
+  $("garage").hidden=!on;
+  $("editor").hidden=on;
+  document.body.classList.toggle("garaging",on);
+  if(on){
+    pressGroup($("garCards"),"car",ED.opts.car);
+    pressGroup($("colors"),"color",ED.opts.color);
+    const m=document.body.dataset.mode;
+    $("garDrive").textContent=m==="host"?"Start the race":onOpen()?"Out on track":m==="guest"?"Join the race":"Drive it";
+    $("garSub").textContent=NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
+    requestAnimationFrame(garPictures);
+  } else fitPad();
+}
+$("btnGarage").addEventListener("click",()=>showGarage(true));
+$("garBack").addEventListener("click",()=>showGarage(false));
+addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("garage").hidden)showGarage(false); });
+$("garDrive").addEventListener("click",()=>{ $("garage").hidden=true; document.body.classList.remove("garaging"); driveOut(); });
+
+/* ---- the rail says when there is more of it ---- */
+function railMoreUI(){
+  const sc=document.querySelector(".rail-scroll"), el=$("railMore"); if(!sc)return;
+  const down=sc.scrollHeight-sc.scrollTop-sc.clientHeight>30;
+  const right=sc.scrollWidth-sc.scrollLeft-sc.clientWidth>30;
+  el.hidden=!(down||right);
+  el.classList.toggle("h",!down&&right);
+  el.dataset.dir=down?"down":"right";
+  $("railMoreBtn").textContent=down?"More settings ▾":"More settings ▸";
+  /* sideways: the strip stands the full height of the scrolling part */
+  el.querySelector("span").style.height=(!down&&right)?sc.clientHeight+"px":"";
+}
+document.querySelector(".rail-scroll").addEventListener("scroll",railMoreUI,{passive:true});
+addEventListener("resize",()=>setTimeout(railMoreUI,50));
+$("railMoreBtn").addEventListener("click",()=>{ const sc=document.querySelector(".rail-scroll"); if($("railMore").dataset.dir==="right") sc.scrollBy({left:sc.clientWidth*0.8,behavior:"smooth"}); else sc.scrollBy({top:sc.clientHeight*0.8,behavior:"smooth"}); });
+setTimeout(railMoreUI,300); setTimeout(railMoreUI,1500);
 const HILL=["Flat","Gentle","Rolling","Hilly","Mountainous"];
 const SMOOTH=["Raw","Loose","Normal","Flowing","Silky"];
 function syncSliders(){
@@ -6076,7 +6219,7 @@ function netUI(){
      tools. Solo puts it last of all: alone it is one button, and choosing a
      car matters more than a party you are not in. Moving the one element
      beats keeping two copies of it in step. */
-  const gl=$("grpLobby"), gc=$("grpCar"), scroll=gl.parentNode;
+  const gl=$("grpLobby"), gc=$("grpEnv"), scroll=gl.parentNode;
   if(mode==="guest"){
     if(scroll.firstElementChild!==gl) scroll.insertBefore(gl,scroll.firstElementChild);
   }else if(mode==="host"){
@@ -6263,7 +6406,7 @@ function garage(kind){
   if(!G.T||!G.scene||!G.car||!CAR_MODELS.some(m=>m.id===kind))return;
   if(kind===ED.opts.car){ togglePause(false); return; }
   ED.opts.car=kind; G.T.opts.car=kind;
-  pressGroup($("cars"),"car",kind); store.set("ad.opts",ED.opts);
+  pressGroup($("garCards"),"car",kind); store.set("ad.opts",ED.opts); garLabel();
   G.scene.remove(G.car); disposeTree(G.car);
   G.car=buildCar(G.T.opts.color,kind); G.scene.add(G.car);
   G.perf=carPerf(kind);
@@ -6794,6 +6937,13 @@ $("btnDrive").addEventListener("click",()=>{
   if(!ED.track)return;
   const m=document.body.dataset.mode;
   if(m==="guest"&&!NET.live)return;                        // the host sends everyone out
+  showGarage(true);                                        // choose the car on the way out
+});
+/* Out of the garage and onto the track. A host takes the room with them
+   from here, so the car everyone sees is the one just chosen. */
+function driveOut(){
+  if(!ED.track)return;
+  const m=document.body.dataset.mode;
   if(a2hsWanted()){ a2hsShow(); return; }                  // OK carries on into driveNow
   if(m==="host"){
     /* The circuit first, then the flag. Messages arrive in order on one
@@ -6804,7 +6954,7 @@ $("btnDrive").addEventListener("click",()=>{
     NET.live=true;                                           // the relay tells everyone else
   }
   driveNow();
-});
+}
 function driveNow(){
   if(!ED.track)return;
   /* Which board these laps belong to. A different circuit is a different
@@ -6903,7 +7053,7 @@ $("pBack").addEventListener("click",()=>{
   if(!CAR_MODELS.some(m=>m.id===ED.opts.car)) ED.opts.car="gt";
   pressGroup($("themes"),"theme",ED.opts.theme);
   pressGroup($("colors"),"color",ED.opts.color);
-  pressGroup($("cars"),"car",ED.opts.car);
+  pressGroup($("garCards"),"car",ED.opts.car); garLabel();
   solidUI();
   fsUI();
   acctUI();                         // your own name, from the last visit

@@ -16,9 +16,11 @@ Open `index.html` in any modern browser, or host it as-is.
   before it, and the board shows both places — a dotted marker where it was
   asked for, the checkered line where it is. Corners are numbered from the
   line, and a banked corner keeps its angle when the numbers change.
-- **Pick a car** — a GT racer, a Formula single-seater, a kart with no top
-  end and enormous grip, or a Yaris that never quite settles on its springs.
-  Each keeps its own best lap, since they don't lap at the same pace.
+- **Pick a car** in the garage, which is where **Drive it** takes you: a GT
+  racer, a Formula single-seater, a kart with no top end and enormous grip,
+  or a Yaris that never quite settles on its springs, each drawn from its own
+  model in the colour you choose. Each keeps its own best lap, since they
+  don't lap at the same pace. The garage is in the pause menu too.
 - **Drive it** — `WASD`/arrows, `R` recover, `C` camera, `M` sound, `Esc`
   menu. On a phone, on-screen controls appear automatically.
 - **Fullscreen** — on Android the browser is asked for it as you go out on
