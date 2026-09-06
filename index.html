@@ -497,10 +497,18 @@ body.touchmode .tower{transform:scale(.86);transform-origin:top left}
 body.touchcap .touchonly{display:block}
 
 /* pause */
+/* Centred when it fits; when it does not — a phone on its side, with the
+   party rows and the board in the card — the whole thing scrolls from the
+   top rather than losing its last few buttons off the bottom. margin:auto
+   does that where align-items:center would pin the overflow out of reach. */
 .pause{
   position:absolute;inset:0;background:rgba(6,10,11,.9);backdrop-filter:blur(8px);
-  display:flex;align-items:center;justify-content:center;pointer-events:auto;z-index:5}
-.pause .card{width:min(420px,90vw);background:var(--panel);border:1px solid var(--line);padding:26px}
+  display:flex;pointer-events:auto;z-index:5;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:max(10px,var(--sat,0px)) 0 max(10px,var(--sab,0px))}
+.pause .card{width:min(420px,90vw);background:var(--panel);border:1px solid var(--line);padding:26px;margin:auto;flex:none}
+/* the garage: the four cars, in the card, one press from the wheel */
+.pgar{margin:-2px 0 2px}
+.pgar .chip{flex:1;text-align:center;padding:9px 6px}
 .pause h3{margin:0 0 4px;font-size:15px;letter-spacing:.18em;text-transform:uppercase}
 .pause p{margin:0 0 20px;font-size:12.5px;color:var(--dim);line-height:1.6}
 .pause .btns{display:flex;flex-direction:column;gap:8px}
@@ -1080,6 +1088,16 @@ body.admining #lobbybar{display:none}
         <div class="btns">
           <button class="pbtn primary" id="pResume">Resume <span class="s">Esc</span></button>
           <button class="pbtn" id="pReset">Recover car <span class="s">R</span></button>
+          <!-- A pit stop. Change car without going back to the board: the
+               new car is built where you stand and you restart from the
+               line, since its laps are a different record. -->
+          <button class="pbtn" id="pGarage">Garage <span class="s" id="garState">GT</span></button>
+          <div class="chips pgar" id="pGar" hidden>
+            <button class="chip" data-car="gt">GT</button>
+            <button class="chip" data-car="formula">Formula</button>
+            <button class="chip" data-car="yaris">Yaris</button>
+            <button class="chip" data-car="kart">Kart</button>
+          </div>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
           <!-- Only in a party, and only the host may turn it: if one car is
                solid and the other is not, one of you gets shoved and the
@@ -4752,12 +4770,12 @@ $("themes").addEventListener("click",e=>{
 $("colors").addEventListener("click",e=>{
   const b=e.target.closest("[data-color]"); if(!b)return;
   ED.opts.color=b.dataset.color; pressGroup($("colors"),"color",ED.opts.color);
-  store.set("ad.opts",ED.opts); rebuild();
+  store.set("ad.opts",ED.opts); rebuild(); netMeta();
 });
 $("cars").addEventListener("click",e=>{
   const b=e.target.closest("[data-car]"); if(!b)return;
   ED.opts.car=b.dataset.car; pressGroup($("cars"),"car",ED.opts.car);
-  store.set("ad.opts",ED.opts); rebuild();
+  store.set("ad.opts",ED.opts); rebuild(); netMeta();
 });
 const HILL=["Flat","Gentle","Rolling","Hilly","Mountainous"];
 const SMOOTH=["Raw","Loose","Normal","Flowing","Silky"];
@@ -5635,8 +5653,6 @@ function netHandle(m){
     if(m.t==="joined"&&NET.live&&ED.track) netGo(true);
     return;
   }
-  /* the host is back at the board; the race is over until they start again */
-  if(m.t==="pit"){ NET.live=false; driveLabel(); return; }
   if(m.t==="peer"){ NET.peers.set(m.id,{name:m.name,car:m.car,colour:m.colour,buf:[]}); netUI(); return; }
   if(m.t==="gone"){ netDropCar(m.id); NET.peers.delete(m.id); netUI(); return; }
   if(m.t==="host"){ NET.hostId=m.id; netUI(); return; }
@@ -5679,6 +5695,38 @@ function netGo(late){
     driveNow();
   }
 }
+/* What you drive is yours to change at any time, and everyone else builds
+   your car from it; the name is not sent, because an account's name is not
+   the client's to send. */
+function netMeta(){
+  if(NET.status!=="in")return;
+  netSend({t:"meta",car:ED.opts.car,colour:ED.opts.color});
+}
+/* The garage. A different car built where the old one stood, then back to
+   the line: its laps are a different record, so the timing starts afresh
+   with that car's own best. The world around it is left exactly as built. */
+function garageUI(){
+  const m=CAR_MODELS.find(x=>x.id===ED.opts.car);
+  $("garState").textContent=m?m.label:"GT";
+  pressGroup($("pGar"),"car",ED.opts.car);
+}
+function garage(kind){
+  $("pGar").hidden=true;
+  if(!G.T||!G.scene||!G.car||!CAR_MODELS.some(m=>m.id===kind))return;
+  if(kind===ED.opts.car){ togglePause(false); return; }
+  ED.opts.car=kind; G.T.opts.car=kind;
+  pressGroup($("cars"),"car",kind); store.set("ad.opts",ED.opts);
+  G.scene.remove(G.car); disposeTree(G.car);
+  G.car=buildCar(G.T.opts.color,kind); G.scene.add(G.car);
+  G.perf=carPerf(kind);
+  resetCar(true);
+  paintSectors(true);
+  netMeta();
+  garageUI();
+  togglePause(false);
+}
+$("pGarage").addEventListener("click",()=>{ garageUI(); const g=$("pGar"); g.hidden=!g.hidden; });
+$("pGar").addEventListener("click",e=>{ const b=e.target.closest("[data-car]"); if(b)garage(b.dataset.car); });
 function netSendTrack(){
   if(NET.id!==NET.hostId||!ED.raw)return;
   /* Canonical, so that what everyone builds does not depend on the window
@@ -6176,7 +6224,7 @@ function driveNow(){
   /* has to ride on this click: fullscreen is only granted from a gesture */
   if(touchUIOn()&&fsCan()&&!fsOn()) fsEnter().then(fsLandscape).catch(()=>{});
   $("loading").hidden=false;
-  $("pause").hidden=true;
+  $("pause").hidden=true; $("pGar").hidden=true; garageUI();
   resize();
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     try{
@@ -6203,10 +6251,9 @@ $("pTouch").addEventListener("click",()=>{
   TOUCHUI=!touchUIOn(); store.set("ad.touchui",TOUCHUI); applyTouchUI();
 });
 $("pBack").addEventListener("click",()=>{
-  /* The host leaving the track ends the race for the room: nobody else can
-     join one that is not being run. A guest leaving is only leaving, and
-     the board offers them the way back out. */
-  if(NET.status==="in"&&NET.id===NET.hostId&&NET.live){ NET.live=false; netSend({t:"pit"}); }
+  /* Leaving the track is only leaving the track. The room stays live for
+     as long as the party does, so the board offers the way straight back
+     out — whether or not the host is out there just now. */
   G.running=false; togglePause(false); $("pause").hidden=true;
   $("drive").hidden=true; $("editor").hidden=false;
   document.body.classList.remove("driving");

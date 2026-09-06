@@ -225,16 +225,8 @@ wss.on("connection", (ws) => {
       /* Only the host sends everyone out on track, for the same reason only
          the host sets the circuit. */
       if (ws.id !== room.hostId) return;
-      room.live = true;
+      room.live = true;                    // and stays so while the room lasts
       broadcast(room, { t: "go" }, ws.id);
-      return;
-    }
-    if (m.t === "pit") {
-      /* The host is back at the board, so there is no race to join until
-         they start one again. Guests already out stay out. */
-      if (ws.id !== room.hostId) return;
-      room.live = false;
-      broadcast(room, { t: "pit" }, ws.id);
       return;
     }
     if (m.t === "bye") { leave(ws); return; }

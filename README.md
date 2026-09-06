@@ -34,8 +34,13 @@ machines can never disagree about a crash.
 Once the host has started, the room is live: anyone who joins — or comes
 back after leaving — goes straight out onto the circuit, and a guest who
 steps back to the board gets a **Join the race** button instead of a wait.
-The host going back to the drawing board ends that; the next start sends
-everyone out again.
+It stays live for as long as the party does — the host stepping back to
+the board to change something does not close it, and whoever goes out next
+goes out onto the circuit as it now is.
+
+**Garage**, in the pause menu, changes car without leaving the track: the
+new car is built where you are and you restart from the line, since its
+laps are a different record. Everyone in the party sees the change.
 
 The relay that carries the messages is in [`relay/`](relay/): a small
 websocket server that hands out codes and passes messages between players in
