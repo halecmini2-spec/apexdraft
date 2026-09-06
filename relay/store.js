@@ -21,7 +21,7 @@ const path = require("path");
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [] };
+  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [] };
   let writing = null, again = false;
 
   try {
@@ -33,6 +33,7 @@ function fileStore(file) {
     db.visits = db.visits || {};
     db.days = db.days || {};
     db.log = db.log || [];
+    db.ghosts = db.ghosts || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -131,6 +132,32 @@ function fileStore(file) {
       return db.laps.filter((l) => l.circuit === circuit)
                     .sort((a, b) => a.ms - b.ms)
                     .slice(0, limit);
+    },
+    /* Where one driver stands on a board: their time, their place, and how
+       many are on it. */
+    async rank(circuit, userId) {
+      const all = db.laps.filter((l) => l.circuit === circuit).sort((a, b) => a.ms - b.ms);
+      const i = all.findIndex((l) => l.user_id === userId);
+      return { count: all.length, ms: i >= 0 ? all[i].ms : null, rank: i >= 0 ? i + 1 : null };
+    },
+    /* The lap itself, as a run of positions, so it can be driven against. */
+    async putGhost(circuit, userId, data) {
+      const i = db.ghosts.findIndex((g) => g.circuit === circuit && g.user_id === userId);
+      if (i >= 0) db.ghosts[i].data = data; else db.ghosts.push({ circuit, user_id: userId, data });
+      await save();
+    },
+    async ghost(circuit) {
+      const laps = db.laps.filter((l) => l.circuit === circuit).sort((a, b) => a.ms - b.ms);
+      for (const l of laps) {
+        const g = db.ghosts.find((x) => x.circuit === circuit && x.user_id === l.user_id);
+        if (g) return { name: l.name, ms: l.ms, car: l.car, data: g.data };
+      }
+      return null;
+    },
+    async pruneGhosts(before) {
+      const n = db.ghosts.length;
+      db.ghosts = db.ghosts.filter((g) => !(g.circuit.startsWith("daily_") && g.circuit < before));
+      if (db.ghosts.length !== n) await save();
     },
 
     /* ---- what an admin can see and undo ---- */
@@ -276,6 +303,15 @@ function pgStore(url) {
           PRIMARY KEY (circuit, user_id)
         )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS laps_board ON laps(circuit,ms)`);
+      /* A lap as a run of positions, kept beside the time so the fastest
+         one can be driven against. Only the daily circuits keep these. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS ghosts (
+          circuit TEXT NOT NULL,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          data    TEXT NOT NULL,
+          PRIMARY KEY (circuit, user_id)
+        )`);
       /* Visits: one row per browser per day, with how many times it came.
          Nothing about who — the id is a random one the browser made up. */
       await pool.query(`
@@ -369,6 +405,27 @@ function pgStore(url) {
         `SELECT name,ms,car,at FROM laps WHERE circuit=$1 ORDER BY ms ASC LIMIT $2`,
         [circuit, limit]
       )).rows;
+    },
+    async rank(circuit, userId) {
+      const mine = await one(`SELECT ms FROM laps WHERE circuit=$1 AND user_id=$2`, [circuit, userId]);
+      const n = await one(`SELECT COUNT(*)::int AS n FROM laps WHERE circuit=$1`, [circuit]);
+      if (!mine) return { count: n ? n.n : 0, ms: null, rank: null };
+      const ahead = await one(`SELECT COUNT(*)::int AS n FROM laps WHERE circuit=$1 AND ms<$2`, [circuit, mine.ms]);
+      return { count: n ? n.n : 0, ms: Number(mine.ms), rank: (ahead ? ahead.n : 0) + 1 };
+    },
+    async putGhost(circuit, userId, data) {
+      await pool.query(
+        `INSERT INTO ghosts (circuit,user_id,data) VALUES ($1,$2,$3)
+         ON CONFLICT (circuit,user_id) DO UPDATE SET data=EXCLUDED.data`, [circuit, userId, data]);
+    },
+    async ghost(circuit) {
+      const r = await one(
+        `SELECT l.name, l.ms, l.car, g.data FROM laps l JOIN ghosts g ON g.circuit=l.circuit AND g.user_id=l.user_id
+         WHERE l.circuit=$1 ORDER BY l.ms ASC LIMIT 1`, [circuit]);
+      return r ? { name: r.name, ms: Number(r.ms), car: r.car, data: r.data } : null;
+    },
+    async pruneGhosts(before) {
+      await pool.query(`DELETE FROM ghosts WHERE circuit LIKE 'daily_%' AND circuit < $1`, [before]);
     },
 
     /* ---- what an admin can see and undo ---- */

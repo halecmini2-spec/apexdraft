@@ -16,6 +16,7 @@ const { makeTracks } = require("./tracks");
 const { makeLaps } = require("./laps");
 const { makeAdmin } = require("./admin");
 const { makeVisits } = require("./visits");
+const { makeDaily } = require("./daily");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
@@ -25,6 +26,7 @@ const auth = makeAuth(store);
 const tracks = makeTracks(store, auth.userFor);
 const laps = makeLaps(store, auth.userFor);
 const visits = makeVisits(store);
+const daily = makeDaily();
 /* What is happening right now, for the admin desk. A socket only connects
    to host or join, so every socket is somebody in a party. */
 const liveNow = () => ({
@@ -119,6 +121,7 @@ const server = http.createServer((req, res) => {
      on the same service because it is the same small amount of work, and
      because one address is one thing to wake. */
   const handle = url.pathname === "/api/hit" ? visits.route
+                : url.pathname === "/api/daily" ? daily.route
                 : url.pathname.startsWith("/api/tracks") ? tracks.route
                 : url.pathname.startsWith("/api/laps") ? laps.route
                 : url.pathname.startsWith("/api/admin") ? admin.route

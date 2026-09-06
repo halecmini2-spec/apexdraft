@@ -539,6 +539,30 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .go:active{transform:translateY(1px)}
 .go:disabled{background:var(--raise);color:var(--faint);cursor:not-allowed}
 /* the about section: quiet until opened */
+/* the daily */
+#dailyScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
+.dy-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+@media (max-width:700px){.dy-grid{grid-template-columns:1fr}}
+.dy-map canvas{width:100%;height:auto;aspect-ratio:3/2;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:2px}
+.dy-facts{font-size:11.5px;color:var(--faint);margin-top:6px;letter-spacing:.03em}
+.dy-side{display:flex;flex-direction:column;gap:10px}
+.dy-tile{background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
+.dy-tile .k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.dy-tile b{font-family:var(--mono);font-size:24px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.dy-tile.wr b{color:var(--purple)}
+.dy-tile .w{font-size:12px;color:var(--dim)}
+.dy-side .go{margin:0}
+.dy-side .chip .s{margin-left:6px}
+.dy-times{margin-top:4px}
+.dailybox{margin-top:9px;background:rgba(9,14,15,.82);border-left:2px solid var(--amber);backdrop-filter:blur(4px);
+  padding:5px 10px;font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:2px}
+.dailybox .k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.dailybox b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+.dailybox .wr b{color:var(--purple)}
+.dailybox .g{color:var(--faint);font-size:10px}
+body.daily .rail-scroll .grp:not(.grp-daily):not(.grp-gar){opacity:.45;pointer-events:none}
+body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
+.grp-daily .chips{margin-top:8px}
 #aboutScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .about{max-width:680px;font-size:13.5px;line-height:1.65;color:var(--dim)}
 .about h2{font-size:17px;margin:6px 0 8px;letter-spacing:.02em;text-transform:none;color:var(--ink)}
@@ -1191,6 +1215,7 @@ body.admining #lobbybar{display:none}
     </div>
 
     <div class="lb-acct" id="lbAcct">
+      <button class="chip on" id="btnDaily">Daily</button>
       <button class="chip" id="btnAbout">About</button>
       <button class="chip" id="btnTracks">Tracks</button>
       <button class="chip on" id="btnAdmin" hidden>Admin</button>
@@ -1248,6 +1273,38 @@ body.admining #lobbybar{display:none}
     </div>
   </section>
 
+  <!-- The daily time trial: one circuit a day, the same for everyone, the
+       GT for everyone, and the world's times on it. -->
+  <section id="dailyScreen" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head">
+        <div>
+          <h1 class="auth-brand">Daily <span>time trial</span></h1>
+          <p class="auth-sub" id="dySub">Fetching today's circuit…</p>
+        </div>
+        <div class="chips"><button class="chip" id="dyRefresh">Refresh</button><button class="chip" id="dyBack">Back to the track</button></div>
+      </div>
+      <div class="dy-grid">
+        <div class="dy-map">
+          <canvas id="dyMap" width="480" height="320"></canvas>
+          <div class="dy-facts" id="dyFacts"></div>
+        </div>
+        <div class="dy-side">
+          <div class="dy-tile wr"><span class="k">World record today</span><b id="dyWR">—:—.———</b><span class="w" id="dyWRWho"></span></div>
+          <div class="dy-tile you"><span class="k">You</span><b id="dyYou">—:—.———</b><span class="w" id="dyYouRank"></span></div>
+          <button class="go" id="dyDrive">Drive today's circuit</button>
+          <button class="chip" id="dyGhost">Record ghost <span class="s on" id="dyGhostState">On</span></button>
+          <p class="ahint" id="dyNote">The same circuit for everyone until midnight UTC, always in the GT. Times need an account; the ghost is the fastest lap so far, driven beside you.</p>
+        </div>
+      </div>
+      <div class="times dy-times">
+        <div class="ti-head"><span>World times today</span><span class="ti-n" id="dyCount"></span></div>
+        <div class="ti-list" id="dyList"></div>
+        <p class="ti-note" id="dyListNote"></p>
+      </div>
+    </div>
+  </section>
+
   <section id="editor" class="screen">
     <aside class="rail">
       <div class="rail-scroll">
@@ -1259,6 +1316,13 @@ body.admining #lobbybar{display:none}
              is the way you race it.</p>
         </div>
 
+        <!-- Shown while the daily circuit is on the board: it is not yours to
+             change, so the settings below are locked. -->
+        <div class="grp grp-daily" id="grpDaily" hidden>
+          <h2>Daily time trial</h2>
+          <p class="hint" id="dyRailWhat">Today's circuit</p>
+          <div class="chips"><button class="chip" id="dyOpen">Times &amp; ranking</button><button class="chip" id="dyLeave">Leave the daily</button></div>
+        </div>
         <div class="grp grp-track">
           <h2>Circuit build</h2>
           <div class="slider">
@@ -1419,6 +1483,13 @@ body.admining #lobbybar{display:none}
              so it flows under the timing rather than being pinned to a guess
              at how tall they are. -->
         <div class="standings" id="standings" hidden></div>
+        <!-- the daily: the record, and where you stand against the world -->
+        <div class="dailybox" id="dailyBox" hidden>
+          <span class="k">Daily time trial</span>
+          <span class="wr">WR <b id="dbWR">—</b></span>
+          <span>You <b id="dbYou">—</b></span>
+          <span class="g" id="dbGhost"></span>
+        </div>
       </div>
       <!-- Who is where. Over the car when it is on screen, pinned to the edge
            pointing at them when it is not, so nobody is ever simply lost.
@@ -1485,6 +1556,7 @@ body.admining #lobbybar{display:none}
                solid and the other is not, one of you gets shoved and the
                other feels nothing. -->
           <button class="pbtn" id="pSolid" hidden>Contact <span class="s off" id="pSolidState">Off</span></button>
+          <button class="pbtn" id="pGhost" hidden>Record ghost <span class="s on" id="ghostState">On</span></button>
           <button class="pbtn" id="pFull" hidden>Fullscreen <span class="s off" id="fullState">Off</span></button>
           <button class="pbtn" id="pTouch">On-screen controls <span class="s on" id="touchState">On</span></button>
           <button class="pbtn" id="pBack">Back to the drawing board</button>
@@ -4408,6 +4480,7 @@ function completeLap(ms){
     /* Only improvements travel. Everyone else is keeping your best, not a
        list of every lap you have driven. */
     if(NET.status==="in")netSend({t:"lap",ms,lap:CAR.lapNo});
+    if(DAILY.on){ GH.mine=GH.rec.slice(); GH.mine.push([Math.round(ms),+CAR.x.toFixed(2),+CAR.z.toFixed(2),+CAR.yaw.toFixed(3)]); }
     lbPost(ms);
   } else {
     showFlash("Lap "+CAR.lapNo,"#E6EEEC",fmtTime(ms));
@@ -4925,6 +4998,7 @@ function frame(now){
   if(G.acc>0.5)G.acc=0;
 
   updateCarMesh();
+  if(DAILY.on){ if(CAR.state==="run")ghostRecord(); ghostUpdate(); }
   netTick(); netUpdateCars();
   if(G.smoke)updateSmoke(dt);
   updateCamera(dt);
@@ -5136,7 +5210,7 @@ function clearBanks(){ ED.opts.banks=[]; ED.sel=null; }
 function startDraw(cx,cy){
   /* A guest is looking at the host's circuit. Every way of drawing arrives
      here, so this is the only place that has to say no. */
-  if(document.body.dataset.mode==="guest")return;
+  if(document.body.dataset.mode==="guest"||DAILY.on)return;
   if(ED.pickStart){ pickStartAt(cx,cy); return; }     // the touch path lands here too
   const p=toPad(cx,cy);
   if(!isFinite(p.x)||!isFinite(p.y))return;
@@ -5177,6 +5251,7 @@ if(window.PointerEvent){
   pad.addEventListener("pointerdown",e=>{
     if(e.button>0)return;
     e.preventDefault();
+    if(DAILY.on)return;                                 // the daily circuit is not yours to change
     if(ED.pickStart){ pickStartAt(e.clientX,e.clientY); return; }
     if(hitCorner(e.clientX,e.clientY))return;
     drawId=e.pointerId; startDraw(e.clientX,e.clientY);
@@ -5440,6 +5515,7 @@ $("colors").addEventListener("click",e=>{
 });
 $("garCards").addEventListener("click",e=>{
   const b=e.target.closest("[data-car]"); if(!b)return;
+  if(DAILY.on&&b.dataset.car!=="gt")return;              // the daily is the GT for everyone
   ED.opts.car=b.dataset.car; pressGroup($("garCards"),"car",ED.opts.car);
   store.set("ad.opts",ED.opts); rebuild(); netMeta(); garLabel();
 });
@@ -5508,10 +5584,175 @@ function showGarage(on){
     pressGroup($("colors"),"color",ED.opts.color);
     const m=document.body.dataset.mode;
     $("garDrive").textContent=m==="host"?"Start the race":m==="guest"?"Join the race":"Drive it";
-    $("garSub").textContent=NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
+    $("garSub").textContent=DAILY.on?"The daily is the GT for everyone — pick a colour and go.":NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
     requestAnimationFrame(garPictures);
   } else fitPad();
 }
+/* ---- the daily time trial ----
+   The relay draws one circuit a day from the date, the same for everyone,
+   always the GT. On the board it is not yours to change: the settings lock,
+   the garage offers only the GT, and the lap board is the day's. Every
+   improvement carries the lap itself, as a run of positions, so the fastest
+   one can be driven against as a ghost. */
+const DAILY={on:false,data:null,at:0,day:null,saved:null,board:[],you:null};
+const GH={on:store.get("ad.ghost",true),rec:[],recT:-1,mine:null,wr:null,mesh:null,i:0,y:0};
+function ordinal(n){ const s=["th","st","nd","rd"], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+async function dailyLoad(force){
+  if(!force&&DAILY.data&&Date.now()-DAILY.at<60000)return DAILY.data;
+  const d=await api("/api/daily");
+  DAILY.data=d; DAILY.at=Date.now();
+  return d;
+}
+function showDaily(on){
+  $("dailyScreen").hidden=!on; $("editor").hidden=on;
+  document.body.classList.toggle("dailying",on);
+  if(on){ dyRender(); dyRefresh(); } else fitPad();
+}
+async function dyRefresh(){
+  $("dyListNote").textContent="";
+  try{
+    const d=await dailyLoad(true); dyRender();
+    const r=await api("/api/laps?circuit="+encodeURIComponent(d.circuit),acctIn()?{token:ACCT.token}:{});
+    DAILY.board=r.board||[]; DAILY.you=r.you||null;
+    if(DAILY.on&&LB.key===d.circuit){ LB.board=DAILY.board; LB.at=Date.now(); }
+    dyRender(); dailyUI();
+  }catch(e){ $("dyListNote").textContent=e.message; }
+}
+function dyRender(){
+  const d=DAILY.data;
+  if(!d){ $("dySub").textContent="Fetching today's circuit…"; return; }
+  const date=new Date(d.day+"T00:00:00Z").toLocaleDateString([],{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"});
+  const left=Math.max(0,d.endsAt-Date.now()), hh=Math.floor(left/3600000), mm=Math.floor(left%3600000/60000);
+  $("dySub").textContent=date+" · GT · a new circuit in "+hh+"h "+String(mm).padStart(2,"0")+"m";
+  try{ drawMini($("dyMap"),d.track.raw); }catch(e){}
+  try{
+    const T=buildCircuit(d.track.raw.map(a=>({x:a[0],y:a[1]})),Object.assign({},OPTS0,d.track.opts),1);
+    if(T){ const st=T.stats, th=THEMES[d.track.opts.theme]; $("dyFacts").textContent=(st.length/1000).toFixed(2)+" km · "+st.corners+" corners · "+(th?th.label:d.track.opts.theme)+" · "+d.track.opts.width+" m wide · "+Math.round(st.climb)+" m of climb"; }
+  }catch(e){}
+  const b=DAILY.board||[], you=DAILY.you;
+  $("dyWR").textContent=b.length?fmtTime(b[0].ms):"—:—.———";
+  $("dyWRWho").textContent=b.length?b[0].name:"nobody yet — be the first";
+  $("dyYou").textContent=(you&&you.ms)?fmtTime(you.ms):"—:—.———";
+  $("dyYouRank").textContent=(you&&you.rank)?ordinal(you.rank)+" of "+you.count+" in the world":(acctIn()?"no time yet today":"sign in to be ranked");
+  $("dyCount").textContent=b.length?b.length+(b.length===1?" driver":" drivers"):"";
+  const list=$("dyList"); list.innerHTML="";
+  const me=acctIn()?ACCT.user.name:null;
+  b.forEach((r,i)=>{
+    const row=document.createElement("div"); row.className="ti-row"+(me&&r.name===me?" me":"");
+    const p=document.createElement("span"); p.className="p"; p.textContent=(i+1)+".";
+    const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
+    const t=document.createElement("span"); t.className="t"; t.textContent=i===0?fmtTime(r.ms):"+"+((r.ms-b[0].ms)/1000).toFixed(3);
+    row.appendChild(p); row.appendChild(n); row.appendChild(t); list.appendChild(row);
+  });
+  if(!b.length) $("dyListNote").textContent="No times yet today.";
+  $("dyGhostState").textContent=GH.on?"On":"Off"; $("dyGhostState").className="s "+(GH.on?"on":"off");
+  $("dyDrive").textContent=DAILY.on?"Back out on today's circuit":"Drive today's circuit";
+}
+function enterDaily(){
+  const d=DAILY.data; if(!d)return;
+  if(NET.status==="in"){ $("dyListNote").textContent="Leave the party first — the daily is driven alone."; return; }
+  if(!DAILY.on) DAILY.saved={raw:ED.raw?ED.raw.map(p=>({x:p.x,y:p.y})):null,opts:Object.assign({},ED.opts),fit:ED.fit};
+  DAILY.on=true; DAILY.day=d.day;
+  takeTrack(d.track);
+  ED.opts.car="gt"; rebuild();
+  pressGroup($("garCards"),"car","gt"); garLabel();
+  LB.key=d.circuit; LB.board=DAILY.board||[]; LB.at=0;
+  document.body.classList.add("daily");
+  dailyRailUI(); dailyUI();
+  ghostFetch();
+  showDaily(false);
+  showGarage(true);
+}
+function leaveDaily(){
+  if(!DAILY.on)return;
+  DAILY.on=false; document.body.classList.remove("daily");
+  ghostClear();
+  const sv=DAILY.saved; DAILY.saved=null;
+  if(sv&&sv.raw){ ED.raw=sv.raw; ED.opts=sv.opts; ED.fit=sv.fit||1; }
+  else { ED.raw=shapeLoop(DEFAULT_SHAPE); ED.opts=Object.assign({},OPTS0); ED.fit=1; }
+  LB.key=null; LB.board=[]; LB.at=0;
+  rebuild(); syncSliders(); pressGroup($("themes"),"theme",ED.opts.theme);
+  pressGroup($("garCards"),"car",ED.opts.car); garLabel();
+  dailyRailUI(); dailyUI();
+}
+function dailyRailUI(){
+  $("grpDaily").hidden=!DAILY.on;
+  if(DAILY.on) $("dyRailWhat").textContent="Today's circuit · "+DAILY.day+" · GT · the settings are locked";
+  const tag=$("boardTag");
+  if(DAILY.on){ tag.hidden=false; tag.innerHTML='<span class="dot"></span>Daily circuit · locked'; }
+  else if(document.body.dataset.mode!=="guest"){ tag.hidden=true; }
+}
+function dailyUI(){
+  const box=$("dailyBox"); if(!box)return;
+  box.hidden=!DAILY.on;
+  $("pGhost").hidden=!DAILY.on;
+  if(!DAILY.on)return;
+  const b=LB.board||[], you=DAILY.you;
+  $("dbWR").textContent=b.length?fmtTime(b[0].ms)+"  "+b[0].name:"none yet";
+  $("dbYou").textContent=(you&&you.ms?fmtTime(you.ms):"—")+(you&&you.rank?"  "+ordinal(you.rank)+" of "+you.count:"");
+  $("dbGhost").textContent=GH.wr?(GH.on?"ghost: "+GH.wr.name+"'s "+fmtTime(GH.wr.ms):"ghost off"):"no ghost lap yet";
+  $("ghostState").textContent=GH.on?"On":"Off"; $("ghostState").className="s "+(GH.on?"on":"off");
+}
+function setGhost(on){ GH.on=on; store.set("ad.ghost",on); dailyUI(); if(!$("dailyScreen").hidden)dyRender(); }
+/* recording: a sample every tenth of a second of lap time */
+function ghostRecord(){
+  const t=CAR.curMs;
+  if(t<GH.recT) GH.rec=[];
+  if(GH.rec.length<4000&&(!GH.rec.length||t-GH.rec[GH.rec.length-1][0]>=100))
+    GH.rec.push([Math.round(t),+CAR.x.toFixed(2),+CAR.z.toFixed(2),+CAR.yaw.toFixed(3)]);
+  GH.recT=t;
+}
+/* the record, driven beside you: a see-through GT following its samples */
+async function ghostFetch(){
+  if(!DAILY.on||!DAILY.data)return;
+  try{
+    const r=await api("/api/laps/ghost?circuit="+encodeURIComponent(DAILY.data.circuit));
+    if(r&&r.samples&&r.samples.length>1){ GH.wr={name:r.name,ms:r.ms,samples:r.samples}; GH.i=0; ghostAttach(); }
+    else GH.wr=null;
+  }catch(e){}
+  dailyUI();
+}
+function ghostAttach(){
+  if(!G.scene||!GH.wr)return;
+  if(!GH.mesh){
+    const m=buildCar("#DCE6E3","gt");
+    m.traverse(o=>{ if(o.isMesh){ o.castShadow=false; o.receiveShadow=false; const ms=Array.isArray(o.material)?o.material:[o.material]; for(const mat of ms){ mat.transparent=true; mat.opacity=0.32; mat.depthWrite=false; } } });
+    GH.mesh=m;
+  }
+  if(GH.mesh.parent!==G.scene) G.scene.add(GH.mesh);
+  GH.mesh.visible=false;
+}
+function ghostClear(){
+  if(GH.mesh&&GH.mesh.parent) GH.mesh.parent.remove(GH.mesh);
+  GH.wr=null; GH.mine=null; GH.rec=[]; GH.recT=-1;
+}
+function ghostUpdate(){
+  const m=GH.mesh; if(!m)return;
+  const show=DAILY.on&&GH.on&&GH.wr&&CAR.state==="run";
+  if(!show){ m.visible=false; return; }
+  const S=GH.wr.samples, t=CAR.curMs;
+  if(t>S[S.length-1][0]+200){ m.visible=false; return; }
+  let i=GH.i; if(i>=S.length-1||S[i][0]>t) i=0;
+  while(i<S.length-2&&S[i+1][0]<=t) i++;
+  GH.i=i;
+  const a=S[i], b=S[Math.min(i+1,S.length-1)];
+  const u=b[0]>a[0]?clamp((t-a[0])/(b[0]-a[0]),0,1):0;
+  const x=a[1]+(b[1]-a[1])*u, z=a[2]+(b[2]-a[2])*u;
+  let da=b[3]-a[3]; da=Math.atan2(Math.sin(da),Math.cos(da));
+  const yaw=a[3]+da*u;
+  const y=heightAt(G.T,x,z,null,GH.y||0); GH.y=y;
+  m.position.set(x,y,z); m.rotation.set(0,yaw,0);
+  m.visible=true;
+}
+$("btnDaily").addEventListener("click",()=>{ if(NET.status==="in"){ netSay("Leave the party first — the daily is driven alone."); return; } showDaily(true); });
+$("dyBack").addEventListener("click",()=>showDaily(false));
+$("dyRefresh").addEventListener("click",dyRefresh);
+$("dyDrive").addEventListener("click",enterDaily);
+$("dyOpen").addEventListener("click",()=>showDaily(true));
+$("dyLeave").addEventListener("click",leaveDaily);
+$("dyGhost").addEventListener("click",()=>setGhost(!GH.on));
+$("pGhost").addEventListener("click",()=>setGhost(!GH.on));
+addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("dailyScreen").hidden)showDaily(false); });
 function showAbout(on){
   $("aboutScreen").hidden=!on; $("editor").hidden=on;
   document.body.classList.toggle("abouting",on);
@@ -5924,8 +6165,16 @@ async function lbFetch(force){
   if(LB.busy)return;
   LB.busy=true;
   try{
-    const r=await api("/api/laps?circuit="+encodeURIComponent(key));
-    if(LB.key===key){ LB.board=r.board||[]; LB.at=Date.now(); }
+    const r=await api("/api/laps?circuit="+encodeURIComponent(key),acctIn()?{token:ACCT.token}:{});
+    if(LB.key===key){
+      LB.board=r.board||[]; LB.at=Date.now();
+      if(DAILY.on){
+        DAILY.you=r.you||null; DAILY.board=LB.board; dailyUI();
+        /* a new record out there is a new ghost to chase */
+        const wr=LB.board.length?LB.board[0].ms:null;
+        if(wr!==null&&(!GH.wr||GH.wr.ms!==wr)) ghostFetch();
+      }
+    }
   }catch(e){ /* the panel says what it has */ }
   finally{ LB.busy=false; }
   timesUI();
@@ -5934,9 +6183,18 @@ async function lbPost(ms){
   const key=LB.key;
   if(!key||!acctIn())return;
   try{
-    const r=await api("/api/laps",{method:"POST",token:ACCT.token,
-      body:{circuit:key,ms:Math.round(ms),car:ED.opts.car||"gt"}});
-    if(LB.key===key){ LB.board=r.board||LB.board; LB.at=Date.now(); }
+    const body={circuit:key,ms:Math.round(ms),car:ED.opts.car||"gt"};
+    if(DAILY.on&&GH.mine) body.ghost=GH.mine;           // the lap itself, for the ghost
+    const r=await api("/api/laps",{method:"POST",token:ACCT.token,body});
+    if(LB.key===key){
+      const hadWR=LB.board.length?LB.board[0].ms:null;
+      LB.board=r.board||LB.board; LB.at=Date.now();
+      if(DAILY.on){
+        DAILY.you=r.rank||DAILY.you; DAILY.board=LB.board; dailyUI();
+        const nowWR=LB.board.length?LB.board[0].ms:null;
+        if(nowWR!==hadWR||!GH.wr) ghostFetch();           // a new record: a new ghost
+      }
+    }
     timesUI();
   }catch(e){ /* a lap is not worth interrupting a race over */ }
 }
@@ -6396,7 +6654,8 @@ function netUI(){
     if(gc&&gc.nextElementSibling!==gl) scroll.insertBefore(gl,gc.nextElementSibling);
   }
 
-  $("boardTag").hidden=mode!=="guest";
+  $("boardTag").hidden=mode!=="guest"&&!DAILY.on;
+  if(DAILY.on)dailyRailUI();
   driveLabel();
   solidUI();          // the contact row exists only inside a party
 
@@ -6567,6 +6826,7 @@ function garageUI(){
 }
 function garage(kind){
   $("pGar").hidden=true;
+  if(DAILY.on&&kind!=="gt"){ flashPause("The daily is driven in the GT, for everyone."); return; }
   if(!G.T||!G.scene||!G.car||!CAR_MODELS.some(m=>m.id===kind))return;
   if(kind===ED.opts.car){ togglePause(false); return; }
   ED.opts.car=kind; G.T.opts.car=kind;
@@ -6650,6 +6910,7 @@ function netTakeTrack(d){
   else netSay("Circuit received from the host.");
 }
 $("btnHost").addEventListener("click",()=>{
+  leaveDaily();
   netOpen(()=>{ NET.status="joining"; netSend({t:"host",token:ACCT.token,name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
 });
 /* In a bar the two live side by side, and a Join beside a Join party reads
@@ -6666,6 +6927,7 @@ $("btnJoinGo").addEventListener("click",()=>{
   const code=($("netCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   if(code.length<4){ netSay("A party code is four characters."); return; }
   joinBox(false);
+  leaveDaily();
   netOpen(()=>{ NET.status="joining"; netSend({t:"join",code,token:ACCT.token,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
 });
 $("lbLeave").addEventListener("click",()=>{ $("btnLeave").click(); });
@@ -6977,10 +7239,12 @@ $("startPick").addEventListener("click",()=>{
 $("startAuto").addEventListener("click",()=>{ clearStart(); moveStart(); });
 
 $("btnUndo").addEventListener("click",()=>{
+  if(DAILY.on)return;
   if(!ED.history.length){msg("Nothing to undo.");return;}
   ED.raw=ED.history.pop(); clearBanks(); clearStart(); rebuild();
 });
 $("btnClear").addEventListener("click",()=>{
+  if(DAILY.on)return;
   ED.history.push(ED.raw?ED.raw.slice():null);
   ED.raw=null; ED.track=null; clearBanks(); clearStart(); syncBank();
   renderPad(); updateReadout();
@@ -6995,6 +7259,7 @@ $("btnPanel").addEventListener("click",()=>{
   fitPad();
 });
 $("btnReverse").addEventListener("click",()=>{
+  if(DAILY.on)return;
   if(!ED.raw){msg("Draw a circuit first.");return;}
   ED.raw=ED.raw.slice().reverse(); clearBanks(); rebuild();
   msg("Racing direction reversed.");
@@ -7095,8 +7360,8 @@ function driveNow(){
   if(!ED.track)return;
   /* Which board these laps belong to. A different circuit is a different
      board, and everybody's times start again with it — including the ones
-     the room set on the last one. */
-  const k=circuitKey();
+     the room set on the last one. The daily's board is the day's. */
+  const k=(DAILY.on&&DAILY.data)?DAILY.data.circuit:circuitKey();
   if(k!==LB.key){
     LB.key=k; LB.board=[]; LB.at=0;
     for(const p of NET.peers.values())p.bestMs=null;
@@ -7123,6 +7388,7 @@ function driveNow(){
       resize();
       startGame();
       musicStart(ED.track.opts.car);
+      if(DAILY.on){ ghostAttach(); dailyUI(); }
     }catch(err){
       $("loadLbl").textContent="Could not build that circuit — try a simpler loop.";
       console.error(err);

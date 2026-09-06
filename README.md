@@ -36,6 +36,23 @@ Open `index.html` in any modern browser, or host it as-is.
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
 
+## The daily time trial
+
+**Daily** in the bar is one circuit a day, the same for everyone, always
+in the GT. The relay draws it from the date — harmonics on an oval, with
+the width, the hills, the smoothing, the scenery and a few banked corners
+all rolled with the shape — so every machine builds exactly the same lap
+and nothing has to be stored. It changes at midnight UTC.
+
+The Daily page shows the circuit, the world record so far and who holds
+it, your own best and where it stands ("14th of 213"), and the day's times.
+Drive it and the settings on the board lock, the garage offers only the GT,
+and the timing tower carries the record and your ranking while you drive.
+
+Every improvement you post carries the lap itself, as a run of positions,
+and the fastest lap of the day is the **ghost**: a see-through GT driving
+its record beside you, switched on or off from the Daily page or the pause
+menu. Times need an account; the board is readable without one.
 ## Racing other people
 
 **Host** a party and you get a four-character code. Anyone who enters it joins

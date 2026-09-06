@@ -17,6 +17,24 @@ const TOP = 25;
 const MIN_MS = 5000;            // nothing real is quicker than five seconds
 const MAX_MS = 30 * 60 * 1000;  // nor slower than half an hour
 const KEY_RE = /^[A-Za-z0-9_]{6,64}$/;
+/* A ghost is a run of [ms, x, z, yaw] samples, a few a second for a lap:
+   a few thousand at most, and only for the daily circuits, which are the
+   ones people race against the world on. */
+const GHOST_MAX = 4000;
+const isDaily = (c) => /^daily_\d{8}$/.test(c);
+function cleanGhost(g) {
+  if (!Array.isArray(g) || g.length < 10 || g.length > GHOST_MAX) return null;
+  let last = -1;
+  const out = [];
+  for (const s of g) {
+    if (!Array.isArray(s) || s.length !== 4) return null;
+    const [t, x, z, yaw] = s.map(Number);
+    if (![t, x, z, yaw].every(Number.isFinite) || t < last) return null;
+    last = t;
+    out.push([Math.round(t), +x.toFixed(2), +z.toFixed(2), +yaw.toFixed(3)]);
+  }
+  return out;
+}
 
 function makeLaps(store, userFor) {
   function bearer(req) {
@@ -37,8 +55,18 @@ function makeLaps(store, userFor) {
     if (req.method === "GET") {
       const circuit = String(url.searchParams.get("circuit") || "");
       if (!KEY_RE.test(circuit)) return json(res, 400, { error: "That isn't a circuit." }), true;
+      /* the fastest lap, as something to drive against */
+      if (url.pathname === "/api/laps/ghost") {
+        const g = await store.ghost(circuit);
+        return json(res, 200, g ? { name: g.name, ms: g.ms, car: g.car, samples: JSON.parse(g.data) } : { samples: null }), true;
+      }
       const board = await store.board(circuit, TOP);
-      return json(res, 200, { board: board.map(row), top: TOP }), true;
+      /* Signed in, the answer also says where you stand: your time, your
+         place, and how many are on the board — which the top of the list
+         cannot tell you once you are off it. */
+      const user = await userFor(bearer(req));
+      const you = user ? await store.rank(circuit, user.id) : null;
+      return json(res, 200, { board: board.map(row), top: TOP, you }), true;
     }
 
     if (req.method !== "POST") return json(res, 405, { error: "Not allowed." }), true;
@@ -49,7 +77,7 @@ function makeLaps(store, userFor) {
       return json(res, 429, { error: "Slow down a moment." }), true;
 
     let body;
-    try { body = await readBody(req); }
+    try { body = await readBody(req, 320 * 1024); }
     catch (e) { return json(res, 400, { error: "That request didn't make sense." }), true; }
 
     const circuit = String(body.circuit || "");
@@ -64,9 +92,25 @@ function makeLaps(store, userFor) {
     const best = await store.putLap({
       circuit, user_id: user.id, name: user.name, ms, car, at: Date.now(),
     });
+    const kept = best === ms;
+    /* The lap itself travels with an improvement on a daily circuit, so the
+       record can be driven against. */
+    if (kept && isDaily(circuit) && body.ghost) {
+      const g = cleanGhost(body.ghost);
+      if (g) {
+        try { await store.putGhost(circuit, user.id, JSON.stringify(g)); }
+        catch (e) { console.error("ghost:", e && e.message); }
+      }
+      /* yesterday's ghosts are nobody's to race any more */
+      if (Math.random() < 0.05) {
+        const before = "daily_" + new Date(Date.now() - 3 * 86_400_000).toISOString().slice(0, 10).replace(/-/g, "");
+        store.pruneGhosts(before).catch(() => {});
+      }
+    }
     const board = await store.board(circuit, TOP);
+    const rank = await store.rank(circuit, user.id);
     return json(res, 200, {
-      board: board.map(row), best, kept: best === ms, you: user.name, top: TOP,
+      board: board.map(row), best, kept, you: user.name, top: TOP, rank,
     }), true;
   }
 
