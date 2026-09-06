@@ -3791,11 +3791,17 @@ const touch={l:0,r:0,gas:0,brake:0,hand:0};
 const IS_TOUCH=("ontouchstart" in window)||(navigator.maxTouchPoints>0)||
   (window.matchMedia&&window.matchMedia("(pointer:coarse)").matches);
 let TOUCHUI=store.get("ad.touchui",null);
-function touchUIOn(){ return TOUCHUI==null?IS_TOUCH:TOUCHUI; }
+/* A phone has no other way to drive. On a handheld the controls are simply
+   on — whatever was chosen before, whatever is stored — and the switch is
+   not offered, because turning it off leaves a car nobody can steer. A
+   laptop with a touchscreen keeps the choice: it has a keyboard. */
+const padOnly=()=>typeof isHandheld==="function"&&isHandheld();
+function touchUIOn(){ if(padOnly())return true; return TOUCHUI==null?IS_TOUCH:TOUCHUI; }
 function applyTouchUI(){
   document.body.classList.toggle("touchmode",touchUIOn());
   const el=$("touchState");
   if(el){ el.textContent=touchUIOn()?"On":"Off"; el.className="s "+(touchUIOn()?"on":"off"); }
+  const row=$("pTouch"); if(row) row.hidden=padOnly();
 }
 
 function initRenderer(){
@@ -7002,6 +7008,7 @@ $("pReset").addEventListener("click",()=>{ resetCar(false); togglePause(false); 
 $("pFull").addEventListener("click",()=>{ fsToggle(); setTimeout(fsUI,120); });
 $("pSound").addEventListener("click",()=>setSound(!SOUND));
 $("pTouch").addEventListener("click",()=>{
+  if(padOnly()){ flashPause("On a phone the controls stay on — there is nothing else to drive with."); return; }
   TOUCHUI=!touchUIOn(); store.set("ad.touchui",TOUCHUI); applyTouchUI();
 });
 $("pBack").addEventListener("click",()=>{
