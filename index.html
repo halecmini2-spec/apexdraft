@@ -2739,7 +2739,7 @@ function bodyGT(b,M){
      Everything else about a wheel looking "attached to the side" follows
      from getting that one curve right. */
   const fender=(zw,R,crest,px,sit)=>{
-    const gap=R*0.17, Ro=R+gap, reach=Ro+0.24, st=[], N=14;
+    const gap=R*0.17, Ro=R+gap, reach=Ro+0.19, st=[], N=14;
     for(let i=0;i<=N;i++){
       const t=-1+2*i/N, z=zw+t*reach, d=Math.abs(z-zw), u=Math.abs(t);
       /* Underside: the circle it has to clear over the tyre, dropping away
@@ -2748,7 +2748,9 @@ function bodyGT(b,M){
       const y1 = crest-(crest-sit)*u*u;
       /* Tapered to a sliver at both ends, so it dies into the flank instead
          of finishing as a blade standing out of it. */
-      const fade=Math.pow(1-u,1.35);
+      /* Rounded off rather than tapered to a spike: this falls away like the
+         edge of a blister instead of running out to a point. */
+      const fade=Math.pow(Math.max(0,1-u*u),0.62);
       const y0 = Math.max(Math.min(arc, y1-0.03), y1-0.03-0.62*fade);
       st.push({z, w:Math.max(0.02,(R*0.60)*fade), y0, y1, n:3.0+1.3*fade});
     }
@@ -2757,8 +2759,8 @@ function bodyGT(b,M){
       f.position.x=sx; f.castShadow=true; b.add(f);
     }
   };
-  fender(FZ,FR,0.815,FX,0.575);
-  fender(RZ,RR,0.888,RX,0.800);
+  fender(FZ,FR,0.815,FX,0.498);
+  fender(RZ,RR,0.888,RX,0.712);
 
   const carbonC=0x0E1112, darkC=0x15191B, grilleC=0x1E2428;
 
