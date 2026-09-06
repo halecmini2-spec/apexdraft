@@ -2556,161 +2556,146 @@ function buildWheels(g,M,spec){
   return wheels;
 }
 
-/* ---- GT: low and wide, on a swan-neck wing ---- */
-/* ---- GT: a rear-engined flat-six racer, after the 911 GT3 RS ----
-   What makes the shape read as that car rather than as a generic supercar is
-   the order of its heights: a bonnet lower than the front wing tops, a
-   windscreen that starts early, and a roof that never stops falling until it
-   reaches a tail which is taller and wider than the nose. The engine is
-   behind the rear axle, so the mass sits at the back and the body says so. */
+/* ---- GT: a 911, built to the real car's proportions ----
+   The numbers first, because the shape follows from them and guessing them
+   was what made every earlier attempt read as a generic supercar. A 992 GT3
+   is 4.57 long, 1.85 wide and 1.28 tall on a 2.46 wheelbase — so a metre of
+   front overhang, a metre and an eighth behind the rear axle, and a cabin
+   whose roof is nearly a third of the length off the ground. That last ratio
+   is the one that matters: this car is tall for its length, and drawing it
+   low is what makes it look like something else.
+
+   The rear wheels sit well forward of the tail, the engine hangs behind
+   them, and the body is at its widest and highest over them. Everything
+   above the beltline falls from a short roof in one unbroken line into the
+   deck — no boot, no separate rear screen. */
 function bodyGT(b,M){
   const shell=new THREE.Mesh(loft([
-    {z: 2.24,w:0.84,y0:0.20,y1:0.45,n:2.2},   // nose: blunt, not a wedge
-    {z: 2.00,w:1.00,y0:0.15,y1:0.455,n:2.3},  // an arc across, not a plate
-    {z: 1.66,w:1.06,y0:0.13,y1:0.485,n:2.4},  // bonnet, low between the wings
-    {z: 1.22,w:1.07,y0:0.12,y1:0.535,n:2.9},
-    {z: 0.96,w:1.05,y0:0.12,y1:0.655,n:4.4},  // cowl: the screen starts early
-    {z: 0.30,w:1.05,y0:0.11,y1:0.715,n:4.8},  // a high beltline, shallow glass
-    {z:-0.30,w:1.07,y0:0.11,y1:0.765,n:5.0},
-    {z:-0.66,w:1.10,y0:0.11,y1:0.80,n:5.0},   // haunches gathering
-    {z:-1.28,w:1.15,y0:0.12,y1:0.86,n:4.8},   // widest, over the rear axle
-    {z:-1.84,w:1.12,y0:0.14,y1:0.885,n:4.4},  // engine deck, the high point
-    {z:-2.18,w:1.02,y0:0.18,y1:0.855,n:3.8},  // ducktail
-    {z:-2.34,w:0.90,y0:0.24,y1:0.78,n:3.2}    // tall blunt tail, not a taper
-  ],20),M.paint);
+    {z: 2.29,w:0.76,y0:0.20,y1:0.595,n:3.0},  // bumper face, blunt but not tall
+    {z: 2.12,w:0.86,y0:0.16,y1:0.665,n:3.4},
+    {z: 1.88,w:0.874,y0:0.14,y1:0.660,n:3.8}, // bonnet, sunk between the wings
+    {z: 1.52,w:0.878,y0:0.13,y1:0.675,n:4.2}, // over the front axle
+    {z: 1.14,w:0.876,y0:0.13,y1:0.720,n:4.4},
+    {z: 0.80,w:0.872,y0:0.13,y1:0.800,n:4.6}, // cowl, base of the screen
+    {z: 0.28,w:0.882,y0:0.13,y1:0.845,n:4.8}, // beltline through the doors
+    {z:-0.28,w:0.890,y0:0.13,y1:0.875,n:4.8},
+    {z:-0.72,w:0.898,y0:0.14,y1:0.915,n:4.6}, // haunches gathering
+    {z:-1.17,w:0.900,y0:0.15,y1:0.955,n:4.4}, // widest, over the rear axle
+    {z:-1.66,w:0.886,y0:0.17,y1:0.975,n:4.0}, // engine deck, the high point
+    {z:-2.08,w:0.855,y0:0.20,y1:0.955,n:3.6}, // ducktail
+    {z:-2.29,w:0.76,y0:0.24,y1:0.875,n:3.2}   // tall blunt tail
+  ],22),M.paint);
   shell.castShadow=true; b.add(shell);
 
-  /* The fastback. It peaks just behind the driver and falls all the way to
-     the deck — no separate boot, which is the whole silhouette. */
+  /* The greenhouse. Glass all the way from the screen to the deck; the roof
+     below covers the middle of it, leaving a windscreen and side windows. */
   const cabin=new THREE.Mesh(loft([
-    {z: 1.08,w:0.56,y0:0.68,y1:0.76,n:3.0},   // screen base, nearly over the axle
-    {z: 0.70,w:0.79,y0:0.70,y1:1.06,n:3.4},
-    {z: 0.24,w:0.86,y0:0.72,y1:1.17,n:3.8},   // this car is tall for its length
-    {z:-0.34,w:0.84,y0:0.74,y1:1.15,n:3.8},
-    {z:-0.92,w:0.77,y0:0.78,y1:1.00,n:3.4},   // rear screen
-    {z:-1.34,w:0.62,y0:0.82,y1:0.90,n:3.0}    // into the deck
-  ],18),M.glass);
+    {z: 0.86,w:0.60,y0:0.78,y1:0.86,n:3.0},
+    {z: 0.44,w:0.78,y0:0.80,y1:1.16,n:3.4},
+    {z: 0.02,w:0.83,y0:0.82,y1:1.27,n:3.8},
+    {z:-0.44,w:0.825,y0:0.84,y1:1.26,n:3.8},
+    {z:-0.92,w:0.79,y0:0.86,y1:1.14,n:3.4},
+    {z:-1.32,w:0.71,y0:0.90,y1:1.02,n:3.0},
+    {z:-1.58,w:0.60,y0:0.93,y1:0.98,n:3.0}
+  ],20),M.glass);
   cabin.castShadow=true; b.add(cabin);
 
-  /* A roof, not a canopy. The glass above is one closed shape, which on its
-     own reads as a bubble over the whole cabin; this caps the middle of it in
-     body colour so what is left showing is a windscreen at the front, windows
-     down the sides and a rear screen behind. Squared off (a high exponent
-     gives near-vertical sides) and a shade wider than the glass at every
-     station, so it overhangs into a roof line instead of sinking into the
-     glass and disappearing. */
+  /* Roof and flyline in one piece, header rail to deck. Stopping it short
+     anywhere in between shows a cap where no seam belongs. */
   const roof=new THREE.Mesh(loft([
-    {z: 0.42,w:0.856,y0:1.030,y1:1.162,n:7.0},   // header rail, top of the screen
-    {z: 0.10,w:0.878,y0:1.062,y1:1.200,n:8.0},
-    {z:-0.34,w:0.863,y0:1.030,y1:1.183,n:8.0},
-    {z:-0.80,w:0.813,y0:0.944,y1:1.070,n:7.0},
-    {z:-1.14,w:0.733,y0:0.876,y1:0.978,n:6.0},
-    {z:-1.38,w:0.618,y0:0.824,y1:0.902,n:5.0}    // and down into the deck
-  ],18),M.paint);
+    {z: 0.34,w:0.804,y0:1.034,y1:1.204,n:7.0},
+    {z:-0.06,w:0.841,y0:1.116,y1:1.286,n:8.0},
+    {z:-0.50,w:0.833,y0:1.093,y1:1.263,n:8.0},
+    {z:-0.95,w:0.796,y0:0.979,y1:1.149,n:7.0},
+    {z:-1.34,w:0.714,y0:0.895,y1:1.035,n:6.0},
+    {z:-1.60,w:0.604,y0:0.865,y1:0.995,n:5.0}
+  ],20),M.paint);
   roof.castShadow=true; b.add(roof);
 
-  /* The bonnet dips between two raised wing tops, with a round lamp let into
-     the front of each. That trough is the front of this car; a flat bonnet
-     with lights stuck on the corners is the front of any other. */
-  /* The bonnet between them is two metres of body and a cross-section that
-     shallow cannot be domed into anything you would notice — an arc over
-     that width is a flat plate however you shape it. So the relief is put
-     there rather than bent into it: a panel down the middle standing a
-     little proud, which lays a crease along each side of the bonnet and
-     gives the light something to break on. */
+  /* The bonnet is a trough: a panel down the middle standing proud of the
+     shell, with the wing tops standing higher still either side of it. */
   const bonnet=new THREE.Mesh(loft([
-    {z: 2.10,w:0.38,y0:0.30,y1:0.492,n:3.0},
-    {z: 1.84,w:0.45,y0:0.30,y1:0.520,n:3.2},
-    {z: 1.46,w:0.45,y0:0.30,y1:0.552,n:3.2},
-    {z: 1.12,w:0.40,y0:0.30,y1:0.588,n:3.2}
-  ],14),M.paint);
+    {z: 2.14,w:0.36,y0:0.30,y1:0.660,n:3.0},
+    {z: 1.90,w:0.42,y0:0.30,y1:0.685,n:3.2},
+    {z: 1.52,w:0.42,y0:0.30,y1:0.706,n:3.2},
+    {z: 1.16,w:0.38,y0:0.30,y1:0.748,n:3.2}
+  ],16),M.paint);
   bonnet.castShadow=true; b.add(bonnet);
 
-  for(const sx of [-0.74,0.74]){
+  for(const sx of [-0.60,0.60]){
     const crown=new THREE.Mesh(loft([
-      {z: 2.00,w:0.20,y0:0.30,y1:0.645,n:3.2},
-      {z: 1.86,w:0.245,y0:0.28,y1:0.665,n:3.2},
-      {z: 1.50,w:0.245,y0:0.28,y1:0.675,n:3.4},
-      {z: 1.12,w:0.225,y0:0.28,y1:0.64,n:3.4},
-      {z: 0.82,w:0.185,y0:0.30,y1:0.60,n:3.2}
-    ],14),M.paint);
+      {z: 2.10,w:0.210,y0:0.34,y1:0.700,n:3.2},
+      {z: 1.90,w:0.235,y0:0.32,y1:0.742,n:3.2},
+      {z: 1.54,w:0.235,y0:0.32,y1:0.758,n:3.4},
+      {z: 1.20,w:0.215,y0:0.32,y1:0.775,n:3.4},
+      {z: 0.98,w:0.185,y0:0.34,y1:0.790,n:3.2}
+    ],16),M.paint);
     crown.position.x=sx; crown.castShadow=true; b.add(crown);
   }
 
   const carbon=0x0E1112, dark=0x15191B, mesh=0x22282A;
   const k=trimKit();
-  k.box(1.96,0.07,0.54,0,0.11,2.10,carbon);            // splitter
-  /* Three mouths across the bumper, which is what the front of this car is
-     mostly made of once you get below the lamps. */
-  k.box(0.66,0.17,0.10,0,   0.29,2.30,dark);
-  k.box(0.44,0.15,0.10,-0.72,0.28,2.24,dark);
-  k.box(0.44,0.15,0.10, 0.72,0.28,2.24,dark);
-  k.box(0.36,0.05,0.28,-1.02,0.28,1.86,carbon,-0.38);  // dive planes
-  k.box(0.36,0.05,0.28, 1.02,0.28,1.86,carbon,-0.38);
-  k.box(0.14,0.13,2.10,-1.10,0.19,-0.05,carbon);       // side skirts
-  k.box(0.14,0.13,2.10, 1.10,0.19,-0.05,carbon);
+  k.box(1.80,0.07,0.50,0,0.115,2.16,carbon);           // splitter
+  k.box(0.30,0.05,0.24,-0.88,0.30,1.98,carbon,-0.36);  // canards
+  k.box(0.30,0.05,0.24, 0.88,0.30,1.98,carbon,-0.36);
+  k.box(0.80,0.20,0.10,0,    0.31,2.335,dark);         // bumper mouths
+  k.box(0.40,0.15,0.10,-0.62, 0.30,2.30,dark);
+  k.box(0.40,0.15,0.10, 0.62, 0.30,2.30,dark);
+  k.box(0.13,0.13,1.94,-0.905,0.20,-0.10,carbon);      // side skirts
+  k.box(0.13,0.13,1.94, 0.905,0.20,-0.10,carbon);
 
-  /* Louvres on top of the front wings, letting the arches breathe — the
-     detail you cannot mistake for anything else on this car. */
-  for(let i=0;i<3;i++){
-    const z=1.74-i*0.16;
-    k.box(0.34,0.04,0.09,-0.72,0.56-i*0.005,z,dark,-0.30);
-    k.box(0.34,0.04,0.09, 0.72,0.56-i*0.005,z,dark,-0.30);
+  k.box(0.26,0.05,0.30,-0.235,0.700,1.60,dark,-0.09);  // bonnet outlets
+  k.box(0.26,0.05,0.30, 0.235,0.700,1.60,dark,-0.09);
+  for(let i=0;i<2;i++){                                // front wing outlets
+    const z=1.62-i*0.15;
+    k.box(0.22,0.04,0.075,-0.615,0.764-i*0.004,z,dark,-0.30);
+    k.box(0.22,0.04,0.075, 0.615,0.764-i*0.004,z,dark,-0.30);
   }
-  k.box(0.30,0.045,0.36,-0.235,0.567,1.46,dark,-0.09); // ducts, in the raised panel
-  k.box(0.30,0.045,0.36, 0.235,0.567,1.46,dark,-0.09);
+  k.box(0.06,0.22,0.50,-0.900,0.640,-0.60,dark);       // rear quarter intakes
+  k.box(0.06,0.22,0.50, 0.900,0.640,-0.60,dark);
+  k.box(0.26,0.05,0.22,-0.62,0.700,0.34,dark);         // door blades
+  k.box(0.26,0.05,0.22, 0.62,0.700,0.34,dark);
 
-  /* Intakes in front of the rear wheels, feeding an engine behind them. */
-  k.box(0.07,0.20,0.52,-1.09,0.555,-0.52,dark);
-  k.box(0.07,0.20,0.52, 1.09,0.555,-0.52,dark);
-  k.box(0.30,0.05,0.24,-0.72,0.665,0.24,dark);         // door vents
-  k.box(0.30,0.05,0.24, 0.72,0.665,0.24,dark);
+  k.box(0.98,0.04,0.44,0,0.990,-1.66,mesh);            // engine deck grille
+  for(let i=-3;i<=3;i++) k.box(0.05,0.05,0.44,i*0.13,0.995,-1.66,dark);
 
-  /* Engine deck: a grille over the flat six, and the ram intake standing
-     proud of it. */
-  k.box(1.06,0.04,0.46,0,0.90,-1.82,mesh);
-  for(let i=-3;i<=3;i++) k.box(0.05,0.05,0.46,i*0.14,0.905,-1.82,dark);
-  k.box(0.62,0.07,0.20,0,0.915,-1.46,dark);
+  k.box(1.74,0.24,0.42,0,0.21,-2.16,carbon);           // diffuser
+  for(let i=-2;i<=2;i++) k.box(0.05,0.24,0.44,i*0.32,0.22,-2.16,dark);
+  k.box(0.12,0.12,0.24,-0.15,0.38,-2.32,dark);         // centre exhausts
+  k.box(0.12,0.12,0.24, 0.15,0.38,-2.32,dark);
 
-  k.box(1.92,0.24,0.44,0,0.20,-2.20,carbon);           // diffuser
-  for(let i=-2;i<=2;i++) k.box(0.05,0.24,0.46,i*0.35,0.21,-2.20,dark);
-  k.box(0.13,0.13,0.26,-0.17,0.36,-2.36,dark);         // centre exhausts
-  k.box(0.13,0.13,0.26, 0.17,0.36,-2.36,dark);
+  /* Swan neck: arms up from the deck, over the top, and the plane hung
+     underneath them. It stands at roof height, where this car's does. */
+  k.box(0.07,0.34,0.18,-0.70,1.115,-1.86,carbon);
+  k.box(0.07,0.34,0.18, 0.70,1.115,-1.86,carbon);
+  k.box(0.07,0.09,0.30,-0.70,1.325,-1.94,carbon);
+  k.box(0.07,0.09,0.30, 0.70,1.325,-1.94,carbon);
+  k.box(1.72,0.05,0.42,0,1.255,-1.98,carbon,-0.12);    // wing plane
+  k.box(0.05,0.36,0.50,-0.86,1.195,-1.98,dark);        // endplates
+  k.box(0.05,0.36,0.50, 0.86,1.195,-1.98,dark);
 
-  /* Swan neck: the arms come over the top and the plane hangs beneath them,
-     which is why the wing looks like it is being carried rather than propped. */
-  k.box(0.08,0.42,0.20,-0.82,1.04,-1.94,carbon);
-  k.box(0.08,0.42,0.20, 0.82,1.04,-1.94,carbon);
-  k.box(0.08,0.10,0.34,-0.82,1.27,-2.02,carbon);
-  k.box(0.08,0.10,0.34, 0.82,1.27,-2.02,carbon);
-  k.box(1.94,0.06,0.46,0,1.20,-2.06,carbon,-0.13);     // wing plane
-  k.box(0.05,0.40,0.54,-0.97,1.13,-2.06,dark);         // endplates
-  k.box(0.05,0.40,0.54, 0.97,1.13,-2.06,dark);
-
-  k.box(0.20,0.08,0.10,-1.13,0.79,0.62,dark);          // mirrors
-  k.box(0.20,0.08,0.10, 1.13,0.79,0.62,dark);
+  k.box(0.18,0.07,0.09,-0.96,0.845,0.66,dark);         // mirrors
+  k.box(0.18,0.07,0.09, 0.96,0.845,0.66,dark);
   b.add(k.mesh());
 
-  /* Round headlights, set into the tops of the front wings. Square lamps
-     would undo the shape on their own. */
+  /* Lamps in the tops of the wings, where a 911 wears them. */
   const hm=new THREE.MeshStandardMaterial({
     color:SRGB(0xFFF6E2),emissive:SRGB(0xFFE9BE),emissiveIntensity:0.8,
     roughness:0.12,metalness:0.1});
-  const hg=new THREE.CylinderGeometry(0.115,0.115,0.16,16);
-  for(const sx of [-0.74,0.74]){
+  const hg=new THREE.CylinderGeometry(0.125,0.125,0.16,16);
+  for(const sx of [-0.60,0.60]){
     const l=new THREE.Mesh(hg,hm);
     l.rotation.set(Math.PI/2,0,0);
-    /* Sunk into the wing rather than perched on it: most of the depth is
-       inside the bodywork, leaving a face rather than a headlamp bolted on. */
-    l.position.set(sx,0.555,2.00);
+    l.position.set(sx,0.665,2.10);
     b.add(l);
   }
 
-  /* One bar across the tail, not two lamps on the corners. */
   const tailMats=addLamps(b,null,
-    {w:1.52,h:0.075,y:0.70,z:-2.335,x:[0]});
+    {w:1.44,h:0.075,y:0.795,z:-2.29,x:[0]});   // one bar across the tail
   return {tailMats,
-    wheels:{r:0.355,tw:0.30,pos:[[-0.96,1.40],[0.96,1.40],[-1.00,-1.42],[1.00,-1.42]]}};
+    /* Staggered, as it is on the car: 20s at the front, wider 21s behind. */
+    wheels:{r:0.343,tw:0.255,rR:0.362,twR:0.315,
+            pos:[[-0.800,1.29],[0.800,1.29],[-0.777,-1.17],[0.777,-1.17]]}};
 }
 
 /* ---- Formula: narrow tub, exposed wheels, wings at both ends ---- */
