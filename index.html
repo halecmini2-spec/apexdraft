@@ -6056,7 +6056,8 @@ function netUI(){
   $("lobbybar").hidden=false;
   if(on){
     $("lbRole").textContent=host?"Host":"In a lobby";
-    $("lbCode").textContent=NET.code||"----";
+    $("lbCode").textContent=onOpen()?"open":(NET.code||"----");
+    $("lbCode").previousElementSibling.textContent=onOpen()?"Track":"Lobby code";
     const total=NET.peers.size+1;
     $("lbCount").textContent=total+(total===1?" driver":" drivers");
     const bar=$("lbRoster"); bar.innerHTML="";
@@ -6115,7 +6116,9 @@ function netUI(){
     $("netWho").textContent = host
       ? (n?"Everyone has your circuit. Start when you're ready."
           :"Share the code — whoever joins gets your circuit.")
+      : onOpen() ? "The open track: the relay's circuit of the day. It changes tomorrow, once the track is empty."
       : "The host builds the circuit and starts the race.";
+    $("boardTag").innerHTML="<span class=\"dot\"></span>"+(onOpen()?"Open track · today's circuit":"Host's track");
   }
 }
 
