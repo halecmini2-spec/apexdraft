@@ -288,7 +288,9 @@ body[data-mode="guest"] #btnDrive{
   cursor:default;letter-spacing:.14em;
 }
 body[data-mode="guest"] #btnDrive:hover{background:transparent}
-body[data-mode="guest"].starting #btnDrive{background:var(--party);color:#1A0603;border-color:var(--party)}
+body[data-mode="guest"].starting #btnDrive,
+body[data-mode="guest"].live #btnDrive{background:var(--party);color:#1A0603;border-color:var(--party);cursor:pointer}
+body[data-mode="guest"].live #btnDrive:hover{background:#FF6553}
 
 /* while you are in one, the party controls follow the same red */
 body.inparty #solidBox .chip{border-color:var(--party-deep);color:#F0B7AF}
@@ -4856,7 +4858,8 @@ function fsUI(){
    ===================================================================== */
 const NET={
   ws:null, id:null, code:null, hostId:null, peers:new Map(),
-  status:"off", sendAt:0, wantTrack:false, left:false
+  status:"off", sendAt:0, wantTrack:false, left:false,
+  live:false        // the host is out on track, and the room is open to join
 };
 const PUBLIC_RELAY="wss://apexdraft-relay.onrender.com";
 /* Sits in a bar an inch high now, so it says the offer and stops. What
@@ -5560,8 +5563,9 @@ function driveLabel(){
   const b=$("btnDrive"), m=document.body.dataset.mode;
   if(m==="host") b.textContent="Start race";
   else if(m==="guest") b.textContent=document.body.classList.contains("starting")
-    ? "Race starting" : "Waiting for host";
+    ? "Race starting" : NET.live ? "Join the race" : "Waiting for host";
   else b.textContent="Drive it";
+  document.body.classList.toggle("live",m==="guest"&&NET.live);
 }
 function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
 
@@ -5621,9 +5625,18 @@ function netHandle(m){
     NET.peers.clear();
     (m.peers||[]).forEach(p=>NET.peers.set(p.id,{name:p.name,car:p.car,colour:p.colour,buf:[]}));
     if(m.t==="hosted") netSendTrack();
+    /* A room that is already racing sends its circuit with the welcome and
+       says so, and a newcomer goes straight out to it: turning up late to a
+       race should mean joining it, not waiting at the board for a start
+       that already happened. */
+    NET.live=!!m.live;
+    if(m.t==="joined"&&m.track) netTakeTrack(m.track);
     netUI(); solidUI();
+    if(m.t==="joined"&&NET.live&&ED.track) netGo(true);
     return;
   }
+  /* the host is back at the board; the race is over until they start again */
+  if(m.t==="pit"){ NET.live=false; driveLabel(); return; }
   if(m.t==="peer"){ NET.peers.set(m.id,{name:m.name,car:m.car,colour:m.colour,buf:[]}); netUI(); return; }
   if(m.t==="gone"){ netDropCar(m.id); NET.peers.delete(m.id); netUI(); return; }
   if(m.t==="host"){ NET.hostId=m.id; netUI(); return; }
@@ -5632,9 +5645,9 @@ function netHandle(m){
   if(m.t==="track"){ netTakeTrack(m.data); return; }
   /* the host has sent everyone out on track */
   if(m.t==="go"){
+    NET.live=true;
     if(NET.id===NET.hostId)return;
-    document.body.classList.add("starting"); driveLabel();
-    setTimeout(()=>{ driveNow(); document.body.classList.remove("starting"); driveLabel(); },450);
+    netGo(false);
     return;
   }
   if(m.t==="state"){
@@ -5650,6 +5663,20 @@ function netHandle(m){
     if(Number.isFinite(ms)&&ms>0&&(p.bestMs==null||ms<p.bestMs))p.bestMs=ms;
     standingsUI();
     return;
+  }
+}
+/* Out onto the host's circuit. A start has a beat of "Race starting" so
+   the button is seen to answer; joining a race already running does not
+   wait for one. Only from the board — a guest already driving is out there
+   and stays there, on the circuit they were sent. */
+function netGo(late){
+  if(document.body.classList.contains("driving")&&late)return;
+  if(!late){
+    document.body.classList.add("starting"); driveLabel();
+    setTimeout(()=>{ driveNow(); document.body.classList.remove("starting"); driveLabel(); },450);
+  }else{
+    netSay("The race is on — joining it.");
+    driveNow();
   }
 }
 function netSendTrack(){
@@ -6118,7 +6145,7 @@ $("a2hsOk").addEventListener("click",()=>{
 $("btnDrive").addEventListener("click",()=>{
   if(!ED.track)return;
   const m=document.body.dataset.mode;
-  if(m==="guest")return;                                   // the host sends everyone out
+  if(m==="guest"&&!NET.live)return;                        // the host sends everyone out
   if(a2hsWanted()){ a2hsShow(); return; }                  // OK carries on into driveNow
   if(m==="host"){
     /* The circuit first, then the flag. Messages arrive in order on one
@@ -6126,6 +6153,7 @@ $("btnDrive").addEventListener("click",()=>{
        out onto it — however recently it was last touched. */
     netSendTrack();
     netSend({t:"go"});                                       // take the room with you
+    NET.live=true;                                           // the relay tells everyone else
   }
   driveNow();
 });
@@ -6176,9 +6204,14 @@ $("pTouch").addEventListener("click",()=>{
   TOUCHUI=!touchUIOn(); store.set("ad.touchui",TOUCHUI); applyTouchUI();
 });
 $("pBack").addEventListener("click",()=>{
+  /* The host leaving the track ends the race for the room: nobody else can
+     join one that is not being run. A guest leaving is only leaving, and
+     the board offers them the way back out. */
+  if(NET.status==="in"&&NET.id===NET.hostId&&NET.live){ NET.live=false; netSend({t:"pit"}); }
   G.running=false; togglePause(false); $("pause").hidden=true;
   $("drive").hidden=true; $("editor").hidden=false;
   document.body.classList.remove("driving");
+  driveLabel();
   fitPad();
 });
 

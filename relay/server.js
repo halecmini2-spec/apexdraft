@@ -182,7 +182,12 @@ wss.on("connection", (ws) => {
       ws.car = m.car; ws.colour = m.colour;
       const peers = roomPeers(room, ws.id);
       room.players.set(ws.id, ws);
-      send(ws, { t: "joined", code, id: ws.id, hostId: room.hostId, peers });
+      /* The circuit the room is on and whether it is racing on it travel with
+         the welcome, so a latecomer can go straight out rather than wait for
+         a start that has already happened. The host is still asked below, in
+         case what it has is newer than what the room remembers. */
+      send(ws, { t: "joined", code, id: ws.id, hostId: room.hostId, peers,
+                 live: !!room.live, track: room.track || null });
       broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
       /* Ask the host to re-send the circuit for the newcomer. */
       const host = room.players.get(room.hostId);
@@ -220,7 +225,16 @@ wss.on("connection", (ws) => {
       /* Only the host sends everyone out on track, for the same reason only
          the host sets the circuit. */
       if (ws.id !== room.hostId) return;
+      room.live = true;
       broadcast(room, { t: "go" }, ws.id);
+      return;
+    }
+    if (m.t === "pit") {
+      /* The host is back at the board, so there is no race to join until
+         they start one again. Guests already out stay out. */
+      if (ws.id !== room.hostId) return;
+      room.live = false;
+      broadcast(room, { t: "pit" }, ws.id);
       return;
     }
     if (m.t === "bye") { leave(ws); return; }
