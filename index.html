@@ -3403,11 +3403,14 @@ function bodyFormula(b,M){
   const carbon=0x0E1112, dark=0x15191B;
   const k=trimKit();
   k.box(1.50,0.05,3.70,0,0.09,0.05,carbon);            // floor
-  k.box(2.08,0.05,0.44,0,0.12,2.86,carbon);            // front wing
-  k.box(0.30,0.14,0.36,0,0.19,2.50,carbon);            // nose pylon down onto the wing
-  k.box(1.92,0.04,0.26,0,0.23,2.70,carbon,-0.24);
-  k.box(0.05,0.36,0.54,-1.05,0.26,2.84,dark);
-  k.box(0.05,0.36,0.54, 1.05,0.26,2.84,dark);
+  /* The front wing sits under the nose, its trailing edge just ahead of
+     the front tyres and its leading edge under the tip of the nose — not
+     out in front of the car on its own. */
+  k.box(2.08,0.05,0.44,0,0.12,2.24,carbon);            // front wing main plane
+  k.box(0.30,0.10,0.34,0,0.185,2.22,carbon);           // nose pylon down onto it
+  k.box(1.92,0.04,0.26,0,0.22,2.06,carbon,-0.24);      // flap, behind and above
+  k.box(0.05,0.36,0.54,-1.05,0.26,2.22,dark);          // endplates
+  k.box(0.05,0.36,0.54, 1.05,0.26,2.22,dark);
   /* The pylon has to reach down to the bodywork. Shortening the engine cover
      left the whole wing assembly hanging in the air behind the car. */
   k.box(0.13,0.64,0.26,0,0.72,-2.02,carbon);           // rear wing pylon
