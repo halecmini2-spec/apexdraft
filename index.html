@@ -439,6 +439,10 @@ body.inparty .lb-party{display:none}
 .lb-party .joingo{margin-top:0}
 /* The one button that opens a door the game does not otherwise have, so it
    is allowed to look like a door rather than like a checkbox. */
+.chip.go-open{border-color:#1E5A4C;color:#7FD1C4;background:rgba(127,209,196,.08)}
+.chip.go-open:hover{background:#7FD1C4;border-color:#7FD1C4;color:#062018}
+.chip.go-open .s{font-family:var(--mono);font-size:10.5px;margin-left:6px;opacity:.8}
+.chip.go-open .s:empty{display:none}
 .chip.go-party{border-color:var(--amber-deep);color:var(--amber);background:var(--amber-glow)}
 .chip.go-party:hover{background:var(--amber);border-color:var(--amber);color:#120E04}
 .chip.go-party:disabled:hover{background:var(--amber-glow);border-color:var(--amber-deep);color:var(--amber)}
@@ -1129,6 +1133,9 @@ body.admining #lobbybar{display:none}
     <div class="lb-party" id="lbParty">
       <p class="hint" id="netHint">Race live with other people</p>
       <div class="chips" id="netBtns">
+        <!-- Always running, no code, no host: press it and you are on the
+             track with whoever is out there. -->
+        <button class="chip go-open" id="btnOpen">Open track <span class="s" id="openN"></span></button>
         <button class="chip go-party" id="btnHost">Host a party</button>
         <button class="chip" id="btnJoin">Join</button>
       </div>
@@ -1219,8 +1226,8 @@ body.admining #lobbybar{display:none}
         <div class="grp grp-lobby" id="grpLobby">
           <h2>Party <span class="livedot" id="netDot" hidden></span></h2>
           <div id="netLive" hidden>
-            <div class="codeout">
-              <span class="k">Party code</span>
+            <div class="codeout" id="codeOut">
+              <span class="k" id="codeK">Party code</span>
               <b id="netShow">----</b>
             </div>
             <div class="roster" id="netWhos"></div>
@@ -1268,10 +1275,11 @@ body.admining #lobbybar{display:none}
           <h3>Time trials and lap times</h3>
           <p>Every circuit keeps its own leaderboard of fastest laps, with sector times and a best-lap
             ghost of your own pace. Two people who draw the same layout race for the same record.</p>
-          <h3>Multiplayer racing with friends</h3>
+          <h3>Multiplayer racing with friends — or with anyone</h3>
           <p>Host a party, share a four-letter code, and up to eight players race together on your
             circuit with live positions, name tags and a running order. Join a race that is already
-            under way, or swap cars in the garage without leaving the track.</p>
+            under way, or swap cars in the garage without leaving the track. Or press <b>Open track</b>:
+            a public server that is always running, with a new circuit every day and no code needed.</p>
           <h3>Frequently asked questions</h3>
           <dl class="faq">
             <dt>Is Apex Drawn free?</dt>
@@ -6081,7 +6089,8 @@ function netUI(){
   solidUI();          // the contact row exists only inside a party
 
   if(on){
-    $("netShow").textContent=NET.code||"----";
+    $("codeK").textContent=onOpen()?"Open track":"Party code";
+    $("netShow").textContent=onOpen()?"Always on":(NET.code||"----");
     /* Everyone in the room as a chip in the colour of the car they are
        driving, so the grid you are about to line up on is legible before you
        get there — and so a name is attached to whoever just went past. */
@@ -6116,7 +6125,7 @@ function driveLabel(){
   const b=$("btnDrive"), m=document.body.dataset.mode;
   if(m==="host") b.textContent="Start race";
   else if(m==="guest") b.textContent=document.body.classList.contains("starting")
-    ? "Race starting" : NET.live ? "Join the race" : "Waiting for host";
+    ? "Race starting" : onOpen() ? "Out on track" : NET.live ? "Join the race" : "Waiting for host";
   else b.textContent="Drive it";
   document.body.classList.toggle("live",m==="guest"&&NET.live);
 }
@@ -6186,6 +6195,7 @@ function netHandle(m){
     if(m.t==="joined"&&m.track) netTakeTrack(m.track);
     netUI(); solidUI();
     if(m.t==="joined"&&NET.live&&ED.track) netGo(true);
+    if(onOpen()) netSay("On the open track — today's circuit, with whoever is out there.");
     return;
   }
   if(m.t==="peer"){ NET.peers.set(m.id,{name:m.name,car:m.car,colour:m.colour,buf:[]}); netUI(); return; }
@@ -6328,6 +6338,35 @@ function netTakeTrack(d){
   if(d.v!==NET_VER) netSay("Circuit received — but the host is on an older version of the game. Ask them to refresh.");
   else netSay("Circuit received from the host.");
 }
+/* The open track is a party with a fixed code and no host. Everything a
+   guest can do there, and nothing else — the relay owns the circuit. */
+const OPEN_CODE="OPEN";
+const onOpen=()=>NET.status==="in"&&NET.code===OPEN_CODE;
+$("btnOpen").addEventListener("click",()=>{
+  netOpen(()=>{ NET.status="joining"; netSay("Heading out to the open track…"); netSend({t:"join",code:OPEN_CODE,token:ACCT.token,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
+});
+/* How many are out there, said on the button while you are deciding. Polled
+   gently, and only while the board is up and you are not already in a
+   party — the relay sleeps when idle and this must not be what wakes it
+   every few seconds. */
+let openT=0;
+async function openCount(){
+  clearTimeout(openT);
+  const idle=NET.status!=="in"&&!document.body.classList.contains("driving");
+  if(idle){
+    try{
+      const ctrl=("AbortController" in window)?new AbortController():null;
+      const kill=setTimeout(()=>{ try{ctrl&&ctrl.abort();}catch(e){} },8000);
+      const r=await fetch(apiBase()+"/health",{signal:ctrl?ctrl.signal:undefined,cache:"no-store"});
+      clearTimeout(kill);
+      const j=await r.json();
+      const n=+j.open||0;
+      $("openN").textContent=n?(n+(n===1?" out":" out")):"";
+    }catch(e){ $("openN").textContent=""; }
+  }
+  openT=setTimeout(openCount,idle?30000:60000);
+}
+setTimeout(openCount,2500);
 $("btnHost").addEventListener("click",()=>{
   netOpen(()=>{ NET.status="joining"; netSend({t:"host",token:ACCT.token,name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
 });

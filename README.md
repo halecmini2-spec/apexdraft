@@ -31,6 +31,12 @@ Open `index.html` in any modern browser, or host it as-is.
 
 ## Racing other people
 
+**Open track** in the top bar is a public server that is always running:
+no code, no host, no waiting. Press it and you are out on the relay's own
+circuit with whoever else is there, up to twelve at a time. The circuit
+changes with the day (UTC) whenever the room is empty, so it is never
+swapped under a car. The button says how many are out there.
+
 **Host** a party and you get a four-character code. Anyone who enters it joins
 you, and the circuit you have drawn is sent to them — they don't need to draw
 anything. Everyone drives their own car on their own machine; you see each
