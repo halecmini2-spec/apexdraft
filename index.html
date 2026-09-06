@@ -430,7 +430,11 @@ body[data-mode="solo"] #netLive{display:none}
 /* Taken up: in a lobby the invitation is the lobby. */
 body.inparty .lb-party{display:none}
 
-.lb-party{display:flex;align-items:center;gap:11px;margin-left:auto;min-width:0}
+/* At the far right, after the account chips, in a red box of its own: the
+   online controls are one thing, and the box says which thing. */
+.lb-party{display:flex;align-items:center;gap:11px;min-width:0;order:3;margin-left:12px;
+  border:1px solid var(--party-deep);border-radius:3px;padding:5px 10px;background:var(--party-glow)}
+.lb-acct{order:2;margin-left:auto!important}
 .lb-party .hint{margin:0;text-align:right;max-width:46vw;font-size:11.5px;line-height:1.35}
 .lb-party .chips{margin:0;flex:0 0 auto}
 .lb-party #netJoinBox{display:flex;align-items:center;gap:9px}
