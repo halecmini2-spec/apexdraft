@@ -136,7 +136,11 @@ today and all time, parties started, accounts, and a thirty-day chart. The
 page sends one beacon per load carrying a random id its browser made up and
 keeps; the relay stores a count per day against it. No address, no browser
 string, no path — enough to say how many came, and nothing about any one of
-them. Copies opened from disk or a dev server are not counted.
+them. Copies opened from disk or a dev server are not counted. The desk
+also lists when the recent visits happened, on the admin's own clock, with
+each browser shown as a short tag and marked as a newcomer or a return.
+"People" means different browsers: a phone and a laptop count twice, two
+people on one machine count once.
 
 ### The small print
 

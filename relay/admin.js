@@ -37,10 +37,15 @@ function makeAdmin(store, userFor, liveNow) {
     if (url.pathname === "/api/admin/stats" && req.method === "GET") {
       const since = new Date(Date.now() - 29 * 86_400_000).toISOString().slice(0, 10);
       const st = await store.stats(since);
+      /* The visitor id never leaves the server as itself: the desk gets a
+         short tag made from it, enough to see the same browser twice. */
+      const crypto = require("crypto");
+      const tag = (v) => crypto.createHash("sha256").update("tag:" + v).digest("hex").slice(0, 4);
+      const recent = (await store.recent(400)).map((r) => ({ at: r.at, who: tag(r.vid), first: r.first }));
       return json(res, 200, {
         live: liveNow ? liveNow() : { players: 0, rooms: 0, racing: 0 },
         today: new Date().toISOString().slice(0, 10),
-        days: st.days, totals: st.totals,
+        days: st.days, totals: st.totals, recent,
       }), true;
     }
 

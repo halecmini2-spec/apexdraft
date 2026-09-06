@@ -23,7 +23,7 @@ function makeVisits(store) {
     let vid = null;
     try { const b = await readBody(req, 512); vid = String(b.v || ""); } catch (e) { vid = null; }
     if (vid && VID.test(vid)) {
-      try { await store.hit(today(), vid); } catch (e) { console.error("hit:", e && e.message); }
+      try { await store.hit(today(), vid, Date.now()); } catch (e) { console.error("hit:", e && e.message); }
     }
     res.writeHead(204).end();
     return true;

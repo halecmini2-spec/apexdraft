@@ -21,7 +21,7 @@ const path = require("path");
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {} };
+  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [] };
   let writing = null, again = false;
 
   try {
@@ -32,6 +32,7 @@ function fileStore(file) {
     db.laps = db.laps || [];
     db.visits = db.visits || {};
     db.days = db.days || {};
+    db.log = db.log || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -165,10 +166,23 @@ function fileStore(file) {
     },
 
     /* ---- how many came, and how many played ---- */
-    async hit(day, vid) {
+    async hit(day, vid, at) {
       const d = db.visits[day] || (db.visits[day] = {});
       d[vid] = (d[vid] || 0) + 1;
+      /* when, as well as how many: the last month of them */
+      db.log.push({ at: at || Date.now(), vid });
+      const cut = Date.now() - 31 * 86_400_000;
+      if (db.log.length > 5000 || (db.log[0] && db.log[0].at < cut)) db.log = db.log.filter((l) => l.at >= cut).slice(-5000);
       await save();
+    },
+    /* The most recent visits, newest first, each marked as a first visit
+       or a return — judged by whether the id had been seen on an earlier
+       day. */
+    async recent(limit) {
+      const out = db.log.slice(-limit).reverse();
+      const first = {};
+      for (const [day, m] of Object.entries(db.visits)) for (const v of Object.keys(m)) if (!first[v] || day < first[v]) first[v] = day;
+      return out.map((l) => ({ at: l.at, vid: l.vid, first: first[l.vid] || null }));
     },
     async playing(day, players) {
       const d = db.days[day] || (db.days[day] = { plays: 0, peak: 0 });
@@ -271,6 +285,13 @@ function pgStore(url) {
           n   INTEGER NOT NULL DEFAULT 1,
           PRIMARY KEY (day, vid)
         )`);
+      /* When each visit happened, for the desk's list of recent ones. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS visit_log (
+          at  BIGINT NOT NULL,
+          vid TEXT NOT NULL
+        )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS visit_log_at ON visit_log(at)`);
       /* Parties started per day, and the most people connected at once. */
       await pool.query(`
         CREATE TABLE IF NOT EXISTS days (
@@ -374,10 +395,21 @@ function pgStore(url) {
     },
 
     /* ---- how many came, and how many played ---- */
-    async hit(day, vid) {
+    async hit(day, vid, at) {
       await pool.query(
         `INSERT INTO visits (day,vid,n) VALUES ($1,$2,1)
          ON CONFLICT (day,vid) DO UPDATE SET n=visits.n+1`, [day, vid]);
+      await pool.query(`INSERT INTO visit_log (at,vid) VALUES ($1,$2)`, [at || Date.now(), vid]);
+      /* a month of moments is plenty; the day counts keep the rest */
+      if (Math.random() < 0.02) await pool.query(`DELETE FROM visit_log WHERE at < $1`, [Date.now() - 31 * 86_400_000]);
+    },
+    async recent(limit) {
+      const rows = (await pool.query(`SELECT at, vid FROM visit_log ORDER BY at DESC LIMIT $1`, [limit])).rows;
+      if (!rows.length) return [];
+      const vids = [...new Set(rows.map((r) => r.vid))];
+      const f = (await pool.query(`SELECT vid, MIN(day) AS first FROM visits WHERE vid = ANY($1) GROUP BY vid`, [vids])).rows;
+      const first = {}; for (const r of f) first[r.vid] = r.first;
+      return rows.map((r) => ({ at: Number(r.at), vid: r.vid, first: first[r.vid] || null }));
     },
     async playing(day, players) {
       await pool.query(

@@ -786,6 +786,17 @@ body.admining #lobbybar{display:none}
 .ad-key .k-bar{background:var(--amber);opacity:.8}
 .ad-key .k-line{height:2px;background:#7FD1C4;vertical-align:2px}
 .ad-key .k-dot{width:7px;height:7px;border-radius:50%;background:var(--party)}
+.ad-when{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;margin-top:6px}
+@media (max-width:700px){.ad-when{grid-template-columns:1fr}}
+.ad-when .ad-head{margin:6px 0 6px}
+#adminScreen .ad-log{max-height:236px;overflow-y:auto;gap:3px}
+.ad-log .ad-row{padding:5px 10px;font-family:var(--mono);font-size:11.5px}
+.ad-log .t{color:var(--ink);font-variant-numeric:tabular-nums}
+.ad-log .d{color:var(--faint);margin-left:8px}
+.ad-log .w{color:var(--dim)}
+.ad-log .new{color:var(--amber);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-left:8px}
+.ad-log .back{color:var(--faint);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-left:8px}
+.ad-chart.hours{height:236px}
 #adminScreen .auth-sub.bad{color:var(--party)}
 #adminScreen .tk-head .chips{display:flex;gap:8px;flex:0 0 auto}
 
@@ -1488,6 +1499,19 @@ body.admining #lobbybar{display:none}
         </div>
         <canvas id="stChart" class="ad-chart"></canvas>
         <p class="ahint ad-key"><i class="k-bar"></i> visits &nbsp; <i class="k-line"></i> different people &nbsp; <i class="k-dot"></i> parties started &nbsp;· last 30 days, UTC · live counts refresh every 15 s</p>
+        <!-- When they came. Times are shown on the admin's own clock; each
+             visitor is a four-character tag, the same tag each time the same
+             browser comes back, and nothing more than that. -->
+        <div class="ad-when">
+          <div class="ad-recent">
+            <div class="ad-head"><span>Recent visits</span><span class="ad-meta" id="stRecentN"></span></div>
+            <div class="ad-list ad-log" id="stRecent"></div>
+          </div>
+          <div class="ad-hours">
+            <div class="ad-head"><span>By hour of day</span><span class="ad-meta">last 7 days, your clock</span></div>
+            <canvas id="stHours" class="ad-chart hours"></canvas>
+          </div>
+        </div>
       </div>
       <div class="ad-head"><span>Accounts</span></div>
       <div class="ad-list" id="adUsers"></div>
@@ -5882,8 +5906,47 @@ async function adStats(){
     $("stToday").textContent=n(today.hits); $("stUniq").textContent=n(today.uniques); $("stPlays").textContent=n(today.plays);
     $("stAll").textContent=n(r.totals.hits); $("stAllU").textContent=n(r.totals.uniques); $("stAcct").textContent=n(r.totals.accounts);
     adChart(r.days||[],r.today);
+    adRecent(r.recent||[],r.today);
   }catch(e){ adSay(e.message,true); }
   stTimer=setTimeout(adStats,15000);
+}
+/* The list of moments, and the same moments folded onto a clock face. Both
+   in the admin's own time zone, which is the only clock a person reads. */
+function adRecent(recent,today){
+  const box=$("stRecent"); box.innerHTML="";
+  const now=new Date(), dayOf=d=>d.toDateString();
+  const fmtT=d=>d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const fmtD=d=>dayOf(d)===dayOf(now)?"today":(dayOf(d)===dayOf(new Date(now-86400000))?"yesterday":d.toLocaleDateString([],{day:"numeric",month:"short"}));
+  $("stRecentN").textContent=recent.length?("last "+recent.length):"none yet";
+  for(const v of recent.slice(0,150)){
+    const d=new Date(v.at), row=document.createElement("div"); row.className="ad-row";
+    const left=document.createElement("span");
+    const t=document.createElement("span"); t.className="t"; t.textContent=fmtT(d);
+    const dd=document.createElement("span"); dd.className="d"; dd.textContent=fmtD(d);
+    left.appendChild(t); left.appendChild(dd);
+    const right=document.createElement("span");
+    const w=document.createElement("span"); w.className="w"; w.textContent="visitor "+v.who;
+    const tag=document.createElement("span");
+    /* first seen the day this visit happened -> a newcomer that day */
+    const isNew=!v.first||v.first===new Date(v.at).toISOString().slice(0,10);
+    tag.className=isNew?"new":"back"; tag.textContent=isNew?"new":"back";
+    right.appendChild(w); right.appendChild(tag);
+    row.appendChild(left); row.appendChild(right); box.appendChild(row);
+  }
+  /* by hour, last seven days, local time */
+  const cv=$("stHours"), dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth||400, H=cv.clientHeight||236;
+  cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr);
+  const c=cv.getContext("2d"); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+  const hours=new Array(24).fill(0), cut=Date.now()-7*86400000;
+  for(const v of recent) if(v.at>=cut) hours[new Date(v.at).getHours()]++;
+  const max=Math.max(3,...hours), padL=26,padR=8,padT=10,padB=20, gw=W-padL-padR, gh=H-padT-padB, step=gw/24, bw=Math.max(3,step*0.62);
+  c.font="9.5px ui-monospace, Consolas, monospace"; c.textBaseline="middle"; c.textAlign="right"; c.fillStyle="#5E7371"; c.strokeStyle="rgba(255,255,255,.07)";
+  for(let k=0;k<=2;k++){ const y=padT+gh-gh*k/2; c.beginPath(); c.moveTo(padL,y); c.lineTo(W-padR,y); c.stroke(); c.fillText(String(Math.round(max*k/2)),padL-5,y); }
+  const nowH=now.getHours();
+  hours.forEach((n,h)=>{ const x=padL+h*step+(step-bw)/2, hh=gh*n/max; c.fillStyle=h===nowH?"#FFB020":"rgba(255,176,32,.6)"; if(hh>0)c.fillRect(x,padT+gh-hh,bw,hh); });
+  c.textAlign="center"; c.textBaseline="alphabetic"; c.fillStyle="#5E7371";
+  for(let h=0;h<24;h+=6) c.fillText(String(h).padStart(2,"0")+":00",padL+h*step+step/2,H-6);
 }
 function adChart(days,today){
   const cv=$("stChart"), dpr=window.devicePixelRatio||1;
