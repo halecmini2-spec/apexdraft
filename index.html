@@ -3108,11 +3108,11 @@ function bodyKart(b,M){
 
   /* The number panel standing up in front of the driver — the one piece of
      bodywork that nothing but a kart has. */
-  const nassau=new THREE.Mesh(lens(0.42,0.30,0.042),M.paint);
-  nassau.position.set(0,0.292,0.672); nassau.rotation.x=0.34; b.add(nassau);
-  const plate=new THREE.Mesh(lens(0.235,0.175,0.048),trimM);
-  plate.position.set(0,0.300,0.683); plate.rotation.x=0.34; b.add(plate);
-  for(const s of [-1,1]) tube([s*0.15,0.165,0.652],[s*0.10,0.086,0.840],0.015,steelM);
+  const nassau=new THREE.Mesh(lens(0.60,0.42,0.048),M.paint);
+  nassau.position.set(0,0.356,0.622); nassau.rotation.x=0.24; b.add(nassau);
+  const plate=new THREE.Mesh(lens(0.345,0.240,0.054),trimM);
+  plate.position.set(0,0.362,0.635); plate.rotation.x=0.24; b.add(plate);
+  for(const s of [-1,1]) tube([s*0.22,0.230,0.640],[s*0.11,0.086,0.870],0.016,steelM);
 
   /* rear bumper: a low hoop of tube with a small panel across it */
   const rearHoop=new THREE.Mesh(new THREE.TorusGeometry(0.44,0.022,6,16,1.9),chromeM);
@@ -3174,12 +3174,12 @@ function bodyKart(b,M){
 
   /* ---- steering ---- */
   const col=new THREE.Mesh(new THREE.CylinderGeometry(0.017,0.017,0.44,8),steelM);
-  col.position.set(0,0.300,0.640); col.rotation.x=0.70; b.add(col);
-  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.118,0.017,6,18),darkM);
-  rim.position.set(0,0.452,0.470); rim.rotation.x=1.06; b.add(rim);
+  col.position.set(0,0.352,0.622); col.rotation.x=0.70; b.add(col);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.126,0.018,6,18),darkM);
+  rim.position.set(0,0.556,0.462); rim.rotation.x=1.06; b.add(rim);
   for(let i=0;i<3;i++){
     const sp=new THREE.Mesh(new THREE.BoxGeometry(0.100,0.018,0.026),darkM);
-    sp.position.set(0,0.452,0.470); sp.rotation.x=1.06; sp.rotation.z=i*TAU/3+0.4; b.add(sp);
+    sp.position.set(0,0.556,0.462); sp.rotation.x=1.06; sp.rotation.z=i*TAU/3+0.4; b.add(sp);
   }
   const pedalBar=new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,0.30,8),steelM);
   pedalBar.rotation.z=Math.PI/2; pedalBar.position.set(0,0.105,0.815); b.add(pedalBar);
@@ -3209,31 +3209,31 @@ function bodyKart(b,M){
     m.castShadow=true; b.add(m); return m;
   };
   for(const s of [-1,1]){
-    limb([s*0.080,0.185,-0.170],[s*0.115,0.215,0.300],0.062,0.048,suitM);   // thigh
-    ball([s*0.115,0.215,0.300],0.050,suitM);
-    limb([s*0.115,0.215,0.300],[s*0.108,0.170,0.700],0.046,0.034,suitM);    // shin
-    ball([s*0.108,0.160,0.752],0.044,gloveM,[1,0.80,1.5]);                  // boot
-    limb([s*0.163,0.470,-0.285],[s*0.212,0.408,-0.030],0.043,0.037,suitM);  // upper arm
-    ball([s*0.212,0.408,-0.030],0.040,suitM);
-    limb([s*0.212,0.408,-0.030],[s*0.118,0.450,0.415],0.036,0.031,suitM);   // forearm
-    ball([s*0.113,0.450,0.436],0.038,gloveM,[0.9,1,1.05]);                  // hand
-    ball([s*0.163,0.470,-0.285],0.054,suitM);
-    ball([s*0.080,0.185,-0.170],0.058,suitM);
+    limb([s*0.100,0.196,-0.175],[s*0.140,0.243,0.300],0.104,0.082,suitM);   // thigh
+    ball([s*0.140,0.243,0.300],0.086,suitM);
+    limb([s*0.140,0.243,0.300],[s*0.116,0.176,0.700],0.078,0.058,suitM);    // shin
+    ball([s*0.116,0.164,0.756],0.066,gloveM,[1,0.78,1.45]);                 // boot
+    limb([s*0.238,0.556,-0.300],[s*0.284,0.462,-0.020],0.074,0.062,suitM);  // upper arm
+    ball([s*0.284,0.462,-0.020],0.068,suitM);
+    limb([s*0.284,0.462,-0.020],[s*0.130,0.552,0.408],0.060,0.048,suitM);   // forearm
+    ball([s*0.122,0.555,0.430],0.058,gloveM,[0.9,1,1.05]);                  // hand
+    ball([s*0.238,0.556,-0.300],0.092,suitM);
+    ball([s*0.100,0.196,-0.175],0.098,suitM);
   }
-  ball([0,0.198,-0.215],0.098,suitM,[1.25,0.80,0.98]);
-  limb([0,0.208,-0.225],[0,0.462,-0.292],0.096,0.090,suitM);
-  ball([0,0.372,-0.262],0.110,suitM,[1.16,1.02,0.84]);
-  limb([-0.163,0.470,-0.285],[0.163,0.470,-0.285],0.054,0.054,suitM);
-  ball([0,0.530,-0.268],0.044,darkM,[1.5,0.8,1.1]);                          // neck brace
-  limb([0,0.508,-0.272],[0,0.572,-0.252],0.040,0.043,suitM);
+  ball([0,0.206,-0.222],0.166,suitM,[1.25,0.80,0.98]);
+  limb([0,0.216,-0.230],[0,0.548,-0.308],0.164,0.152,suitM);
+  ball([0,0.428,-0.276],0.186,suitM,[1.16,1.02,0.84]);
+  limb([-0.238,0.556,-0.300],[0.238,0.556,-0.300],0.092,0.092,suitM);
+  ball([0,0.628,-0.284],0.076,darkM,[1.5,0.8,1.1]);                         // neck brace
+  limb([0,0.600,-0.290],[0,0.700,-0.268],0.068,0.074,suitM);
 
   const shellM=new THREE.MeshStandardMaterial({color:SRGB(0xF2F4F5),roughness:0.30,metalness:0.10});
-  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.101,16,12),shellM);
-  helmet.position.set(0,0.636,-0.240); helmet.scale.set(1,0.98,1.05);
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.176,16,12),shellM);
+  helmet.position.set(0,0.808,-0.252); helmet.scale.set(1,0.98,1.05);
   helmet.castShadow=true; b.add(helmet);
-  const visor=new THREE.Mesh(lens(0.140,0.055,0.075),M.glass);
-  visor.position.set(0,0.634,-0.150); visor.rotation.x=-0.06; b.add(visor);
-  const stripe=new THREE.Mesh(new THREE.TorusGeometry(0.0985,0.025,6,16,Math.PI),M.paint);
+  const visor=new THREE.Mesh(lens(0.244,0.096,0.10),M.glass);
+  visor.position.set(0,0.804,-0.104); visor.rotation.x=-0.06; b.add(visor);
+  const stripe=new THREE.Mesh(new THREE.TorusGeometry(0.1715,0.042,6,16,Math.PI),M.paint);
   stripe.rotation.y=Math.PI/2;
   stripe.position.copy(helmet.position); stripe.scale.copy(helmet.scale);
   b.add(stripe);
