@@ -2646,7 +2646,16 @@ function buildWheels(g,M,spec){
     const k=i<2?F:R;
     const w=new THREE.Group();
     const tyre=new THREE.Mesh(k.tg,M.rubber); tyre.castShadow=true; w.add(tyre);
-    if(k.race){
+    if(k.race&&spec.plain){
+      /* A kart rim is a plain light dish with a hub in it — no spokes to
+         speak of. Same lathed tyre, different wheel entirely. */
+      w.add(new THREE.Mesh(k.rg,M.metal));
+      for(const sx of [-1,1]){
+        const l=new THREE.Mesh(k.lg,M.disc);
+        l.position.x=sx*k.tw*0.43; w.add(l);
+      }
+      w.add(new THREE.Mesh(k.hg,M.rim));
+    }else if(k.race){
       /* Dark rim, ten spokes across its face, a hub in the middle: the three
          things that still say "race wheel" at the distance you race at. */
       w.add(new THREE.Mesh(k.rg,M.rim));
@@ -2987,196 +2996,253 @@ function bodyYaris(b,M){
     bop:{sy:0.22,sx:0.12,freq:8.6}};
 }
 
-/* ---- Kart: a rental racing kart ----
-   Two-tone, which is most of what makes one of these read as a kart rather
-   than as a go-cart silhouette: a white steel frame carrying the floor tray
-   and the seat, with the bodywork that bolts to it — nose cone, side pods,
-   rear bumper — in the driver's colour. Everything else is what a kart
-   actually has bolted to it and nothing it hasn't. */
+/* ---- Kart: a competition kart ----
+   The whole thing is four exposed wheels, a frame of round steel tube lying
+   almost on the road, and four small pieces of plastic bolted to it — nose,
+   two pods and a number panel. Nothing encloses anything. Getting that
+   division right matters more than any single part: bodywork is smooth and
+   coloured, chassis is bare tube, and the mechanical parts are simply on
+   show.
+
+   It is also very low. The frame rails sit a hand's width off the ground and
+   the driver's hips are barely above them, with his legs run out flat in
+   front to the pedals. A kart drawn at car height stops being a kart. */
 function bodyKart(b,M){
-  const frameM=new THREE.MeshStandardMaterial({color:SRGB(0xE9EDEF),roughness:0.44,metalness:0.20});
-  const seatM =new THREE.MeshStandardMaterial({color:SRGB(0xDCE1E3),roughness:0.64,metalness:0.05});
-  const steelM=new THREE.MeshStandardMaterial({color:SRGB(0xB4BCC0),roughness:0.34,metalness:0.72});
-  const darkM =new THREE.MeshStandardMaterial({color:SRGB(0x1A1F22),roughness:0.58,metalness:0.28});
+  const steelM=new THREE.MeshStandardMaterial({color:SRGB(0xAEB6BB),roughness:0.32,metalness:0.80});
+  const chromeM=new THREE.MeshStandardMaterial({color:SRGB(0xCED5D9),roughness:0.18,metalness:0.92});
+  const darkM =new THREE.MeshStandardMaterial({color:SRGB(0x191E21),roughness:0.60,metalness:0.25});
+  const seatM =new THREE.MeshStandardMaterial({color:SRGB(0x23292D),roughness:0.72,metalness:0.06});
+  const trimM =new THREE.MeshStandardMaterial({color:SRGB(0xF0F3F4),roughness:0.36,metalness:0.10});
 
-  /* floor tray */
-  const pan=new THREE.Mesh(loft([
-    {z: 0.98,w:0.235,y0:0.055,y1:0.125,n:4.0},
-    {z: 0.62,w:0.400,y0:0.050,y1:0.132,n:5.5},
-    {z: 0.10,w:0.500,y0:0.045,y1:0.142,n:7.0},
-    {z:-0.46,w:0.500,y0:0.045,y1:0.152,n:7.0},
-    {z:-0.90,w:0.420,y0:0.055,y1:0.162,n:5.5}
-  ],20),frameM);
-  pan.castShadow=true; b.add(pan);
+  const FZ=0.80, RZ=-0.62, FX=0.560, RX=0.700;   // axles, and how wide they run
+  const FR=0.175, RR=0.192;                      // rear rubber is the taller too
 
-  /* nose cone, and the bumper hoops that live in front of it */
-  const nose=new THREE.Mesh(loft([
-    {z: 1.34,w:0.285,y0:0.140,y1:0.250,n:3.2},
-    {z: 1.20,w:0.360,y0:0.122,y1:0.288,n:3.6},
-    {z: 1.00,w:0.390,y0:0.110,y1:0.300,n:4.0},
-    {z: 0.84,w:0.330,y0:0.106,y1:0.268,n:4.0}
-  ],20),M.paint);
-  nose.castShadow=true; b.add(nose);
-  const tube=(len,r,x,y,z,mat)=>{
-    const g=new THREE.CylinderGeometry(r,r,len,10); g.rotateZ(Math.PI/2);
-    const m=new THREE.Mesh(g,mat); m.position.set(x,y,z); m.castShadow=true; b.add(m); return m;
-  };
-  tube(0.70,0.026,0,0.205,1.44,steelM);
-  tube(0.70,0.026,0,0.300,1.42,steelM);
-  for(const s of [-1,1]){ tube(0.026,0.026,s*0.34,0.252,1.43,steelM).rotation.z=Math.PI/2; }
-
-  /* side pods: big flat panels, angled up and outwards */
-  for(const s of [-1,1]){
-    const pod=new THREE.Mesh(loft([
-      {z: 0.58,w:0.095,y0:-0.050,y1:0.050,n:5.0},
-      {z: 0.30,w:0.155,y0:-0.072,y1:0.072,n:6.0},
-      {z:-0.04,w:0.170,y0:-0.078,y1:0.078,n:6.0},
-      {z:-0.36,w:0.125,y0:-0.060,y1:0.060,n:5.0}
-    ],16),M.paint);
-    pod.position.set(s*0.545,0.238,0.10);
-    pod.rotation.z=s*0.36;
-    pod.castShadow=true; b.add(pod);
-    /* the two stays that hold each pod off the frame */
-    for(const pz of [0.42,-0.20]) tube(0.30,0.020,s*0.40,0.200,pz,steelM);
-  }
-
-  /* seat */
-  const seat=new THREE.Mesh(loft([
-    {z:-0.04,w:0.275,y0:0.150,y1:0.288,n:4.0},
-    {z:-0.28,w:0.305,y0:0.150,y1:0.492,n:4.4},
-    {z:-0.54,w:0.295,y0:0.155,y1:0.558,n:4.0},
-    {z:-0.70,w:0.250,y0:0.170,y1:0.518,n:3.6}
-  ],18),seatM);
-  seat.castShadow=true; b.add(seat);
-
-  /* rear bumper: the wide bar that is the back of one of these */
-  const rb=new THREE.Mesh(loft([
-    {z:-1.18,w:0.585,y0:0.205,y1:0.330,n:4.5},
-    {z:-1.07,w:0.640,y0:0.195,y1:0.352,n:5.0},
-    {z:-0.96,w:0.585,y0:0.205,y1:0.330,n:4.5}
-  ],18),M.paint);
-  rb.castShadow=true; b.add(rb);
-  for(const s of [-1,1]){
-    const st=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.34,8),steelM);
-    st.position.set(s*0.30,0.235,-0.94); st.rotation.x=-1.15; b.add(st);
-  }
-
-  /* running gear */
-  tube(1.28,0.030,0,0.200,-0.80,steelM);                 // rear axle
-  for(const s of [-1,1]){
-    const bh=new THREE.Mesh(new THREE.BoxGeometry(0.075,0.115,0.10),darkM);
-    bh.position.set(s*0.30,0.205,-0.80); b.add(bh);
-  }
-  /* engine on one side, radiator on the other, as they always are */
-  const eng=new THREE.Mesh(loft([
-    {z:-0.34,w:0.105,y0:0.185,y1:0.400,n:4.0},
-    {z:-0.56,w:0.125,y0:0.180,y1:0.455,n:4.4},
-    {z:-0.76,w:0.105,y0:0.190,y1:0.405,n:4.0}
-  ],14),darkM);
-  eng.position.x=0.415; eng.castShadow=true; b.add(eng);
-  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(0.060,0.052,0.24,10),steelM);
-  pipe.position.set(0.418,0.470,-0.66); pipe.rotation.x=0.62; b.add(pipe);
-  const rad=new THREE.Mesh(new THREE.BoxGeometry(0.040,0.210,0.26),frameM);
-  rad.position.set(-0.478,0.352,0.06); rad.rotation.set(0,0,0.30); b.add(rad);
-
-  /* steering */
-  const col=new THREE.Mesh(new THREE.CylinderGeometry(0.020,0.020,0.40,8),steelM);
-  col.position.set(0,0.360,0.46); col.rotation.x=0.62; b.add(col);
-  const wheelR=new THREE.Mesh(new THREE.TorusGeometry(0.135,0.020,6,16),darkM);
-  wheelR.position.set(0,0.520,0.325); wheelR.rotation.x=1.16; b.add(wheelR);
-  for(const s of [-1,1]){
-    const sp=new THREE.Mesh(new THREE.BoxGeometry(0.115,0.022,0.030),darkM);
-    sp.position.set(s*0.062,0.516,0.328); sp.rotation.x=1.16; b.add(sp);
-  }
-
-  const k=trimKit();
-  const dark=0x15191B, tubeC=0x8A9295;
-  k.box(0.055,0.055,1.86,-0.395,0.085,0.02,tubeC);      // frame rails
-  k.box(0.055,0.055,1.86, 0.395,0.085,0.02,tubeC);
-  k.box(0.98,0.052,0.052,0,0.085,0.86,tubeC);           // front crossmember
-  k.box(0.14,0.05,0.16,-0.30,0.115,0.66,dark);          // pedals
-  k.box(0.14,0.05,0.16, 0.30,0.115,0.66,dark);
-  k.box(0.06,0.18,0.06,-0.44,0.245,-0.62,tubeC);        // sprocket guard
-  b.add(k.mesh());
-
-  /* ---- the driver ----
-     A kart has nowhere to hide one, so this is the one figure in the game
-     that has to hold up close. It is built the way a person is: joints in
-     the right places with tapered limbs between them, a ball at each joint
-     so the seams round over, and everything bent — elbows out and down to
-     the rim, knees up and forward to the pedals. Boxes for arms and legs is
-     what made the last one a mannequin; nothing here is a box.
-
-     The helmet takes the car's colour rather than the suit. It is the
-     highest thing on the kart and the only part you can pick out from three
-     corners away, and in a party that colour is who you are. */
-  const suitM=new THREE.MeshStandardMaterial({color:SRGB(0x3B454C),roughness:0.88,metalness:0.04});
-  const gloveM=new THREE.MeshStandardMaterial({color:SRGB(0x11161A),roughness:0.82,metalness:0.06});
-  const strapM=new THREE.MeshStandardMaterial({color:SRGB(0x5A656B),roughness:0.85,metalness:0.05});
-
-  /* A tapered limb between two joints, pointed however the joints ask. */
-  const limb=(a,c,r0,r1,mat)=>{
+  /* a round tube between two points: the frame is made of these */
+  const tube=(a,c,r,mat)=>{
     const A=new THREE.Vector3().fromArray(a), C=new THREE.Vector3().fromArray(c);
-    const d=new THREE.Vector3().subVectors(C,A), L=d.length();
-    const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,L,9),mat);
+    const d=new THREE.Vector3().subVectors(C,A);
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),9),mat);
     m.position.copy(A).add(C).multiplyScalar(0.5);
     m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
     m.castShadow=true; b.add(m); return m;
   };
-  /* A ball at a joint: what stops a limb ending in a visible flat disc. */
+
+  /* ---- chassis: two rails running the length of it, tied across ---- */
+  for(const s of [-1,1]){
+    tube([s*0.115,0.072,0.94],[s*0.300,0.066,0.30],0.030,steelM);   // out to the pods
+    tube([s*0.300,0.066,0.30],[s*0.300,0.066,-0.34],0.030,steelM);
+    tube([s*0.300,0.066,-0.34],[s*0.190,0.086,-0.80],0.030,steelM); // in behind the seat
+    tube([s*0.300,0.070,0.22],[s*0.560,0.062,0.20],0.022,steelM);   // pod outriggers
+    tube([s*0.300,0.070,-0.24],[s*0.560,0.062,-0.22],0.022,steelM);
+    tube([s*0.115,0.072,0.94],[s*0.430,0.088,0.86],0.022,steelM);   // to the stub axles
+  }
+  tube([-0.115,0.072,0.94],[0.115,0.072,0.94],0.028,steelM);        // front crossmember
+  tube([-0.300,0.066,-0.10],[0.300,0.066,-0.10],0.024,steelM);
+  tube([-0.190,0.086,-0.80],[0.190,0.086,-0.80],0.028,steelM);
+  /* stub axles and kingpins */
+  for(const s of [-1,1]){
+    tube([s*0.430,0.088,0.86],[s*FX,FR*0.92,FZ],0.020,darkM);
+    tube([s*0.430,0.050,0.86],[s*0.430,0.150,0.86],0.018,darkM);
+  }
+
+  /* ---- rear axle: one bar right across, in its bearings ---- */
+  const axle=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,RX*2+0.10,12),steelM);
+  axle.rotation.z=Math.PI/2; axle.position.set(0,RR*0.86,RZ); axle.castShadow=true; b.add(axle);
+  for(const s of [-1,1]){
+    const brg=new THREE.Mesh(new THREE.CylinderGeometry(0.052,0.052,0.075,10),darkM);
+    brg.rotation.z=Math.PI/2; brg.position.set(s*0.235,RR*0.86,RZ); b.add(brg);
+    tube([s*0.235,RR*0.86,RZ],[s*0.250,0.075,RZ+0.16],0.020,steelM);
+  }
+  const sprocket=new THREE.Mesh(new THREE.CylinderGeometry(0.098,0.098,0.014,18),darkM);
+  sprocket.rotation.z=Math.PI/2; sprocket.position.set(-0.150,RR*0.86,RZ); b.add(sprocket);
+  const brake=new THREE.Mesh(new THREE.CylinderGeometry(0.082,0.082,0.016,16),chromeM);
+  brake.rotation.z=Math.PI/2; brake.position.set(0.120,RR*0.86,RZ); b.add(brake);
+
+  /* ---- floor tray: a thin plate the driver's heels rest on ---- */
+  const floor=new THREE.Mesh(loft([
+    {z: 0.86,w:0.145,y0:0.052,y1:0.082,n:5.0},
+    {z: 0.46,w:0.255,y0:0.048,y1:0.080,n:6.0},
+    {z: 0.02,w:0.300,y0:0.046,y1:0.080,n:6.5},
+    {z:-0.34,w:0.290,y0:0.048,y1:0.084,n:6.0}
+  ],18),darkM);
+  floor.castShadow=true; b.add(floor);
+
+  /* ---- bodywork: four small plastic panels, and that is all of it ---- */
+  const nose=new THREE.Mesh(loft([
+    {z: 1.18,w:0.235,y0:0.075,y1:0.205,n:3.2},
+    {z: 1.08,w:0.330,y0:0.062,y1:0.235,n:3.6},
+    {z: 0.96,w:0.360,y0:0.058,y1:0.240,n:4.0},
+    {z: 0.86,w:0.320,y0:0.060,y1:0.215,n:4.0}
+  ],20),M.paint);
+  nose.castShadow=true; b.add(nose);
+  const noseStripe=new THREE.Mesh(loft([
+    {z: 1.185,w:0.058,y0:0.100,y1:0.208,n:3.2},
+    {z: 1.02,w:0.070,y0:0.090,y1:0.245,n:3.8},
+    {z: 0.87,w:0.062,y0:0.092,y1:0.220,n:4.0}
+  ],14),trimM);
+  b.add(noseStripe);
+  /* the hoop in front of it, which is tube and not plastic */
+  for(const [yy,rr] of [[0.150,0.345],[0.238,0.320]]){
+    const hoop=new THREE.Mesh(new THREE.TorusGeometry(rr,0.020,6,16,Math.PI),chromeM);
+    hoop.rotation.x=Math.PI/2;
+    hoop.position.set(0,yy,1.16-rr);
+    b.add(hoop);
+  }
+
+  /* Pods: low, thin and clearly off the frame on their outriggers. */
+  for(const s of [-1,1]){
+    const pod=new THREE.Mesh(loft([
+      {z: 0.54,w:0.048,y0:0.070,y1:0.190,n:4.0},
+      {z: 0.26,w:0.080,y0:0.060,y1:0.238,n:5.0},
+      {z:-0.06,w:0.086,y0:0.056,y1:0.246,n:5.0},
+      {z:-0.34,w:0.064,y0:0.062,y1:0.210,n:4.2}
+    ],18),M.paint);
+    pod.position.x=s*0.585; pod.castShadow=true; b.add(pod);
+    const band=new THREE.Mesh(loft([
+      {z: 0.50,w:0.058,y0:0.118,y1:0.150,n:4.0},
+      {z: 0.10,w:0.094,y0:0.122,y1:0.160,n:5.0},
+      {z:-0.30,w:0.072,y0:0.118,y1:0.150,n:4.2}
+    ],14),trimM);
+    band.position.x=s*0.585; b.add(band);
+  }
+
+  /* The number panel standing up in front of the driver — the one piece of
+     bodywork that nothing but a kart has. */
+  const nassau=new THREE.Mesh(lens(0.42,0.30,0.042),M.paint);
+  nassau.position.set(0,0.292,0.672); nassau.rotation.x=0.34; b.add(nassau);
+  const plate=new THREE.Mesh(lens(0.235,0.175,0.048),trimM);
+  plate.position.set(0,0.300,0.683); plate.rotation.x=0.34; b.add(plate);
+  for(const s of [-1,1]) tube([s*0.15,0.165,0.652],[s*0.10,0.086,0.840],0.015,steelM);
+
+  /* rear bumper: a low hoop of tube with a small panel across it */
+  const rearHoop=new THREE.Mesh(new THREE.TorusGeometry(0.44,0.022,6,16,1.9),chromeM);
+  rearHoop.rotation.set(Math.PI/2,0,0); rearHoop.rotation.z=2.14;
+  rearHoop.position.set(0,0.145,-0.80); b.add(rearHoop);
+  const rearPanel=new THREE.Mesh(loft([
+    {z:-0.92,w:0.300,y0:0.150,y1:0.290,n:4.0},
+    {z:-1.00,w:0.330,y0:0.145,y1:0.300,n:4.4},
+    {z:-1.08,w:0.300,y0:0.150,y1:0.285,n:4.0}
+  ],16),M.paint);
+  rearPanel.castShadow=true; b.add(rearPanel);
+  for(const s of [-1,1]) tube([s*0.190,0.090,-0.80],[s*0.230,0.215,-0.98],0.018,steelM);
+
+  /* ---- engine, behind him and off to one side ---- */
+  const eng=new THREE.Mesh(loft([
+    {z:-0.42,w:0.090,y0:0.115,y1:0.315,n:4.2},
+    {z:-0.60,w:0.105,y0:0.105,y1:0.360,n:4.6},
+    {z:-0.78,w:0.088,y0:0.115,y1:0.310,n:4.2}
+  ],16),darkM);
+  eng.position.x=0.300; eng.castShadow=true; b.add(eng);
+  /* cylinder and airbox on top of it */
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(0.062,0.070,0.115,10),steelM);
+  barrel.position.set(0.300,0.400,-0.575); b.add(barrel);
+  const box=new THREE.Mesh(lens(0.135,0.115,0.145),darkM);
+  box.position.set(0.300,0.400,-0.760); box.rotation.y=Math.PI/2; b.add(box);
+
+  /* The expansion chamber: fat in the middle, tapering both ends, swept out
+     to the side. It is the loudest-looking thing on a kart and a plain grey
+     cylinder does not stand in for it. */
+  const prof=[];
+  const at=(r,y)=>prof.push(new THREE.Vector2(r,y));
+  at(0.016,0);   at(0.030,0.055); at(0.052,0.140); at(0.072,0.250);
+  at(0.076,0.360); at(0.062,0.470); at(0.036,0.560); at(0.026,0.630); at(0.020,0.680);
+  const chamber=new THREE.Mesh(new THREE.LatheGeometry(prof,14),chromeM);
+  chamber.position.set(0.415,0.238,-0.500);
+  chamber.rotation.set(-1.32,0,0.26);   /* sweeping back and out, not forward */
+  chamber.castShadow=true; b.add(chamber);
+  /* header, curling out of the barrel into it */
+  tube([0.320,0.378,-0.556],[0.408,0.286,-0.512],0.025,chromeM);
+  const silencer=new THREE.Mesh(new THREE.CylinderGeometry(0.040,0.040,0.150,10),darkM);
+  silencer.position.set(0.590,0.300,-1.030); silencer.rotation.set(-1.32,0,0.26); b.add(silencer);
+
+  /* fuel bottle, between his knees where it lives */
+  const tank=new THREE.Mesh(loft([
+    {z: 0.10,w:0.075,y0:0.085,y1:0.290,n:4.0},
+    {z:-0.02,w:0.085,y0:0.082,y1:0.300,n:4.4},
+    {z:-0.14,w:0.072,y0:0.088,y1:0.280,n:4.0}
+  ],14),trimM);
+  tank.position.x=-0.020; b.add(tank);
+
+  /* ---- seat, low and wrapping ---- */
+  const seat=new THREE.Mesh(loft([
+    {z:-0.04,w:0.215,y0:0.098,y1:0.215,n:4.0},
+    {z:-0.26,w:0.240,y0:0.098,y1:0.400,n:4.4},
+    {z:-0.46,w:0.230,y0:0.104,y1:0.480,n:4.0},
+    {z:-0.58,w:0.190,y0:0.116,y1:0.435,n:3.6}
+  ],18),seatM);
+  seat.castShadow=true; b.add(seat);
+
+  /* ---- steering ---- */
+  const col=new THREE.Mesh(new THREE.CylinderGeometry(0.017,0.017,0.44,8),steelM);
+  col.position.set(0,0.300,0.640); col.rotation.x=0.70; b.add(col);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.118,0.017,6,18),darkM);
+  rim.position.set(0,0.452,0.470); rim.rotation.x=1.06; b.add(rim);
+  for(let i=0;i<3;i++){
+    const sp=new THREE.Mesh(new THREE.BoxGeometry(0.100,0.018,0.026),darkM);
+    sp.position.set(0,0.452,0.470); sp.rotation.x=1.06; sp.rotation.z=i*TAU/3+0.4; b.add(sp);
+  }
+  const pedalBar=new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,0.30,8),steelM);
+  pedalBar.rotation.z=Math.PI/2; pedalBar.position.set(0,0.105,0.815); b.add(pedalBar);
+  for(const s of [-1,1]){
+    const pd=new THREE.Mesh(new THREE.BoxGeometry(0.075,0.030,0.115),darkM);
+    pd.position.set(s*0.105,0.122,0.800); pd.rotation.x=-0.35; b.add(pd);
+  }
+
+  /* ---- the driver ----
+     Sitting in the frame, not on it: hips barely above the rails, legs run
+     out almost flat to the pedals, arms up and forward to a wheel held close
+     to his chest. That posture is most of what says "kart" from the side. */
+  const suitM =new THREE.MeshStandardMaterial({color:SRGB(0x2A3238),roughness:0.88,metalness:0.04});
+  const gloveM=new THREE.MeshStandardMaterial({color:SRGB(0x11161A),roughness:0.82,metalness:0.06});
+  const limb=(a,c,r0,r1,mat)=>{
+    const A=new THREE.Vector3().fromArray(a), C=new THREE.Vector3().fromArray(c);
+    const d=new THREE.Vector3().subVectors(C,A);
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,d.length(),9),mat);
+    m.position.copy(A).add(C).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+    m.castShadow=true; b.add(m); return m;
+  };
   const ball=(p,r,mat,sc)=>{
     const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,7),mat);
     m.position.fromArray(p);
     if(sc)m.scale.set(sc[0],sc[1],sc[2]);
     m.castShadow=true; b.add(m); return m;
   };
-
   for(const s of [-1,1]){
-    /* legs: hip forward to a raised knee, then down to the pedals */
-    limb([s*0.088,0.300,-0.150],[s*0.118,0.312,0.230],0.072,0.056,suitM);
-    ball([s*0.118,0.312,0.230],0.058,suitM);
-    limb([s*0.118,0.312,0.230],[s*0.118,0.238,0.520],0.054,0.040,suitM);
-    ball([s*0.118,0.234,0.545],0.050,gloveM,[1,0.82,1.5]);   // boot
-    /* arms: shoulder out and down to the elbow, then in to the rim */
-    limb([s*0.205,0.652,-0.228],[s*0.246,0.548,0.020],0.050,0.043,suitM);
-    ball([s*0.246,0.548,0.020],0.046,suitM);
-    limb([s*0.246,0.548,0.020],[s*0.158,0.506,0.288],0.042,0.036,suitM);
-    ball([s*0.152,0.503,0.302],0.044,gloveM,[0.9,1,1.05]);   // hand on the rim
-    ball([s*0.205,0.652,-0.228],0.064,suitM);                // shoulder
-    ball([s*0.088,0.300,-0.150],0.068,suitM);                // hip
+    limb([s*0.080,0.185,-0.170],[s*0.115,0.215,0.300],0.062,0.048,suitM);   // thigh
+    ball([s*0.115,0.215,0.300],0.050,suitM);
+    limb([s*0.115,0.215,0.300],[s*0.108,0.170,0.700],0.046,0.034,suitM);    // shin
+    ball([s*0.108,0.160,0.752],0.044,gloveM,[1,0.80,1.5]);                  // boot
+    limb([s*0.163,0.470,-0.285],[s*0.212,0.408,-0.030],0.043,0.037,suitM);  // upper arm
+    ball([s*0.212,0.408,-0.030],0.040,suitM);
+    limb([s*0.212,0.408,-0.030],[s*0.118,0.450,0.415],0.036,0.031,suitM);   // forearm
+    ball([s*0.113,0.450,0.436],0.038,gloveM,[0.9,1,1.05]);                  // hand
+    ball([s*0.163,0.470,-0.285],0.054,suitM);
+    ball([s*0.080,0.185,-0.170],0.058,suitM);
   }
-  /* body: hips, a chest that leans back into the seat, shoulders across */
-  ball([0,0.318,-0.205],0.115,suitM,[1.25,0.82,0.98]);
-  limb([0,0.330,-0.215],[0,0.646,-0.236],0.112,0.106,suitM);
-  ball([0,0.556,-0.230],0.130,suitM,[1.16,1.02,0.84]);      // chest
-  limb([-0.205,0.652,-0.228],[0.205,0.652,-0.228],0.064,0.064,suitM);
-  ball([0,0.706,-0.202],0.050,strapM,[1.5,0.8,1.1]);        // neck brace
-  limb([0,0.686,-0.206],[0,0.756,-0.178],0.046,0.050,suitM); // neck
+  ball([0,0.198,-0.215],0.098,suitM,[1.25,0.80,0.98]);
+  limb([0,0.208,-0.225],[0,0.462,-0.292],0.096,0.090,suitM);
+  ball([0,0.372,-0.262],0.110,suitM,[1.16,1.02,0.84]);
+  limb([-0.163,0.470,-0.285],[0.163,0.470,-0.285],0.054,0.054,suitM);
+  ball([0,0.530,-0.268],0.044,darkM,[1.5,0.8,1.1]);                          // neck brace
+  limb([0,0.508,-0.272],[0,0.572,-0.252],0.040,0.043,suitM);
 
-  /* White shell with a stripe over the crown in the driver's colour, which
-     is how the karts in the reference are painted — and the stripe still
-     says whose kart it is from across the circuit. */
   const shellM=new THREE.MeshStandardMaterial({color:SRGB(0xF2F4F5),roughness:0.30,metalness:0.10});
-  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.128,16,12),shellM);
-  helmet.position.set(0,0.840,-0.148);
-  helmet.scale.set(1,0.98,1.05);
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.101,16,12),shellM);
+  helmet.position.set(0,0.636,-0.240); helmet.scale.set(1,0.98,1.05);
   helmet.castShadow=true; b.add(helmet);
-  /* Across the middle of the shell, where a face is. Any higher and the
-     whole thing reads as a headband. */
-  const visor=new THREE.Mesh(lens(0.176,0.068,0.09),M.glass);
-  visor.position.set(0,0.836,-0.036); visor.rotation.x=-0.06;
-  b.add(visor);
-  /* Over the crown front to back, which needs a ring standing in the car's
-     own plane — a band of the sphere runs the wrong way round the head. */
-  const stripe=new THREE.Mesh(new THREE.TorusGeometry(0.1245,0.0305,6,16,Math.PI),M.paint);
+  const visor=new THREE.Mesh(lens(0.140,0.055,0.075),M.glass);
+  visor.position.set(0,0.634,-0.150); visor.rotation.x=-0.06; b.add(visor);
+  const stripe=new THREE.Mesh(new THREE.TorusGeometry(0.0985,0.025,6,16,Math.PI),M.paint);
   stripe.rotation.y=Math.PI/2;
   stripe.position.copy(helmet.position); stripe.scale.copy(helmet.scale);
   b.add(stripe);
 
-  const tailMats=addLamps(b,null,{w:0.13,h:0.065,y:0.268,z:-1.245,x:[0]});
+  const tailMats=addLamps(b,null,{w:0.12,h:0.055,y:0.225,z:-1.09,x:[0]});
   return {tailMats,
-    wheels:{r:0.20,tw:0.15,rR:0.23,twR:0.26,
-            pos:[[-0.60,0.84],[0.60,0.84],[-0.64,-0.80],[0.64,-0.80]]}};
+    wheels:{race:true,plain:true,
+            r:FR,tw:0.130, rR:RR,twR:0.250,
+            pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
 function buildCar(bodyColor,kind){
