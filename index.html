@@ -2987,43 +2987,116 @@ function bodyYaris(b,M){
     bop:{sy:0.22,sx:0.12,freq:8.6}};
 }
 
-/* ---- Kart: no bodywork to hide behind, and hardly any of it ---- */
+/* ---- Kart: a rental racing kart ----
+   Two-tone, which is most of what makes one of these read as a kart rather
+   than as a go-cart silhouette: a white steel frame carrying the floor tray
+   and the seat, with the bodywork that bolts to it — nose cone, side pods,
+   rear bumper — in the driver's colour. Everything else is what a kart
+   actually has bolted to it and nothing it hasn't. */
 function bodyKart(b,M){
-  /* a flat pan rather than a shell — a kart is a floor, a seat and an axle */
+  const frameM=new THREE.MeshStandardMaterial({color:SRGB(0xE9EDEF),roughness:0.44,metalness:0.20});
+  const seatM =new THREE.MeshStandardMaterial({color:SRGB(0xDCE1E3),roughness:0.64,metalness:0.05});
+  const steelM=new THREE.MeshStandardMaterial({color:SRGB(0xB4BCC0),roughness:0.34,metalness:0.72});
+  const darkM =new THREE.MeshStandardMaterial({color:SRGB(0x1A1F22),roughness:0.58,metalness:0.28});
+
+  /* floor tray */
   const pan=new THREE.Mesh(loft([
-    {z: 1.02,w:0.26,y0:0.07,y1:0.15,n:4.0},
-    {z: 0.60,w:0.44,y0:0.06,y1:0.15,n:6.0},
-    {z: 0.00,w:0.50,y0:0.05,y1:0.16,n:7.0},
-    {z:-0.60,w:0.50,y0:0.05,y1:0.17,n:7.0},
-    {z:-0.98,w:0.42,y0:0.06,y1:0.18,n:5.5}
-  ],18),M.paint);
+    {z: 0.98,w:0.235,y0:0.055,y1:0.125,n:4.0},
+    {z: 0.62,w:0.400,y0:0.050,y1:0.132,n:5.5},
+    {z: 0.10,w:0.500,y0:0.045,y1:0.142,n:7.0},
+    {z:-0.46,w:0.500,y0:0.045,y1:0.152,n:7.0},
+    {z:-0.90,w:0.420,y0:0.055,y1:0.162,n:5.5}
+  ],20),frameM);
   pan.castShadow=true; b.add(pan);
 
-  /* the seat is the only thing with any height to it */
+  /* nose cone, and the bumper hoops that live in front of it */
+  const nose=new THREE.Mesh(loft([
+    {z: 1.34,w:0.285,y0:0.140,y1:0.250,n:3.2},
+    {z: 1.20,w:0.360,y0:0.122,y1:0.288,n:3.6},
+    {z: 1.00,w:0.390,y0:0.110,y1:0.300,n:4.0},
+    {z: 0.84,w:0.330,y0:0.106,y1:0.268,n:4.0}
+  ],20),M.paint);
+  nose.castShadow=true; b.add(nose);
+  const tube=(len,r,x,y,z,mat)=>{
+    const g=new THREE.CylinderGeometry(r,r,len,10); g.rotateZ(Math.PI/2);
+    const m=new THREE.Mesh(g,mat); m.position.set(x,y,z); m.castShadow=true; b.add(m); return m;
+  };
+  tube(0.70,0.026,0,0.205,1.44,steelM);
+  tube(0.70,0.026,0,0.300,1.42,steelM);
+  for(const s of [-1,1]){ tube(0.026,0.026,s*0.34,0.252,1.43,steelM).rotation.z=Math.PI/2; }
+
+  /* side pods: big flat panels, angled up and outwards */
+  for(const s of [-1,1]){
+    const pod=new THREE.Mesh(loft([
+      {z: 0.58,w:0.095,y0:-0.050,y1:0.050,n:5.0},
+      {z: 0.30,w:0.155,y0:-0.072,y1:0.072,n:6.0},
+      {z:-0.04,w:0.170,y0:-0.078,y1:0.078,n:6.0},
+      {z:-0.36,w:0.125,y0:-0.060,y1:0.060,n:5.0}
+    ],16),M.paint);
+    pod.position.set(s*0.545,0.238,0.10);
+    pod.rotation.z=s*0.36;
+    pod.castShadow=true; b.add(pod);
+    /* the two stays that hold each pod off the frame */
+    for(const pz of [0.42,-0.20]) tube(0.30,0.020,s*0.40,0.200,pz,steelM);
+  }
+
+  /* seat */
   const seat=new THREE.Mesh(loft([
-    {z:-0.10,w:0.30,y0:0.16,y1:0.30,n:4.0},
-    {z:-0.36,w:0.32,y0:0.16,y1:0.52,n:4.4},
-    {z:-0.62,w:0.30,y0:0.16,y1:0.56,n:4.0}
-  ],14),M.paint);
+    {z:-0.04,w:0.275,y0:0.150,y1:0.288,n:4.0},
+    {z:-0.28,w:0.305,y0:0.150,y1:0.492,n:4.4},
+    {z:-0.54,w:0.295,y0:0.155,y1:0.558,n:4.0},
+    {z:-0.70,w:0.250,y0:0.170,y1:0.518,n:3.6}
+  ],18),seatM);
   seat.castShadow=true; b.add(seat);
 
-  const dark=0x15191B, tube=0x8A9295, carbon=0x0E1112;
+  /* rear bumper: the wide bar that is the back of one of these */
+  const rb=new THREE.Mesh(loft([
+    {z:-1.18,w:0.585,y0:0.205,y1:0.330,n:4.5},
+    {z:-1.07,w:0.640,y0:0.195,y1:0.352,n:5.0},
+    {z:-0.96,w:0.585,y0:0.205,y1:0.330,n:4.5}
+  ],18),M.paint);
+  rb.castShadow=true; b.add(rb);
+  for(const s of [-1,1]){
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.34,8),steelM);
+    st.position.set(s*0.30,0.235,-0.94); st.rotation.x=-1.15; b.add(st);
+  }
+
+  /* running gear */
+  tube(1.28,0.030,0,0.200,-0.80,steelM);                 // rear axle
+  for(const s of [-1,1]){
+    const bh=new THREE.Mesh(new THREE.BoxGeometry(0.075,0.115,0.10),darkM);
+    bh.position.set(s*0.30,0.205,-0.80); b.add(bh);
+  }
+  /* engine on one side, radiator on the other, as they always are */
+  const eng=new THREE.Mesh(loft([
+    {z:-0.34,w:0.105,y0:0.185,y1:0.400,n:4.0},
+    {z:-0.56,w:0.125,y0:0.180,y1:0.455,n:4.4},
+    {z:-0.76,w:0.105,y0:0.190,y1:0.405,n:4.0}
+  ],14),darkM);
+  eng.position.x=0.415; eng.castShadow=true; b.add(eng);
+  const pipe=new THREE.Mesh(new THREE.CylinderGeometry(0.060,0.052,0.24,10),steelM);
+  pipe.position.set(0.418,0.470,-0.66); pipe.rotation.x=0.62; b.add(pipe);
+  const rad=new THREE.Mesh(new THREE.BoxGeometry(0.040,0.210,0.26),frameM);
+  rad.position.set(-0.478,0.352,0.06); rad.rotation.set(0,0,0.30); b.add(rad);
+
+  /* steering */
+  const col=new THREE.Mesh(new THREE.CylinderGeometry(0.020,0.020,0.40,8),steelM);
+  col.position.set(0,0.360,0.46); col.rotation.x=0.62; b.add(col);
+  const wheelR=new THREE.Mesh(new THREE.TorusGeometry(0.135,0.020,6,16),darkM);
+  wheelR.position.set(0,0.520,0.325); wheelR.rotation.x=1.16; b.add(wheelR);
+  for(const s of [-1,1]){
+    const sp=new THREE.Mesh(new THREE.BoxGeometry(0.115,0.022,0.030),darkM);
+    sp.position.set(s*0.062,0.516,0.328); sp.rotation.x=1.16; b.add(sp);
+  }
+
   const k=trimKit();
-  k.box(0.92,0.10,0.20,0,0.17,1.16,carbon);            // nose fairing
-  k.box(0.07,0.06,0.30,-0.20,0.13,1.02,tube);          // fairing stays
-  k.box(0.07,0.06,0.30, 0.20,0.13,1.02,tube);
-  k.box(0.30,0.16,0.52,-0.52,0.15,0.20,carbon);        // side pods
-  k.box(0.30,0.16,0.52, 0.52,0.15,0.20,carbon);
-  k.box(0.06,0.06,1.90,-0.40,0.09,0.02,tube);          // frame rails
-  k.box(0.06,0.06,1.90, 0.40,0.09,0.02,tube);
-  k.box(1.06,0.06,0.06,0,0.09,0.92,tube);              // front crossmember
-  k.box(0.05,0.30,0.05,0,0.34,0.46,tube,0.55);         // steering column
-  k.box(0.34,0.05,0.09,0,0.50,0.34,dark);              // wheel
-  k.box(0.26,0.24,0.30,0.42,0.28,-0.66,dark);          // engine, offset right
-  k.box(0.10,0.16,0.10,0.42,0.46,-0.52,tube);          // exhaust stub
-  k.box(0.05,0.20,0.05,-0.44,0.24,-0.62,tube);         // sprocket guard
-  k.box(1.32,0.05,0.05,0,0.20,-0.80,tube);             // rear axle
-  k.box(0.86,0.06,0.16,0,0.30,-1.02,carbon);           // rear bumper
+  const dark=0x15191B, tubeC=0x8A9295;
+  k.box(0.055,0.055,1.86,-0.395,0.085,0.02,tubeC);      // frame rails
+  k.box(0.055,0.055,1.86, 0.395,0.085,0.02,tubeC);
+  k.box(0.98,0.052,0.052,0,0.085,0.86,tubeC);           // front crossmember
+  k.box(0.14,0.05,0.16,-0.30,0.115,0.66,dark);          // pedals
+  k.box(0.14,0.05,0.16, 0.30,0.115,0.66,dark);
+  k.box(0.06,0.18,0.06,-0.44,0.245,-0.62,tubeC);        // sprocket guard
   b.add(k.mesh());
 
   /* ---- the driver ----
@@ -3080,7 +3153,11 @@ function bodyKart(b,M){
   ball([0,0.706,-0.202],0.050,strapM,[1.5,0.8,1.1]);        // neck brace
   limb([0,0.686,-0.206],[0,0.756,-0.178],0.046,0.050,suitM); // neck
 
-  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.128,16,12),M.paint);
+  /* White shell with a stripe over the crown in the driver's colour, which
+     is how the karts in the reference are painted — and the stripe still
+     says whose kart it is from across the circuit. */
+  const shellM=new THREE.MeshStandardMaterial({color:SRGB(0xF2F4F5),roughness:0.30,metalness:0.10});
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.128,16,12),shellM);
   helmet.position.set(0,0.840,-0.148);
   helmet.scale.set(1,0.98,1.05);
   helmet.castShadow=true; b.add(helmet);
@@ -3089,8 +3166,14 @@ function bodyKart(b,M){
   const visor=new THREE.Mesh(lens(0.176,0.068,0.09),M.glass);
   visor.position.set(0,0.836,-0.036); visor.rotation.x=-0.06;
   b.add(visor);
+  /* Over the crown front to back, which needs a ring standing in the car's
+     own plane — a band of the sphere runs the wrong way round the head. */
+  const stripe=new THREE.Mesh(new THREE.TorusGeometry(0.1245,0.0305,6,16,Math.PI),M.paint);
+  stripe.rotation.y=Math.PI/2;
+  stripe.position.copy(helmet.position); stripe.scale.copy(helmet.scale);
+  b.add(stripe);
 
-  const tailMats=addLamps(b,null,{w:0.10,h:0.10,y:0.34,z:-1.06,x:[0]});
+  const tailMats=addLamps(b,null,{w:0.13,h:0.065,y:0.268,z:-1.245,x:[0]});
   return {tailMats,
     wheels:{r:0.20,tw:0.15,rR:0.23,twR:0.26,
             pos:[[-0.60,0.84],[0.60,0.84],[-0.64,-0.80],[0.64,-0.80]]}};
