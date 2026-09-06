@@ -52,19 +52,67 @@
     {
       "@type": "VideoGame",
       "name": "Apex Drawn",
-      "alternateName": ["Apex Draft", "ApexDrawn"],
+      "alternateName": [
+        "Apex Draft",
+        "ApexDrawn",
+        "Apex Drawn racing",
+        "Apex Drawn track maker"
+      ],
       "url": "https://apexdrawn.onrender.com/",
       "image": "https://apexdrawn.onrender.com/og.png",
       "description": "A free browser racing game and track maker. Draw any circuit and race it in 3D — time trials, per-circuit leaderboards, saved tracks and online multiplayer.",
-      "genre": ["Racing", "Driving", "Time trial", "Track builder", "Multiplayer"],
-      "keywords": "racing game, track maker, track designer, draw a racetrack, time trial, multiplayer racing, kart, formula, GT, browser game",
+      "genre": [
+        "Racing",
+        "Driving",
+        "Time trial",
+        "Track builder",
+        "Multiplayer"
+      ],
+      "keywords": "racing game, free racing game, browser racing game, online racing game, 3D racing game, car game, driving game, track maker, track designer, track builder, track creator, circuit designer, draw your own racetrack, draw a track and race it, custom race tracks, time trial, lap times, leaderboard, multiplayer racing game, race with friends, kart racing, formula racing, GT racing, play in browser, no download, mobile racing game",
       "applicationCategory": "Game",
-      "gamePlatform": ["Web browser", "Android", "iOS", "Windows", "macOS"],
-      "playMode": ["SinglePlayer", "MultiPlayer"],
-      "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 8 },
+      "gamePlatform": [
+        "Web browser",
+        "Android",
+        "iOS",
+        "Windows",
+        "macOS"
+      ],
+      "playMode": [
+        "SinglePlayer",
+        "MultiPlayer"
+      ],
+      "numberOfPlayers": {
+        "@type": "QuantitativeValue",
+        "minValue": 1,
+        "maxValue": 8
+      },
       "operatingSystem": "Any",
       "isAccessibleForFree": true,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "about": [
+        {
+          "@type": "Thing",
+          "name": "Track design"
+        },
+        {
+          "@type": "Thing",
+          "name": "Time trial racing"
+        },
+        {
+          "@type": "Thing",
+          "name": "Multiplayer racing"
+        }
+      ],
+      "publisher": {
+        "@type": "Organization",
+        "name": "Apex Drawn",
+        "url": "https://apexdrawn.onrender.com/"
+      },
+      "inLanguage": "en"
     },
     {
       "@type": "WebApplication",
@@ -73,7 +121,71 @@
       "applicationCategory": "GameApplication",
       "browserRequirements": "Requires WebGL",
       "operatingSystem": "Any",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is Apex Drawn free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Apex Drawn is a completely free racing game that runs in your web browser. There is nothing to download or install and no account is needed to draw a track and race it."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I make my own racetrack?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Draw a closed loop on the board with your mouse or finger. The moment you close the loop it becomes a 3D circuit with elevation, kerbs and barriers, and you can drive it straight away. Sliders set the track width, hills and smoothness, and you can bank individual corners."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I play with friends online?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Host a party and share the four-letter code. Everyone who joins races on the circuit you drew, sees each other live on track, and appears on a live leaderboard. Up to eight players share a party."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it work on my phone?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Apex Drawn works on Android and iPhone in the browser, with on-screen controls, and can be added to the home screen to play fullscreen. Hold the phone sideways."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What cars can I drive?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A GT race car, a Formula single-seater, a racing kart and a small hatchback. Each handles differently and keeps its own best lap on every circuit."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Are lap times saved?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Every circuit has its own leaderboard of fastest laps, and signed-in players can save their favourite tracks to race again on any device."
+          }
+        }
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "name": "Apex Drawn",
+      "alternateName": "Apex Draft",
+      "url": "https://apexdrawn.onrender.com/",
+      "inLanguage": "en"
     }
   ]
 }
@@ -238,7 +350,7 @@ button{font-family:inherit;color:inherit}
   background:linear-gradient(180deg,rgba(255,75,58,.10),rgba(10,15,16,0));
   border-bottom:1px solid var(--party-deep);
 }
-.lb-brand{font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+.lb-brand{margin:0;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);display:inline}
 .lb-brand span{color:var(--amber)}
 /* The rail used to carry the wordmark and the version. It only ever showed
    them when you were alone, and the bar is there when you are alone now. */
@@ -402,7 +514,17 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .go:hover{filter:brightness(1.08)}
 .go:active{transform:translateY(1px)}
 .go:disabled{background:var(--raise);color:var(--faint);cursor:not-allowed}
-.foot-note.about{margin:22px 0 4px;line-height:1.55;color:var(--faint);font-size:11px}
+/* the about section: quiet until opened */
+.about{margin:22px 0 4px;font-size:11px;line-height:1.55;color:var(--faint)}
+.about summary{cursor:pointer;color:var(--dim);letter-spacing:.04em;list-style:none;padding:8px 0;border-top:1px solid var(--line)}
+.about summary::-webkit-details-marker{display:none}
+.about summary::before{content:"+ ";color:var(--amber)}
+.about[open] summary::before{content:"− "}
+.about h2{font-size:12px;margin:10px 0 4px;letter-spacing:.06em;text-transform:none;color:var(--ink)}
+.about h3{font-size:11px;margin:12px 0 3px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.about p{margin:0 0 6px}
+.about .faq dt{margin-top:8px;color:var(--dim)}
+.about .faq dd{margin:2px 0 0}
 .foot-note{margin:9px 0 0;font-size:11px;color:var(--faint);text-align:center;letter-spacing:.03em}
 
 /* board */
@@ -921,6 +1043,12 @@ body.admining #lobbybar{display:none}
 </style>
 </head>
 <body>
+<noscript>
+  <h1>Apex Drawn — draw a racetrack and race it</h1>
+  <p>Apex Drawn is a free online racing game and track maker. Draw a circuit and race it in 3D in a
+    GT car, a Formula single-seater, a kart or a hatchback, chase lap times on every circuit's
+    leaderboard, and race friends online. It needs JavaScript and WebGL to run.</p>
+</noscript>
 
 <div id="bootErr" class="boot-err" hidden></div>
 <div class="rotate" id="rotate" hidden role="dialog" aria-live="polite">
@@ -957,7 +1085,7 @@ body.admining #lobbybar{display:none}
        that was impossible to find at the bottom of a column of sliders,
        looking like another setting. -->
   <div id="lobbybar" hidden>
-    <span class="lb-brand">Apex<span>Drawn</span></span>
+    <h1 class="lb-brand">Apex<span>Drawn</span></h1>
     <small class="lb-ver">v4.0</small>
     <span class="lb-role" id="lbRole">Host</span>
     <!-- the grid at a glance, so a host building a circuit can see who has
@@ -1082,12 +1210,45 @@ body.admining #lobbybar{display:none}
             <button class="sw" data-color="#2ED47A" style="background:#2ED47A" title="Verde"></button>
           </div>
         </div>
-        <!-- What this is, in words, at the end of the rail: for the person who
-             scrolled down wondering, and for anything that reads pages. -->
-        <p class="foot-note about">Apex Drawn is a free online racing game and track maker.
-          Draw a circuit, race it in 3D in a GT, Formula, kart or hatchback, chase your lap
-          times on every circuit's leaderboard, save your favourite tracks, and race friends
-          in multiplayer time trials — all in the browser, on phone or desktop.</p>
+        <!-- What this is, in words, at the end of the rail. Closed by default
+             so the board stays a board; open for the person who scrolled down
+             wondering, and readable by anything that reads pages. Real
+             headings and real sentences, nothing hidden: text a visitor
+             cannot see is text search engines punish. -->
+        <details class="about" id="about">
+          <summary>About Apex Drawn — track maker, time trials, multiplayer</summary>
+          <h2>A free browser racing game and track maker</h2>
+          <p>Apex Drawn is a free online racing game where you draw your own racetrack and race it.
+            Sketch a circuit on the board and it becomes a 3D track in seconds — hills, kerbs, barriers
+            and a start line — ready to drive in a GT car, a Formula single-seater, a kart or a hatchback.
+            It runs in the browser on desktop and phone with nothing to download.</p>
+          <h3>Track designer</h3>
+          <p>Draw any shape: a hairpin, a long straight, a flowing esses section. Set the track width,
+            how hilly the land is and how smooth the corners are, and bank each corner on its own.
+            Sign in to save your favourite circuits and load them on any device.</p>
+          <h3>Time trials and lap times</h3>
+          <p>Every circuit keeps its own leaderboard of fastest laps, with sector times and a best-lap
+            ghost of your own pace. Two people who draw the same layout race for the same record.</p>
+          <h3>Multiplayer racing with friends</h3>
+          <p>Host a party, share a four-letter code, and up to eight players race together on your
+            circuit with live positions, name tags and a running order. Join a race that is already
+            under way, or swap cars in the garage without leaving the track.</p>
+          <h3>Frequently asked questions</h3>
+          <dl class="faq">
+            <dt>Is Apex Drawn free?</dt>
+            <dd>Yes. Apex Drawn is a completely free racing game that runs in your web browser. There is nothing to download or install and no account is needed to draw a track and race it.</dd>
+            <dt>How do I make my own racetrack?</dt>
+            <dd>Draw a closed loop on the board with your mouse or finger. The moment you close the loop it becomes a 3D circuit with elevation, kerbs and barriers, and you can drive it straight away. Sliders set the track width, hills and smoothness, and you can bank individual corners.</dd>
+            <dt>Can I play with friends online?</dt>
+            <dd>Yes. Host a party and share the four-letter code. Everyone who joins races on the circuit you drew, sees each other live on track, and appears on a live leaderboard. Up to eight players share a party.</dd>
+            <dt>Does it work on my phone?</dt>
+            <dd>Yes. Apex Drawn works on Android and iPhone in the browser, with on-screen controls, and can be added to the home screen to play fullscreen. Hold the phone sideways.</dd>
+            <dt>What cars can I drive?</dt>
+            <dd>A GT race car, a Formula single-seater, a racing kart and a small hatchback. Each handles differently and keeps its own best lap on every circuit.</dd>
+            <dt>Are lap times saved?</dt>
+            <dd>Every circuit has its own leaderboard of fastest laps, and signed-in players can save their favourite tracks to race again on any device.</dd>
+          </dl>
+        </details>
       </div>
       <div class="rail-foot">
         <button class="go" id="btnDrive">Drive it</button>

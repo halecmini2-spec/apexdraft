@@ -160,9 +160,14 @@ The page carries what a search engine or a link preview needs: a real
 document head with a description, Open Graph and Twitter cards, JSON-LD
 describing it as a free browser racing game and track maker, a canonical
 URL, a web manifest with icons, `robots.txt` and `sitemap.xml`, and the same
-description as visible text on the board. Ranking is up to the search
-engines; submitting the sitemap in Google Search Console and Bing Webmaster
-Tools is the one step worth doing by hand.
+description as visible text on the board — an About section at the end of
+the rail with real headings and an FAQ, which is also in the structured data.
+Nothing is hidden: text a visitor cannot see is text search engines punish.
+
+Bing, DuckDuckGo and Yandex are told about the page through IndexNow (the
+key file at the root is what makes the ping ours). Google does not take
+IndexNow, and ranking anywhere is up to the engines; submitting the sitemap
+in Google Search Console is the one step worth doing by hand.
 
 The game lives at https://apexdrawn.onrender.com/. It was Apex Draft, at
 apexdraft.onrender.com: a Render service keeps the address it was created
