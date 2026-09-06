@@ -3027,42 +3027,67 @@ function bodyKart(b,M){
   b.add(k.mesh());
 
   /* ---- the driver ----
-     A kart has nowhere to hide one: no roof, no doors, no bodywork above the
-     axle, so the seat looked occupied by nobody at all. Reclined into the
-     seat with the legs out in front and the arms up at the wheel, which is
-     the shape a kart driver actually makes.
-     The helmet takes the car's colour rather than the suit, because it is
-     the highest thing on the kart and the only part of it you can pick out
-     from three corners away — and in a party that colour is who you are. */
-  /* A shade the kart has nowhere else: the frame, the pods and the seat back
-     are all near-black, and a driver in the same value vanishes into them. */
-  const suit=0x3B454C, glove=0x11161A, strap=0x5A656B;
-  const d=trimKit();
-  d.box(0.38,0.46,0.30, 0,    0.50,-0.22, suit, -0.28);   // torso, laid back
-  d.box(0.48,0.16,0.26, 0,    0.70,-0.16, suit, -0.28);   // shoulders
-  d.box(0.15,0.09,0.13, 0,    0.79,-0.12, strap);         // neck brace
-  /* Up and out to the rim, angled so they read as two arms rather than one
-     bar laid across the front of him. */
-  d.box(0.11,0.11,0.50, -0.175,0.58, 0.07, suit, -0.34);
-  d.box(0.11,0.11,0.50,  0.175,0.58, 0.07, suit, -0.34);
-  d.box(0.10,0.10,0.10, -0.15, 0.50, 0.31, glove);        // hands on the wheel
-  d.box(0.10,0.10,0.10,  0.15, 0.50, 0.31, glove);
-  d.box(0.16,0.16,0.50, -0.125,0.275,0.18, suit, -0.11);  // thighs, out in front
-  d.box(0.16,0.16,0.50,  0.125,0.275,0.18, suit, -0.11);
-  d.box(0.14,0.12,0.22, -0.125,0.215,0.55, glove);        // feet at the pedals
-  d.box(0.14,0.12,0.22,  0.125,0.215,0.55, glove);
-  const dm=d.mesh();
-  dm.material.roughness=0.88; dm.material.metalness=0.04;  // cloth, not carbon
-  b.add(dm);
+     A kart has nowhere to hide one, so this is the one figure in the game
+     that has to hold up close. It is built the way a person is: joints in
+     the right places with tapered limbs between them, a ball at each joint
+     so the seams round over, and everything bent — elbows out and down to
+     the rim, knees up and forward to the pedals. Boxes for arms and legs is
+     what made the last one a mannequin; nothing here is a box.
 
-  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.165,16,12),M.paint);
-  helmet.position.set(0,0.885,-0.09);
-  helmet.scale.set(1,0.97,1.04);
+     The helmet takes the car's colour rather than the suit. It is the
+     highest thing on the kart and the only part you can pick out from three
+     corners away, and in a party that colour is who you are. */
+  const suitM=new THREE.MeshStandardMaterial({color:SRGB(0x3B454C),roughness:0.88,metalness:0.04});
+  const gloveM=new THREE.MeshStandardMaterial({color:SRGB(0x11161A),roughness:0.82,metalness:0.06});
+  const strapM=new THREE.MeshStandardMaterial({color:SRGB(0x5A656B),roughness:0.85,metalness:0.05});
+
+  /* A tapered limb between two joints, pointed however the joints ask. */
+  const limb=(a,c,r0,r1,mat)=>{
+    const A=new THREE.Vector3().fromArray(a), C=new THREE.Vector3().fromArray(c);
+    const d=new THREE.Vector3().subVectors(C,A), L=d.length();
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r0,L,9),mat);
+    m.position.copy(A).add(C).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+    m.castShadow=true; b.add(m); return m;
+  };
+  /* A ball at a joint: what stops a limb ending in a visible flat disc. */
+  const ball=(p,r,mat,sc)=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,7),mat);
+    m.position.fromArray(p);
+    if(sc)m.scale.set(sc[0],sc[1],sc[2]);
+    m.castShadow=true; b.add(m); return m;
+  };
+
+  for(const s of [-1,1]){
+    /* legs: hip forward to a raised knee, then down to the pedals */
+    limb([s*0.088,0.300,-0.150],[s*0.118,0.312,0.230],0.072,0.056,suitM);
+    ball([s*0.118,0.312,0.230],0.058,suitM);
+    limb([s*0.118,0.312,0.230],[s*0.118,0.238,0.520],0.054,0.040,suitM);
+    ball([s*0.118,0.234,0.545],0.050,gloveM,[1,0.82,1.5]);   // boot
+    /* arms: shoulder out and down to the elbow, then in to the rim */
+    limb([s*0.205,0.652,-0.228],[s*0.246,0.548,0.020],0.050,0.043,suitM);
+    ball([s*0.246,0.548,0.020],0.046,suitM);
+    limb([s*0.246,0.548,0.020],[s*0.158,0.506,0.288],0.042,0.036,suitM);
+    ball([s*0.152,0.503,0.302],0.044,gloveM,[0.9,1,1.05]);   // hand on the rim
+    ball([s*0.205,0.652,-0.228],0.064,suitM);                // shoulder
+    ball([s*0.088,0.300,-0.150],0.068,suitM);                // hip
+  }
+  /* body: hips, a chest that leans back into the seat, shoulders across */
+  ball([0,0.318,-0.205],0.115,suitM,[1.25,0.82,0.98]);
+  limb([0,0.330,-0.215],[0,0.646,-0.236],0.112,0.106,suitM);
+  ball([0,0.556,-0.230],0.130,suitM,[1.16,1.02,0.84]);      // chest
+  limb([-0.205,0.652,-0.228],[0.205,0.652,-0.228],0.064,0.064,suitM);
+  ball([0,0.706,-0.202],0.050,strapM,[1.5,0.8,1.1]);        // neck brace
+  limb([0,0.686,-0.206],[0,0.756,-0.178],0.046,0.050,suitM); // neck
+
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.128,16,12),M.paint);
+  helmet.position.set(0,0.840,-0.148);
+  helmet.scale.set(1,0.98,1.05);
   helmet.castShadow=true; b.add(helmet);
-  /* Across the middle of the shell, where a face is. Sitting it any higher
-     turns the whole thing into a headband. */
-  const visor=new THREE.Mesh(new THREE.BoxGeometry(0.235,0.072,0.10),M.glass);
-  visor.position.set(0,0.874,0.045);
+  /* Across the middle of the shell, where a face is. Any higher and the
+     whole thing reads as a headband. */
+  const visor=new THREE.Mesh(lens(0.176,0.068,0.09),M.glass);
+  visor.position.set(0,0.836,-0.036); visor.rotation.x=-0.06;
   b.add(visor);
 
   const tailMats=addLamps(b,null,{w:0.10,h:0.10,y:0.34,z:-1.06,x:[0]});
