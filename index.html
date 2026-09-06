@@ -1265,8 +1265,28 @@ function circumRadius(a,b,c){
 }
 
 /* Build the full circuit description from raw pad points. */
-function buildCircuit(raw,opts){
+/* A board too small for the circuit shrinks it to fit — see setPadDims. That
+   is a fact about the window, not about the circuit, and it must never reach
+   the world. It did: a guest whose board was smaller than the host's built a
+   smaller track from the same points, so the two of them drove circuits of
+   different lengths, started in different places, and each saw the other out
+   on the grass. Undoing the shrink here means every machine builds the
+   circuit at the size it was drawn, whatever it is being looked at on. */
+function canonRaw(raw,fit){
+  const f=fit||1;
+  if(!raw||!raw.length||Math.abs(f-1)<1e-9)return raw;
+  let cx=0,cy=0;
+  for(const p of raw){ cx+=p.x; cy+=p.y; }
+  cx/=raw.length; cy/=raw.length;
+  return raw.map(p=>({x:cx+(p.x-cx)/f, y:cy+(p.y-cy)/f}));
+}
+
+function buildCircuit(raw,opts,fit){
   if(!raw||raw.length<8)return null;
+  /* Before anything else, so that resampling, smoothing and the minimum
+     corner radius — all of which are measured in pad units — see the same
+     numbers on every machine. */
+  raw=canonRaw(raw,fit);
   let p=resampleClosed(raw,7);
   if(p.length<14)return null;
   const smoothAmt=opts.smooth/100;
@@ -3977,7 +3997,7 @@ function finalise(){
 function rebuild(){
   if(!ED.raw){ED.track=null;renderPad();updateReadout();return;}
   try{
-    ED.track=buildCircuit(ED.raw,ED.opts);
+    ED.track=buildCircuit(ED.raw,ED.opts,ED.fit);
   }catch(err){
     ED.track=null; console.error(err);
     msg("Couldn't build that circuit — try a simpler loop.");
@@ -4511,7 +4531,12 @@ function circuitKey(){
      an empty leaderboard on the circuit that had just been driven. */
   let mx=Infinity,my=Infinity;
   for(const p of d.raw){ if(p[0]<mx)mx=p[0]; if(p[1]<my)my=p[1]; }
-  const s=d.raw.map(p=>Math.round((p[0]-mx)*10)+","+Math.round((p[1]-my)*10)).join(";")
+  /* Quantised at the resolution the points are already held to — two
+     decimals — so every value lands exactly on a grid line. Rounding at a
+     tenth put half of them on the boundary between two cells, where a
+     difference of 1e-13 decided which one they fell into, and two machines
+     holding the same circuit disagreed about which board it was. */
+  const s=d.raw.map(p=>Math.round((p[0]-mx)*100)+","+Math.round((p[1]-my)*100)).join(";")
     +"|w"+(+o.width||0)+"|h"+(+o.hills||0)+"|s"+(+o.smooth||0)+"|e"+(+o.seed||0)
     +"|b"+((o.banks||[]).map(b=>b==null?"-":+b).join(","));
   /* Two independent 32-bit passes, printed together: one is small enough
@@ -4615,7 +4640,8 @@ function timesUI(){
    part of it: those belong to the driver, not the lap. */
 function trackData(){
   if(!ED.raw||ED.raw.length<8)return null;
-  const raw=ED.raw.map(p=>[+p.x.toFixed(2),+p.y.toFixed(2)]);
+  /* At the size it was drawn, not the size this window could show. */
+  const raw=canonRaw(ED.raw,ED.fit).map(p=>[+p.x.toFixed(2),+p.y.toFixed(2)]);
   const opts=Object.assign({},ED.opts);
   delete opts.car; delete opts.color;
   return {raw,opts};
@@ -4958,7 +4984,11 @@ function netHandle(m){
 }
 function netSendTrack(){
   if(NET.id!==NET.hostId||!ED.raw)return;
-  const raw=ED.raw.map(p=>[+p.x.toFixed(2),+p.y.toFixed(2)]);
+  /* Canonical, so that what everyone builds does not depend on the window
+     it was drawn in. */
+  const f=ED.fit||1;
+  const canon=canonRaw(ED.raw,f);
+  const raw=canon.map(p=>[+p.x.toFixed(2),+p.y.toFixed(2)]);
   /* Adopt exactly what goes down the wire. The circuit used to be sent
      rounded while the host went on driving the unrounded original, so the
      two machines built from different numbers — and since the start line is
@@ -4967,9 +4997,18 @@ function netSendTrack(){
      different spawn, two people racing subtly different circuits. */
   let differs=false;
   for(let i=0;i<raw.length;i++){
-    if(raw[i][0]!==ED.raw[i].x||raw[i][1]!==ED.raw[i].y){ differs=true; break; }
+    if(raw[i][0]!==canon[i].x||raw[i][1]!==canon[i].y){ differs=true; break; }
   }
-  if(differs){ ED.raw=raw.map(a=>({x:a[0],y:a[1]})); rebuild(); }
+  if(differs){
+    /* Adopted back into the board's own scale rather than replacing it, so
+       the host builds precisely the numbers it sent without the drawing
+       jumping out of its box on a board that had shrunk it. */
+    let cx=0,cy=0;
+    for(const p of ED.raw){ cx+=p.x; cy+=p.y; }
+    cx/=ED.raw.length; cy/=ED.raw.length;
+    ED.raw=raw.map(a=>({x:cx+(a[0]-cx)*f, y:cy+(a[1]-cy)*f}));
+    rebuild();
+  }
   netSend({t:"track",data:{raw,opts:ED.opts}});
 }
 
