@@ -486,6 +486,8 @@ body.inparty #netHint{color:#C79289}
 .slider:last-child{margin-bottom:0}
 .slider .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--dim)}
 .slider .val{font-family:var(--mono);font-size:12px;color:var(--amber);font-variant-numeric:tabular-nums}
+.startrow .hint{font-size:11.5px;margin-top:2px}
+#pad.picking{cursor:crosshair}
 input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0;
   /* The rail scrolls vertically, so without this a drag on the slider is
@@ -1151,6 +1153,18 @@ body.admining #lobbybar{display:none}
             <div class="lab"><span>Corner smoothing</span><span class="val" id="vSmooth">Normal</span></div>
             <input type="range" id="sSmooth" min="0" max="100" step="1" value="45">
           </div>
+          <!-- Where the lap begins. It stays where the loop was drawn from
+               unless you put it somewhere else; either way, a line that
+               lands in a tight corner slides back to the straight before
+               it, and the board shows both places when that happens. -->
+          <div class="slider startrow">
+            <div class="lab"><span>Start line</span><span class="val" id="vStart">Where you began drawing</span></div>
+            <div class="chips">
+              <button class="chip" id="startPick" aria-pressed="false">Move the start line</button>
+              <button class="chip" id="startAuto" hidden>Put it back</button>
+            </div>
+            <p class="hint" id="startHint" hidden></p>
+          </div>
         </div>
 
         <div class="grp grp-bank">
@@ -1617,6 +1631,13 @@ function buildCircuit(raw,opts,fit){
   /* Before anything else, so that resampling, smoothing and the minimum
      corner radius — all of which are measured in pad units — see the same
      numbers on every machine. */
+  /* The board draws in the space the loop is held in, which may be shrunk
+     to fit a narrow screen; the circuit is built in the canonical one. Keep
+     the mapping back, so every point the board is given lands on the
+     drawing it sits over. */
+  const f=fit||1; let rcx=0,rcy=0;
+  for(const q of raw){ rcx+=q.x; rcy+=q.y; } rcx/=raw.length; rcy/=raw.length;
+  const fitBack=q=>({x:rcx+(q.x-rcx)*f, y:rcy+(q.y-rcy)*f});
   raw=canonRaw(raw,fit);
   let p=resampleClosed(raw,7);
   if(p.length<14)return null;
@@ -1751,20 +1772,37 @@ function buildCircuit(raw,opts,fit){
     for(let d=-half;d<=half;d++) m=Math.max(m,Math.abs(Ks[(i+d+N*2)%N]));
     return m;
   };
-  let startI=0;
-  if(sharpest(0,4)>TIGHT){
+  /* Where the line was asked for: the point the loop was drawn from, or a
+     spot chosen on the board — held in canonical pad units, so it means the
+     same place on every machine and in a saved circuit. The tight-corner
+     rule is applied to whichever it is. */
+  let fromI=0;
+  const want=opts.start;
+  if(want&&isFinite(want.x)&&isFinite(want.y)){
+    let bd=Infinity;
+    for(let i=0;i<N;i++){ const d=(p[i].x-want.x)*(p[i].x-want.x)+(p[i].y-want.y)*(p[i].y-want.y); if(d<bd){bd=d;fromI=i;} }
+  }
+  let startI=fromI;
+  if(sharpest(fromI,4)>TIGHT){
     const limit=Math.floor(N*0.45);       // half a lap back is not "just in front"
     for(let back=1;back<=limit;back++){
-      const i=(N-back)%N;                 // upstream: the road you came in on
+      const i=(fromI-back+N*2)%N;         // upstream: the road you came in on
       if(sharpest(i,8)<STRAIGHT){ startI=i; break; }
     }
   }
+  /* The board's copy of the loop used to stay unrolled, so its start marker
+     sat where the loop was drawn from even when the line had been moved,
+     and every corner number was drawn that many samples off its corner. */
+  const startFrom=fitBack(p[fromI]);
   if(startI>0){
     const roll=a=>{ const o=a.slice(); for(let i=0;i<N;i++) a[i]=o[(i+startI)%N]; };
     roll(X);roll(Y);roll(Z);roll(TX);roll(TY);roll(TZ);roll(RX);roll(RZ);roll(K);roll(Ks);roll(OV);
+    p=p.map((_,i)=>p[(i+startI)%N]);
     S[0]=0;
     for(let i=1;i<N;i++) S[i]=S[i-1]+Math.hypot(X[i]-X[i-1],Z[i]-Z[i-1]);
   }
+  const startMoved=startI!==fromI;
+  const startAsked=(fromI-startI+N)%N;   // where it was asked for, from the line
 
   /* corner detection: runs of sustained curvature, numbered from the line.
      This has to happen before banking now, because banking is applied per
@@ -1865,7 +1903,8 @@ function buildCircuit(raw,opts,fit){
     corners:merged, opts:Object.assign({},opts),
     bounds:{minX,maxX,minZ,maxZ},
     grid:{CELL,gx0,gz0,gw,gh,buckets},
-    pad:p, padCentre:{x:cx,y:cy},
+    pad:p.map(fitBack), padCentre:{x:cx,y:cy},
+    startFrom, startMoved, startAsked, startPicked:!!(want&&isFinite(want.x)),
     stats:{
       length:len, corners:merged.length, longest:longest,
       grade:maxGrade*100, climb:hi-lo, minRadius:isFinite(tightest)?tightest:0, width:opts.width
@@ -4653,10 +4692,10 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden&&G.running
    carry every setting this build knows about, and a missing one has to come
    out as the default rather than as undefined. */
 const OPTS0={width:12,hills:45,smooth:45,theme:"alpine",car:"gt",
-             color:"#E2482B",seed:7,banks:[]};
+             color:"#E2482B",seed:7,banks:[],start:null};
 const ED={
   raw:null, track:null, drawing:false, pending:null, prevRaw:null, history:[], fit:1,
-  sel:null, cornerPts:[],
+  sel:null, cornerPts:[], pickStart:false,
   opts:store.get("ad.opts",Object.assign({},OPTS0))
 };
 const pad=$("pad"), pctx=pad.getContext("2d");
@@ -4724,6 +4763,69 @@ function toPad(cx,cy){
 let drawId=null;
 /* Clicking a numbered corner selects it for banking rather than starting a
    new drawing. Hit radius is generous — the markers are small on screen. */
+/* Choosing where the start line goes: the next tap on the circuit. Banking
+   is keyed by corner number and the numbers run from the line, so when the
+   line moves each banked corner is found again by where it is and keeps its
+   angle. */
+function pickStartAt(cx,cy){
+  ED.pickStart=false;
+  if(!ED.track){ startUI(); return; }
+  const T=ED.track, q=toPad(cx,cy), P=T.pad;
+  let bi=-1, bd=Infinity;
+  for(let i=0;i<P.length;i++){ const d=(P[i].x-q.x)*(P[i].x-q.x)+(P[i].y-q.y)*(P[i].y-q.y); if(d<bd){bd=d;bi=i;} }
+  const reach=Math.max(28,40/PADT.s);
+  if(bi<0||bd>reach*reach){ msg("Tap on the circuit itself to put the start line there."); startUI(); renderPad(); return; }
+  /* back to canonical pad units, which is what a circuit is built from */
+  const f=ED.fit||1; let rcx=0,rcy=0;
+  for(const r of ED.raw){ rcx+=r.x; rcy+=r.y; } rcx/=ED.raw.length; rcy/=ED.raw.length;
+  ED.opts.start={x:+(rcx+(P[bi].x-rcx)/f).toFixed(2), y:+(rcy+(P[bi].y-rcy)/f).toFixed(2)};
+  moveStart();
+}
+function moveStart(){
+  const old=ED.track;
+  /* Each banked corner is remembered as the road it covers, not as a
+     number: a handful of points along its run. A line placed inside a
+     corner splits it in two, and both halves are still that corner. */
+  const kept=[];
+  if(old){ (ED.opts.banks||[]).forEach((deg,k)=>{ const c=old.corners[k]; if(!(+deg)||!c)return;
+    const pts=[]; const n=Math.max(1,Math.floor((c.b-c.a)/6));
+    for(let i=c.a;i<=c.b;i+=n) pts.push(old.pad[i]); pts.push(old.pad[c.pi]);
+    kept.push({pts,deg:+deg}); }); }
+  const selPt=(old&&ED.sel!=null&&old.corners[ED.sel])?old.pad[old.corners[ED.sel].pi]:null;
+  ED.opts.banks=[]; ED.sel=null;
+  rebuild();
+  const T=ED.track;
+  if(T&&(kept.length||selPt)){
+    const P=T.pad, N=P.length;
+    const nearestI=(pt)=>{ let bi=0,bd=Infinity; for(let i=0;i<N;i++){ const d=(P[i].x-pt.x)*(P[i].x-pt.x)+(P[i].y-pt.y)*(P[i].y-pt.y); if(d<bd){bd=d;bi=i;} } return bd<30*30?bi:-1; };
+    const cornerOf=(i)=>{ let j=-1; T.corners.forEach((c,k)=>{ if(i>=c.a-3&&i<=c.b+3) j=k; }); return j; };
+    const banks=[];
+    for(const k of kept){ for(const pt of k.pts){ const i=nearestI(pt); if(i<0)continue; const j=cornerOf(i); if(j>=0&&banks[j]==null) banks[j]=k.deg; } }
+    if(selPt){ const i=nearestI(selPt); const j=i>=0?cornerOf(i):-1; ED.sel=j>=0?j:null; }
+    ED.opts.banks=banks;
+    if(banks.length) rebuild(); else { syncBank(); renderPad(); }
+  }
+  startUI();
+}
+function startUI(){
+  const T=ED.track, guest=document.body.dataset.mode==="guest";
+  const picked=!!(ED.opts.start&&isFinite(ED.opts.start.x));
+  const pick=$("startPick"), back=$("startAuto"), v=$("vStart"), h=$("startHint");
+  pick.setAttribute("aria-pressed",ED.pickStart?"true":"false");
+  pick.disabled=guest||!T; back.hidden=!picked||guest;
+  pad.classList.toggle("picking",ED.pickStart);
+  if(ED.pickStart){
+    v.textContent="Tap the circuit";
+    h.textContent="Tap the circuit where the start line should go. If that spot is in a tight corner, the line slides back to the straight before it.";
+    h.hidden=false; return;
+  }
+  v.textContent=picked?"Where you chose":"Where you began drawing";
+  if(T&&T.startMoved){
+    h.textContent=(picked?"The spot you chose":"The point you drew from")+" is in a tight corner, so the line has slid back to the straight before it — the dotted marker on the board is where it was asked for, and the corners are numbered from where it now is.";
+    h.hidden=false;
+  } else h.hidden=true;
+}
+function clearStart(){ ED.opts.start=null; ED.pickStart=false; }
 function hitCorner(cx,cy){
   if(!ED.track||!ED.cornerPts||!ED.cornerPts.length)return false;
   const p=toPad(cx,cy);
@@ -4761,6 +4863,7 @@ function startDraw(cx,cy){
   /* A guest is looking at the host's circuit. Every way of drawing arrives
      here, so this is the only place that has to say no. */
   if(document.body.dataset.mode==="guest")return;
+  if(ED.pickStart){ pickStartAt(cx,cy); return; }     // the touch path lands here too
   const p=toPad(cx,cy);
   if(!isFinite(p.x)||!isFinite(p.y))return;
   ED.drawing=true;
@@ -4793,13 +4896,14 @@ function endDraw(){
   }
   ED.history.push(ED.prevRaw);
   ED.raw=pts;
-  clearBanks();            // corner numbering belongs to the old shape
+  clearBanks(); clearStart();   // corner numbering, and the chosen start, belong to the old shape
   finalise();
 }
 if(window.PointerEvent){
   pad.addEventListener("pointerdown",e=>{
     if(e.button>0)return;
     e.preventDefault();
+    if(ED.pickStart){ pickStartAt(e.clientX,e.clientY); return; }
     if(hitCorner(e.clientX,e.clientY))return;
     drawId=e.pointerId; startDraw(e.clientX,e.clientY);
   });
@@ -4842,6 +4946,7 @@ function rebuild(){
   }
   store.set("ad.raw",ED.raw); store.set("ad.opts",ED.opts);
   syncBank();                      // corner count may have changed
+  if(typeof startUI==="function")startUI();
   renderPad(); updateReadout();
   /* A host's circuit is everyone's circuit. It used to go out once, when
      somebody joined, and never again — so every slider nudge and redraw
@@ -4938,9 +5043,10 @@ function drawCircuitMap(ctx,T){
     ctx.restore();
   }
 
-  /* start / finish */
+  /* start / finish, where it really is */
   const s0=P[0], s1=P[1%n];
   const ang0=Math.atan2(s1.y-s0.y,s1.x-s0.x);
+  const u0=1/PADT.s;
   ctx.save(); ctx.translate(s0.x,s0.y); ctx.rotate(ang0);
   const hwP=wPad/2, cell=hwP/2.5;
   for(let r0=0;r0<2;r0++)for(let c=0;c<5;c++){
@@ -4948,6 +5054,29 @@ function drawCircuitMap(ctx,T){
     ctx.fillRect(r0*cell-cell,-hwP+c*(2*hwP/5),cell,2*hwP/5);
   }
   ctx.restore();
+  /* If the line was moved off the spot that was asked for, show both: a
+     hollow marker where it was asked for, and the road it slid back along
+     to reach the straight, so the move is visible rather than a mystery. */
+  if(T.startMoved&&T.startFrom){
+    const k=T.startAsked;
+    ctx.save();
+    ctx.setLineDash([5*u0,5*u0]); ctx.strokeStyle="rgba(255,176,32,.75)"; ctx.lineWidth=2.4*u0; ctx.lineCap="round";
+    ctx.beginPath(); ctx.moveTo(P[0].x,P[0].y);
+    for(let i=1;i<=k;i++) ctx.lineTo(P[i].x,P[i].y);
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.translate(T.startFrom.x,T.startFrom.y);
+    ctx.beginPath(); ctx.arc(0,0,7*u0,0,TAU);
+    ctx.fillStyle="rgba(9,14,15,.85)"; ctx.fill();
+    ctx.strokeStyle="#FFB020"; ctx.lineWidth=1.6*u0; ctx.setLineDash([2.5*u0,2.5*u0]); ctx.stroke();
+    ctx.restore();
+  }
+  /* a chosen spot, when the line could stay on it */
+  else if(T.startPicked){
+    ctx.save(); ctx.translate(s0.x,s0.y);
+    ctx.beginPath(); ctx.arc(0,0,(hwP+7*u0),0,TAU);
+    ctx.strokeStyle="rgba(255,176,32,.55)"; ctx.lineWidth=1.4*u0; ctx.setLineDash([3*u0,4*u0]); ctx.stroke();
+    ctx.restore();
+  }
 
   /* corner numbers */
   ctx.textAlign="center"; ctx.textBaseline="middle";
@@ -6376,14 +6505,20 @@ $("sBank").addEventListener("input",()=>{
 $("bankPrev").addEventListener("click",()=>cycleCorner(-1));
 $("bankNext").addEventListener("click",()=>cycleCorner(1));
 $("bankClear").addEventListener("click",()=>{ clearBanks(); rebuild(); });
+$("startPick").addEventListener("click",()=>{
+  if(document.body.dataset.mode==="guest"){ netSay("Only the host can move the start line."); return; }
+  if(!ED.track)return;
+  ED.pickStart=!ED.pickStart; startUI(); renderPad();
+});
+$("startAuto").addEventListener("click",()=>{ clearStart(); moveStart(); });
 
 $("btnUndo").addEventListener("click",()=>{
   if(!ED.history.length){msg("Nothing to undo.");return;}
-  ED.raw=ED.history.pop(); clearBanks(); rebuild();
+  ED.raw=ED.history.pop(); clearBanks(); clearStart(); rebuild();
 });
 $("btnClear").addEventListener("click",()=>{
   ED.history.push(ED.raw?ED.raw.slice():null);
-  ED.raw=null; ED.track=null; clearBanks(); syncBank();
+  ED.raw=null; ED.track=null; clearBanks(); clearStart(); syncBank();
   renderPad(); updateReadout();
 });
 /* Hiding the panel hands the whole screen to the board, which on a phone

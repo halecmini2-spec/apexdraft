@@ -10,6 +10,12 @@ Open `index.html` in any modern browser, or host it as-is.
 - **Draw** a loop on the board. The direction you draw is the racing
   direction, and where you start becomes the start/finish line.
 - **Bank a corner** by clicking its number on the map, then using the slider.
+- **Start line** — it sits where you began drawing unless you move it:
+  **Move the start line** on the board, then tap the circuit. Either way, a
+  line that lands in a really tight corner slides back to the straight just
+  before it, and the board shows both places — a dotted marker where it was
+  asked for, the checkered line where it is. Corners are numbered from the
+  line, and a banked corner keeps its angle when the numbers change.
 - **Pick a car** — a GT racer, a Formula single-seater, a kart with no top
   end and enormous grip, or a Yaris that never quite settles on its springs.
   Each keeps its own best lap, since they don't lap at the same pace.
