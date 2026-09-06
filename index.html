@@ -1394,23 +1394,39 @@ function buildCircuit(raw,opts,fit){
   const Ks=new Float32Array(N);
   for(let i=0;i<N;i++){let s=0,w=0;for(let d=-6;d<=6;d++){const j=(i+d+N*2)%N;const ww=1-Math.abs(d)/8;s+=K[j]*ww;w+=ww;}Ks[i]=s/w;}
 
-  /* Start the lap on a straight. The line used to fall wherever the drawing
-     happened to begin, which was as often as not mid-corner — you launched
-     into a turn, the grid sat on the apex and the first split landed
-     somewhere meaningless. Score every point by how straight the road is for
-     a good stretch either side, take the flattest, and rotate every
-     per-point array so it becomes index 0.
+  /* Where the lap starts.
+
+     It begins where the circuit was drawn from, and stays there. Hunting the
+     whole lap for its flattest point — which is what this used to do — moves
+     the line somewhere nobody asked for, on a circuit where the drawn start
+     was perfectly reasonable.
+
+     The one case worth overriding is a line that landed in a really tight
+     corner, where you would launch into a turn with the grid on the apex.
+     Then it walks back up the road to the nearest straight, which puts the
+     line on the approach with the corner ahead of it — where a start line
+     belongs. If the lap has no straight anywhere on it, there is nowhere
+     better to be, so it stays where it was drawn.
 
      Y is rotated with its point rather than recomputed, so the elevation
      stays exactly where it was in the world; only the arclength is
      renumbered from the new line. Everything downstream — corners, banking,
      stats, the bucket grid — is built after this and simply sees the new
      ordering. */
-  let startI=0, flattest=Infinity;
-  for(let i=0;i<N;i++){
-    let s=0;
-    for(let d=-20;d<=20;d++) s+=Math.abs(Ks[(i+d+N*2)%N])*(1-Math.abs(d)/26);
-    if(s<flattest){ flattest=s; startI=i; }
+  const TIGHT=1/55;       // tighter than a 55m radius is a proper corner
+  const STRAIGHT=1/190;   // straighter than a 190m radius counts as straight
+  const sharpest=(i,half)=>{
+    let m=0;
+    for(let d=-half;d<=half;d++) m=Math.max(m,Math.abs(Ks[(i+d+N*2)%N]));
+    return m;
+  };
+  let startI=0;
+  if(sharpest(0,4)>TIGHT){
+    const limit=Math.floor(N*0.45);       // half a lap back is not "just in front"
+    for(let back=1;back<=limit;back++){
+      const i=(N-back)%N;                 // upstream: the road you came in on
+      if(sharpest(i,8)<STRAIGHT){ startI=i; break; }
+    }
   }
   if(startI>0){
     const roll=a=>{ const o=a.slice(); for(let i=0;i<N;i++) a[i]=o[(i+startI)%N]; };
