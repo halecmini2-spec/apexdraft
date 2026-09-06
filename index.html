@@ -2490,8 +2490,56 @@ function carMats(bodyColor){
        dull grey behind it, and neither should be catching the sky. */
     rim:new THREE.MeshStandardMaterial({color:SRGB(0x2A2F33),roughness:0.42,metalness:0.75}),
     disc:new THREE.MeshStandardMaterial({color:SRGB(0x6A7075),roughness:0.55,metalness:0.6}),
+    spoke:new THREE.MeshStandardMaterial({color:SRGB(0x3E464C),roughness:0.44,metalness:0.7}),
     carbon:new THREE.MeshStandardMaterial({color:SRGB(0x121618),roughness:0.48,metalness:0.35})
   };
+}
+
+/* ---- shaped parts ----
+   Boxes are why a car built out of them looks built out of them. A wing, a
+   splitter, an endplate and a headlamp are all flat things with a shaped
+   outline, so they are extruded from an outline instead: same handful of
+   triangles, none of them a cube. */
+
+/* An aerofoil section, extruded across the span. Curved over the top,
+   hollowed underneath, closing to a trailing edge. */
+function aerofoil(span,chord,thick){
+  const c=chord,t=thick,s=new THREE.Shape();
+  s.moveTo(0,0);
+  s.bezierCurveTo(0.05*c, 0.66*t, 0.20*c, 1.00*t, 0.44*c, 0.90*t);
+  s.bezierCurveTo(0.66*c, 0.80*t, 0.86*c, 0.40*t, c, 0.05*t);
+  s.lineTo(c,-0.05*t);
+  s.bezierCurveTo(0.82*c,-0.24*t, 0.52*c,-0.33*t, 0.26*c,-0.27*t);
+  s.bezierCurveTo(0.13*c,-0.21*t, 0.04*c,-0.11*t, 0,0);
+  const g=new THREE.ExtrudeGeometry(s,{depth:span,bevelEnabled:false,steps:1,curveSegments:5});
+  g.translate(-c*0.5,0,-span*0.5);
+  g.rotateY(-Math.PI/2);          // span across the car, chord along z
+  return g;
+}
+
+/* A flat panel with a shaped outline, standing across the car: endplates,
+   fences, canards. Points are given as [z,y] in the car's own plane. */
+function panel(pts,thick){
+  const s=new THREE.Shape();
+  s.moveTo(pts[0][0],pts[0][1]);
+  for(let i=1;i<pts.length;i++)s.lineTo(pts[i][0],pts[i][1]);
+  const g=new THREE.ExtrudeGeometry(s,{depth:thick,bevelEnabled:false,steps:1});
+  g.translate(0,0,-thick/2);
+  g.rotateY(Math.PI/2);
+  return g;
+}
+
+/* A lens: a rounded outline lying flat, for lamps set into bodywork. */
+function lens(w,h,d){
+  const s=new THREE.Shape(), r=Math.min(w,h)*0.42;
+  s.moveTo(-w/2+r,-h/2);
+  s.lineTo(w/2-r,-h/2);  s.quadraticCurveTo(w/2,-h/2, w/2,-h/2+r);
+  s.lineTo(w/2,h/2-r);   s.quadraticCurveTo(w/2,h/2, w/2-r,h/2);
+  s.lineTo(-w/2+r,h/2);  s.quadraticCurveTo(-w/2,h/2, -w/2,h/2-r);
+  s.lineTo(-w/2,-h/2+r); s.quadraticCurveTo(-w/2,-h/2, -w/2+r,-h/2);
+  const g=new THREE.ExtrudeGeometry(s,{depth:d,bevelEnabled:false,steps:1,curveSegments:3});
+  g.translate(0,0,-d/2);
+  return g;
 }
 
 /* collects boxes and tubes into one merged, vertex-coloured trim mesh */
@@ -2558,13 +2606,17 @@ function buildWheels(g,M,spec){
     const rr=r*0.6;
     if(race){
       const cyl=(rad,len,seg)=>{ const g=new THREE.CylinderGeometry(rad,rad,len,seg); g.rotateZ(Math.PI/2); return g; };
+      const lip=new THREE.TorusGeometry(rr*0.985,0.016,5,22);
+      lip.rotateY(Math.PI/2);
       return {
-        tg:raceTyre(r,tw), r, race:true, tw,
-        rg:cyl(rr,tw*0.86,22),                    // dark barrel; its ends are the faces
-        hg:cyl(r*0.16,tw*1.00,12),                // hub, proud of both faces
+        tg:raceTyre(r,tw), r, race:true, tw, rr,
+        rg:cyl(rr,tw*0.84,22),                    // dark barrel; its ends are the faces
+        hg:cyl(r*0.135,tw*0.98,12),               // hub, proud of both faces
+        ng:cyl(r*0.062,tw*1.06,8),                // centre nut
+        lg:lip,                                   // bright rim lip
         /* Spokes are laid across the face and poke a whisker past it, so they
            read against the dark rim without needing holes cut through it. */
-        sg:new THREE.BoxGeometry(tw*0.92,0.055,rr*1.52),
+        sg:new THREE.BoxGeometry(tw*0.90,0.042,rr*1.50),
       };
     }
     const tg=new THREE.CylinderGeometry(r,r,tw,22); tg.rotateZ(Math.PI/2);
@@ -2583,11 +2635,18 @@ function buildWheels(g,M,spec){
          things that still say "race wheel" at the distance you race at. */
       w.add(new THREE.Mesh(k.rg,M.rim));
       for(let s=0;s<5;s++){
-        const sp=new THREE.Mesh(k.sg,M.disc);
+        const sp=new THREE.Mesh(k.sg,M.spoke);
         sp.rotation.x=s/10*TAU;
         w.add(sp);
       }
-      w.add(new THREE.Mesh(k.hg,M.metal));
+      /* A bright ring at the edge of each face. It is the line that says
+         "machined rim" from further away than any spoke does. */
+      for(const sx of [-1,1]){
+        const l=new THREE.Mesh(k.lg,M.metal);
+        l.position.x=sx*k.tw*0.43; w.add(l);
+      }
+      w.add(new THREE.Mesh(k.hg,M.disc));
+      w.add(new THREE.Mesh(k.ng,M.metal));
     }else{
       w.add(new THREE.Mesh(k.rg,M.metal));
       for(let s=0;s<5;s++){
@@ -2600,162 +2659,204 @@ function buildWheels(g,M,spec){
   return wheels;
 }
 
-/* ---- GT: a modern GT3 car, invented rather than copied ----
-   Proportions carry this shape, so they are set first and the detail is hung
-   on afterwards: 4.7 long, 2.05 across, 1.22 tall — a car half again as wide
-   as it is high. Long low bonnet, cabin pushed back behind the middle, short
-   tail, and a wing standing above all of it.
 
-   Every panel is one of three things: the shell, something raised proud of it
-   (fender crests, roof), or trim. Nothing is modelled that would not be
-   legible from a car length away, which is the only distance this is ever
-   seen from. */
+/* ---- GT: a modern GT3 car, invented rather than copied ----
+   Sculpted rather than assembled. The shell is one long lofted surface with
+   enough stations to curve properly; the fenders are separate surfaces that
+   arch over each wheel; and every aerodynamic part is a shaped extrusion
+   rather than a box, because boxes are why a car built out of them looks
+   built out of them.
+
+   4.56 long, 2.06 across the arches, 1.26 tall, on a 2.65 wheelbase. */
 function bodyGT(b,M){
+  const FR=0.345, RR=0.362;            // tyre radii, front and rear
+  const FZ=1.32,  RZ=-1.33;            // axle positions
+  const FX=0.845, RX=0.850;            // and how far apart they stand
+
   const shell=new THREE.Mesh(loft([
-    {z: 2.35,w:0.82,y0:0.15,y1:0.455,n:3.0},  // nose: rounded, and low
-    {z: 2.16,w:0.93,y0:0.12,y1:0.505,n:3.4},
-    {z: 1.88,w:0.945,y0:0.10,y1:0.545,n:3.8}, // bonnet, long and flat-ish
-    {z: 1.50,w:0.955,y0:0.10,y1:0.575,n:4.2}, // front axle
-    {z: 1.05,w:0.945,y0:0.10,y1:0.615,n:4.4},
-    {z: 0.60,w:0.940,y0:0.10,y1:0.675,n:4.6}, // cowl — the cabin starts late
-    {z: 0.05,w:0.945,y0:0.10,y1:0.735,n:4.8},
-    {z:-0.55,w:0.955,y0:0.10,y1:0.775,n:4.8},
-    {z:-1.05,w:0.965,y0:0.11,y1:0.805,n:4.6}, // body; the arches go wider still
-    {z:-1.55,w:0.960,y0:0.13,y1:0.825,n:4.2}, // rear deck
-    {z:-2.05,w:0.950,y0:0.16,y1:0.805,n:3.8},
-    {z:-2.35,w:0.850,y0:0.19,y1:0.735,n:3.2}  // short, cut-off tail
-  ],24),M.paint);
+    {z: 2.28,w:0.70,y0:0.17,y1:0.430,n:2.6},  // nose, rounded away in every direction
+    {z: 2.17,w:0.84,y0:0.14,y1:0.492,n:2.9},
+    {z: 2.02,w:0.915,y0:0.115,y1:0.535,n:3.3},
+    {z: 1.82,w:0.888,y0:0.105,y1:0.560,n:3.7},
+    {z: 1.56,w:0.866,y0:0.100,y1:0.572,n:4.0}, // waisted at the axle, so the
+    {z: 1.40,w:0.868,y0:0.100,y1:0.578,n:4.1}, //   wheel stands clear of it
+    {z: 1.26,w:0.888,y0:0.100,y1:0.588,n:4.2},
+    {z: 0.96,w:0.902,y0:0.100,y1:0.622,n:4.4}, // cowl starts to climb
+    {z: 0.62,w:0.906,y0:0.100,y1:0.678,n:4.6},
+    {z: 0.20,w:0.910,y0:0.100,y1:0.734,n:4.8},
+    {z:-0.26,w:0.914,y0:0.100,y1:0.772,n:4.8},
+    {z:-0.70,w:0.898,y0:0.108,y1:0.797,n:4.6},
+    {z:-1.10,w:0.872,y0:0.112,y1:0.816,n:4.4}, // and again at the rear
+    {z:-1.48,w:0.906,y0:0.122,y1:0.826,n:4.2}, // rear deck
+    {z:-1.84,w:0.906,y0:0.140,y1:0.820,n:3.8},
+    {z:-2.10,w:0.880,y0:0.168,y1:0.796,n:3.4},
+    {z:-2.28,w:0.780,y0:0.200,y1:0.738,n:2.9}  // and rounded away again
+  ],30),M.paint);
   shell.castShadow=true; b.add(shell);
 
+  /* Compact cabin: a long screen, a short curved roof, a back light that
+     falls into the deck. */
   const cabin=new THREE.Mesh(loft([
-    {z: 0.66,w:0.62,y0:0.66,y1:0.720,n:3.0},  // base of a long raked screen
-    {z: 0.24,w:0.80,y0:0.68,y1:1.040,n:3.4},
-    {z:-0.22,w:0.86,y0:0.70,y1:1.195,n:3.8},  // roof, and it is a low one
-    {z:-0.66,w:0.85,y0:0.72,y1:1.185,n:3.8},
-    {z:-1.02,w:0.80,y0:0.74,y1:1.075,n:3.4},
-    {z:-1.38,w:0.70,y0:0.78,y1:0.885,n:3.0}
-  ],22),M.glass);
+    {z: 0.98,w:0.555,y0:0.615,y1:0.662,n:3.0},
+    {z: 0.60,w:0.760,y0:0.635,y1:0.958,n:3.4},
+    {z: 0.18,w:0.845,y0:0.660,y1:1.172,n:3.8},
+    {z:-0.24,w:0.866,y0:0.680,y1:1.242,n:3.8},
+    {z:-0.66,w:0.846,y0:0.700,y1:1.204,n:3.6},
+    {z:-1.04,w:0.776,y0:0.730,y1:1.054,n:3.2},
+    {z:-1.36,w:0.660,y0:0.770,y1:0.874,n:3.0}
+  ],24),M.glass);
   cabin.castShadow=true; b.add(cabin);
 
-  /* Painted over the middle of the glass so the greenhouse reads as screen,
-     windows and roof. It ends on a station barely thick at all, which lets it
-     feather out instead of showing a cut edge partway down the back glass. */
   const roof=new THREE.Mesh(loft([
-    {z:-0.06,w:0.851,y0:0.997,y1:1.157,n:7.0},
-    {z:-0.42,w:0.868,y0:1.047,y1:1.207,n:8.0},
-    {z:-0.78,w:0.845,y0:1.005,y1:1.165,n:7.5},
-    {z:-1.00,w:0.815,y0:1.071,y1:1.101,n:6.0}
-  ],22),M.paint);
+    {z: 0.00,w:0.866,y0:1.071,y1:1.221,n:7.0},
+    {z:-0.30,w:0.874,y0:1.105,y1:1.256,n:8.0},
+    {z:-0.62,w:0.859,y0:1.075,y1:1.226,n:7.5},
+    {z:-0.90,w:0.813,y0:1.096,y1:1.127,n:6.0}   // feathered into the back glass
+  ],24),M.paint);
   roof.castShadow=true; b.add(roof);
 
-  /* Fenders. A GT car is widest over its wheels and the body steps up to get
-     there; without these crests the flanks are one smooth tube and the car
-     has no shoulders. */
-  for(const sx of [-0.76,0.76]){
-    const f=new THREE.Mesh(loft([
-      {z: 2.12,w:0.24,y0:0.30,y1:0.545,n:2.8},
-      {z: 1.84,w:0.29,y0:0.28,y1:0.672,n:3.0},
-      {z: 1.50,w:0.30,y0:0.28,y1:0.735,n:3.2},  /* clears the tyre top */
-      {z: 1.14,w:0.28,y0:0.28,y1:0.716,n:3.2},
-      {z: 0.70,w:0.22,y0:0.30,y1:0.688,n:2.8}
-    ],16),M.paint);
-    f.position.x=sx; f.castShadow=true; b.add(f);
-  }
-  for(const sx of [-0.775,0.775]){
-    const h=new THREE.Mesh(loft([
-      {z:-0.38,w:0.225,y0:0.30,y1:0.792,n:2.8},
-      {z:-0.86,w:0.295,y0:0.28,y1:0.845,n:3.0},
-      {z:-1.26,w:0.295,y0:0.28,y1:0.852,n:3.0},
-      {z:-1.74,w:0.225,y0:0.30,y1:0.826,n:2.8}
-    ],16),M.paint);
-    h.position.x=sx; h.castShadow=true; b.add(h);
-  }
-
-  /* Arch lips. Half a ring standing proud over each wheel — the one detail
-     that turns "wheels near a body" into "wheels in arches". */
-  const FR=0.34, RR=0.355;
-  const arch=(x,z,r)=>{
-    const a=new THREE.Mesh(new THREE.TorusGeometry(r+0.048,0.040,6,18,Math.PI),M.paint);
-    a.scale.set(0.80,1,1);
-    a.rotation.y=Math.PI/2;
-    a.position.set(x,r,z);
-    a.castShadow=true; b.add(a);
+  /* ---- fenders ----
+     The underside of each one follows the circle it has to clear, so the
+     opening is an arch rather than a gap under a lump: over the axle the
+     panel is a thin cap sitting on top of the tyre, and by the ends of the
+     arch it has become full-depth bodywork ahead of and behind the wheel.
+     Everything else about a wheel looking "attached to the side" follows
+     from getting that one curve right. */
+  const fender=(zw,R,crest,px,sit)=>{
+    const gap=R*0.17, Ro=R+gap, reach=Ro+0.24, st=[], N=14;
+    for(let i=0;i<=N;i++){
+      const t=-1+2*i/N, z=zw+t*reach, d=Math.abs(z-zw), u=Math.abs(t);
+      /* Underside: the circle it has to clear over the tyre, dropping away
+         once past it. Topside: a crest that sinks back into the shell. */
+      const arc = d<Ro ? R+Math.sqrt(Ro*Ro-d*d)*0.995 : R-(d-Ro)*1.5;
+      const y1 = crest-(crest-sit)*u*u;
+      /* Tapered to a sliver at both ends, so it dies into the flank instead
+         of finishing as a blade standing out of it. */
+      const fade=Math.pow(1-u,1.35);
+      const y0 = Math.max(Math.min(arc, y1-0.03), y1-0.03-0.62*fade);
+      st.push({z, w:Math.max(0.02,(R*0.60)*fade), y0, y1, n:3.0+1.3*fade});
+    }
+    for(const sx of [-px,px]){
+      const f=new THREE.Mesh(loft(st,20),M.paint);
+      f.position.x=sx; f.castShadow=true; b.add(f);
+    }
   };
-  arch(-0.865,1.40,FR); arch(0.865,1.40,FR);
-  arch(-0.875,-1.30,RR); arch(0.875,-1.30,RR);
+  fender(FZ,FR,0.815,FX,0.575);
+  fender(RZ,RR,0.888,RX,0.800);
 
-  const carbon=0x0E1112, dark=0x15191B, grille=0x20262A;
+  const carbonC=0x0E1112, darkC=0x15191B, grilleC=0x1E2428;
+
+  /* ---- splitter: a thin shaped blade, not a slab ---- */
+  const splitter=new THREE.Mesh(loft([
+    {z: 2.42,w:0.66,y0:0.082,y1:0.104,n:5.0},
+    {z: 2.30,w:0.88,y0:0.080,y1:0.108,n:5.5},
+    {z: 2.10,w:1.000,y0:0.078,y1:0.114,n:6.0},
+    {z: 1.86,w:1.010,y0:0.078,y1:0.120,n:6.0},
+    {z: 1.62,w:0.985,y0:0.080,y1:0.126,n:6.0}
+  ],22),M.carbon);
+  splitter.castShadow=true; b.add(splitter);
+
+  /* ---- diffuser: one ramp, not a row of blocks ---- */
+  const diff=new THREE.Mesh(loft([
+    {z:-1.86,w:0.905,y0:0.098,y1:0.190,n:5.0},
+    {z:-2.06,w:0.930,y0:0.118,y1:0.258,n:4.6},
+    {z:-2.26,w:0.905,y0:0.168,y1:0.352,n:4.2},
+    {z:-2.40,w:0.840,y0:0.212,y1:0.400,n:3.8}
+  ],22),M.carbon);
+  diff.castShadow=true; b.add(diff);
+
+  /* ---- skirts, in the same idiom ---- */
+  for(const sx of [-1,1]){
+    const sk=new THREE.Mesh(loft([
+      {z: 1.02,w:0.075,y0:0.120,y1:0.196,n:4.0},
+      {z: 0.40,w:0.090,y0:0.112,y1:0.208,n:4.5},
+      {z:-0.30,w:0.090,y0:0.112,y1:0.208,n:4.5},
+      {z:-0.86,w:0.075,y0:0.120,y1:0.196,n:4.0}
+    ],14),M.carbon);
+    sk.position.x=sx*0.902; sk.castShadow=true; b.add(sk);
+  }
+
+  /* ---- side intake, sunk into the flank rather than bolted to it ---- */
+  for(const sx of [-1,1]){
+    const si=new THREE.Mesh(loft([
+      {z:-0.18,w:0.030,y0:0.470,y1:0.560,n:3.0},
+      {z:-0.46,w:0.048,y0:0.430,y1:0.640,n:3.6},
+      {z:-0.78,w:0.030,y0:0.455,y1:0.585,n:3.0}
+    ],12),new THREE.MeshStandardMaterial({color:SRGB(grilleC),roughness:0.62,metalness:0.2}));
+    si.position.x=sx*0.900; b.add(si);
+  }
+
+  /* ---- the wing ---- */
+  const wing=new THREE.Mesh(aerofoil(1.96,0.48,0.085),M.carbon);
+  wing.position.set(0,1.238,-2.00); wing.rotation.x=-0.15;
+  wing.castShadow=true; b.add(wing);
+  for(const sx of [-1,1]){
+    /* Slim uprights, swept and tapered — a plate on edge, not a post. */
+    const up=new THREE.Mesh(panel([[-0.12,0],[0.15,0],[0.11,0.45],[-0.06,0.45]],0.040),M.carbon);
+    up.position.set(sx*0.74,0.792,-1.94); b.add(up);
+    const ep=new THREE.Mesh(panel([
+      [-0.30,-0.10],[0.28,-0.02],[0.30,0.13],[0.10,0.20],[-0.28,0.16]
+    ],0.022),M.carbon);
+    ep.position.set(sx*0.985,1.234,-2.00); b.add(ep);
+  }
+
+  /* ---- lamps let into the fender fronts ---- */
+  const hm=new THREE.MeshStandardMaterial({
+    color:SRGB(0xF6EFE0),emissive:SRGB(0xE8D6AC),emissiveIntensity:0.5,
+    roughness:0.18,metalness:0.1});
+  const sm=new THREE.MeshStandardMaterial({color:SRGB(0x0C1012),roughness:0.45,metalness:0.25});
+  for(const sx of [-0.62,0.62]){
+    const sur=new THREE.Mesh(lens(0.46,0.155,0.075),sm);
+    sur.position.set(sx,0.512,2.115); sur.rotation.set(-0.20,0,0.06*Math.sign(sx)); b.add(sur);
+    const le=new THREE.Mesh(lens(0.40,0.108,0.075),hm);
+    le.position.set(sx,0.514,2.133); le.rotation.set(-0.20,0,0.06*Math.sign(sx)); b.add(le);
+  }
+
+  /* ---- the small stuff, and only the small stuff, as trim ---- */
   const k=trimKit();
-
-  /* ---- front ---- */
-  k.box(2.02,0.06,0.60,0,0.093,2.24,carbon);           // splitter
-  k.box(0.06,0.13,0.34,-1.00,0.15,2.28,carbon);        // splitter fences
-  k.box(0.06,0.13,0.34, 1.00,0.15,2.28,carbon);
-  k.box(0.34,0.045,0.26,-0.94,0.30,2.06,carbon,-0.34); // canards
-  k.box(0.34,0.045,0.26, 0.94,0.30,2.06,carbon,-0.34);
-  k.box(0.90,0.21,0.10,0,    0.255,2.375,grille);      // centre mouth
-  k.box(0.42,0.15,0.10,-0.70,0.235,2.335,grille);      // outer mouths
-  k.box(0.42,0.15,0.10, 0.70,0.235,2.335,grille);
-  for(let i=0;i<3;i++){                                // bonnet louvres
-    const z=1.62-i*0.13;
-    k.box(0.30,0.035,0.07,-0.34,0.556-i*0.004,z,dark,-0.10);
-    k.box(0.30,0.035,0.07, 0.34,0.556-i*0.004,z,dark,-0.10);
+  k.box(0.98,0.20,0.09,0,   0.268,2.290,grilleC);      // lower grille
+  k.box(0.36,0.13,0.09,-0.74,0.250,2.240,grilleC);     // side channels
+  k.box(0.36,0.13,0.09, 0.74,0.250,2.240,grilleC);
+  for(let i=0;i<3;i++){                                 // bonnet louvres
+    const z=1.66-i*0.135;
+    k.box(0.30,0.032,0.065,-0.33,0.556-i*0.004,z,darkC,-0.10);
+    k.box(0.30,0.032,0.065, 0.33,0.556-i*0.004,z,darkC,-0.10);
   }
-  for(let i=0;i<3;i++){                                // fender exit vents
-    const z=1.10-i*0.12;
-    k.box(0.045,0.055,0.09,-0.928,0.545,z,dark);
-    k.box(0.045,0.055,0.09, 0.928,0.545,z,dark);
+  for(let i=0;i<3;i++){                                 // fender exits
+    const z=1.16-i*0.115;
+    k.box(0.042,0.050,0.082,-0.878,0.548,z,darkC);
+    k.box(0.042,0.050,0.082, 0.878,0.548,z,darkC);
   }
-
-  /* ---- flanks ---- */
-  k.box(0.13,0.12,2.24,-0.960,0.165,-0.05,carbon);     // side skirts
-  k.box(0.13,0.12,2.24, 0.960,0.165,-0.05,carbon);
-  k.box(0.05,0.26,0.58,-0.938,0.545,-0.52,grille);     // rear quarter intakes
-  k.box(0.05,0.26,0.58, 0.938,0.545,-0.52,grille);
-  k.box(0.05,0.05,0.20,-0.985,0.775,0.60,dark);        // mirror stalks
-  k.box(0.05,0.05,0.20, 0.985,0.775,0.60,dark);
-  k.box(0.17,0.10,0.07,-1.055,0.795,0.60,dark);        // mirrors
-  k.box(0.17,0.10,0.07, 1.055,0.795,0.60,dark);
-  /* Shut lines: slim, angled to the bonnet's own slope so they lie on it. */
-  k.box(0.018,0.012,0.94,-0.53,0.573,1.52,dark,0.084);
-  k.box(0.018,0.012,0.94, 0.53,0.573,1.52,dark,0.084);
-
-  /* ---- rear ---- */
-  k.box(1.10,0.035,0.42,0,0.836,-1.56,grille);         // deck vent
-  for(let i=-3;i<=3;i++) k.box(0.05,0.045,0.42,i*0.15,0.842,-1.56,dark);
-  k.box(1.94,0.26,0.48,0,0.205,-2.22,carbon);          // diffuser
-  for(let i=-2;i<=2;i++) k.box(0.05,0.26,0.50,i*0.36,0.215,-2.22,dark);
-  k.box(0.14,0.14,0.22,-0.74,0.36,-2.34,dark);         // side-exit exhausts
-  k.box(0.14,0.14,0.22, 0.74,0.36,-2.34,dark);
-
-  /* The wing: two straight uprights off the deck and a wide plane above the
-     roof, which is the single most recognisable thing on a GT3 car. */
-  k.box(0.07,0.46,0.20,-0.80,1.030,-2.02,carbon);
-  k.box(0.07,0.46,0.20, 0.80,1.030,-2.02,carbon);
-  k.box(2.00,0.055,0.50,0,1.280,-2.10,carbon,-0.14);   // plane
-  k.box(0.05,0.34,0.60,-1.00,1.235,-2.10,dark);        // endplates
-  k.box(0.05,0.34,0.60, 1.00,1.235,-2.10,dark);
+  k.box(1.00,0.032,0.38,0,0.836,-1.50,grilleC);         // deck vent
+  for(let i=-3;i<=3;i++) k.box(0.045,0.042,0.38,i*0.14,0.842,-1.50,darkC);
+  for(let i=-1;i<=1;i++) k.box(0.040,0.20,0.44,i*0.30,0.196,-2.16,darkC);  // strakes
+  k.box(0.05,0.05,0.19,-0.960,0.772,0.60,darkC);        // mirror stalks
+  k.box(0.05,0.05,0.19, 0.960,0.772,0.60,darkC);
+  k.box(0.16,0.095,0.062,-1.030,0.790,0.60,darkC);      // mirrors
+  k.box(0.16,0.095,0.062, 1.030,0.790,0.60,darkC);
   b.add(k.mesh());
 
-  /* Headlamps let into the fender fronts: a slim lens in a dark surround, so
-     they sit in the bodywork rather than on it. */
-  const hm=new THREE.MeshStandardMaterial({
-    color:SRGB(0xFFF6E2),emissive:SRGB(0xFFE9BE),emissiveIntensity:0.75,
-    roughness:0.14,metalness:0.1});
-  const sm=new THREE.MeshStandardMaterial({color:SRGB(0x101416),roughness:0.4,metalness:0.3});
-  for(const sx of [-0.66,0.66]){
-    const sur=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.15,0.10),sm);
-    sur.position.set(sx,0.515,2.145); sur.rotation.x=-0.10; b.add(sur);
-    const lens=new THREE.Mesh(new THREE.BoxGeometry(0.36,0.095,0.10),hm);
-    lens.position.set(sx,0.518,2.168); lens.rotation.x=-0.10; b.add(lens);
+  /* Exhausts: round, because they are pipes. */
+  for(const sx of [-0.30,0.30]){
+    const g=new THREE.CylinderGeometry(0.058,0.058,0.16,10); g.rotateX(Math.PI/2);
+    const e=new THREE.Mesh(g,sm); e.position.set(sx,0.300,-2.34); b.add(e);
   }
 
-  const tailMats=addLamps(b,null,
-    {w:0.52,h:0.10,y:0.655,z:-2.36,x:[-0.60,0.60]});
+  /* Slim horizontal lamps, shaped rather than square. */
+  const tailMats=[];
+  for(const sx of [-0.56,0.56]){
+    const mm=new THREE.MeshStandardMaterial({
+      color:SRGB(0x4A0E0A),emissive:SRGB(0x2A0704),emissiveIntensity:1,
+      roughness:0.24,metalness:0.1});
+    const t=new THREE.Mesh(lens(0.52,0.088,0.07),mm);
+    t.position.set(sx,0.652,-2.276); t.rotation.set(0.10,0,0);
+    b.add(t); tailMats.push(mm);
+  }
+
   return {tailMats,
     wheels:{race:true,
-            r:FR,tw:0.30, rR:RR,twR:0.325,
-            pos:[[-0.865,1.40],[0.865,1.40],[-0.875,-1.30],[0.875,-1.30]]}};
+            r:FR,tw:0.295, rR:RR,twR:0.325,
+            pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
 /* ---- Formula: narrow tub, exposed wheels, wings at both ends ---- */
