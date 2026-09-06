@@ -129,6 +129,38 @@ function fileStore(file) {
                     .sort((a, b) => a.ms - b.ms)
                     .slice(0, limit);
     },
+
+    /* ---- what an admin can see and undo ---- */
+    async users() {
+      return db.users.slice().sort((a, b) => b.created - a.created).map((u) => ({
+        id: u.id, name: u.name, email: u.email, created: u.created,
+        tracks: db.tracks.filter((t) => t.user_id === u.id).length,
+        laps: db.laps.filter((l) => l.user_id === u.id).length,
+      }));
+    },
+    async deleteUser(id) {
+      const n = db.users.length;
+      db.users = db.users.filter((u) => u.id !== id);
+      if (db.users.length === n) return false;
+      /* everything that hung off the account goes with it */
+      db.sessions = db.sessions.filter((s) => s.user_id !== id);
+      db.tracks = db.tracks.filter((t) => t.user_id !== id);
+      db.laps = db.laps.filter((l) => l.user_id !== id);
+      await save();
+      return true;
+    },
+    async deleteLap(circuit, userId) {
+      const n = db.laps.length;
+      db.laps = db.laps.filter((l) => !(l.circuit === circuit && l.user_id === userId));
+      if (db.laps.length !== n) await save();
+      return db.laps.length !== n;
+    },
+    async wipeBoard(circuit) {
+      const n = db.laps.length;
+      db.laps = db.laps.filter((l) => l.circuit !== circuit);
+      if (db.laps.length !== n) await save();
+      return n - db.laps.length;
+    },
   };
 }
 
@@ -268,6 +300,29 @@ function pgStore(url) {
         `SELECT name,ms,car,at FROM laps WHERE circuit=$1 ORDER BY ms ASC LIMIT $2`,
         [circuit, limit]
       )).rows;
+    },
+
+    /* ---- what an admin can see and undo ---- */
+    async users() {
+      return (await pool.query(`
+        SELECT u.id, u.name, u.email, u.created,
+               (SELECT COUNT(*)::int FROM tracks t WHERE t.user_id=u.id) AS tracks,
+               (SELECT COUNT(*)::int FROM laps   l WHERE l.user_id=u.id) AS laps
+        FROM users u ORDER BY u.created DESC`)).rows;
+    },
+    /* Sessions, circuits and laps all reference users ON DELETE CASCADE, so
+       one statement takes the account and everything that hung off it. */
+    async deleteUser(id) {
+      const r = await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
+      return r.rowCount > 0;
+    },
+    async deleteLap(circuit, userId) {
+      const r = await pool.query(`DELETE FROM laps WHERE circuit=$1 AND user_id=$2`, [circuit, userId]);
+      return r.rowCount > 0;
+    },
+    async wipeBoard(circuit) {
+      const r = await pool.query(`DELETE FROM laps WHERE circuit=$1`, [circuit]);
+      return r.rowCount;
     },
   };
 }

@@ -594,6 +594,20 @@ body.shelving #lobbybar{display:none}
 .awho b{color:var(--amber);font-weight:700}
 .amail{margin:0 0 18px;font-size:11.5px;color:var(--faint)}
 .aback{width:100%;margin-top:16px;padding:9px 10px}
+/* ---- the admin desk ---- */
+.ad-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 8px;
+  font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
+.ad-head .chip{padding:4px 9px;font-size:10.5px;letter-spacing:0;text-transform:none}
+.ad-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto}
+.ad-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;
+  background:var(--panel2);border:1px solid var(--line);border-radius:2px}
+.ad-who{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ad-who b{font-size:12.5px;color:var(--ink)}
+.ad-meta{font-size:10.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ad-row .chip{padding:5px 9px;font-size:11px;flex:0 0 auto}
+.ti-x{background:none;border:0;color:var(--party);font-size:15px;line-height:1;padding:0 3px;cursor:pointer;margin-left:2px}
+.ti-x:disabled{opacity:.4;cursor:default}
+.ti-wipe{padding:3px 8px;font-size:10px;letter-spacing:.06em;text-transform:none;margin-left:10px}
 #auth .go:disabled{background:var(--raise);color:var(--faint)}
 
 /* ============ name tags ============
@@ -1049,7 +1063,8 @@ body.shelving #lobbybar{display:none}
              in the room. Two people who drew the same layout get the same
              board, so it is worth beating. -->
         <div class="times" id="pTimes">
-          <div class="ti-head"><span>Fastest laps</span><span class="ti-n" id="tiCount"></span></div>
+          <div class="ti-head"><span>Fastest laps</span>
+            <span><span class="ti-n" id="tiCount"></span><button class="chip ti-wipe" id="tiWipe" hidden>Clear board</button></span></div>
           <div class="ti-list" id="tiList"></div>
           <p class="ti-note" id="tiNote"></p>
         </div>
@@ -1119,6 +1134,16 @@ body.shelving #lobbybar{display:none}
         <p class="awho">Signed in as <b id="auWhoName">—</b></p>
         <p class="amail" id="auWhoMail">—</p>
         <button class="chip" id="auOut">Sign out</button>
+
+        <!-- Only for accounts named in ADMIN_USERS on the relay. Everything
+             here removes something; nothing here creates or edits. -->
+        <div id="authAdmin" hidden>
+          <div class="ad-head"><span>Admin</span><button class="chip" id="adRefresh">Refresh</button></div>
+          <p class="amsg" id="adMsg"></p>
+          <div class="ad-list" id="adUsers"></div>
+          <p class="ahint">Deleting an account takes its saved circuits and lap times with it.
+            Times on the leaderboard can be removed one at a time from the pause menu.</p>
+        </div>
       </div>
 
       <button class="chip aback" id="auBack">Back to the track</button>
@@ -4890,11 +4915,13 @@ function acctUI(){
     $("auWhoName").textContent=ACCT.user.name;
     $("auWhoMail").textContent=ACCT.user.email||"";
   }
+  adminUI();                     // the controls exist only for the named few
   netUI();                       // the roster prints whatever this is now
 }
 function acctOut(){
   ACCT.token=null; ACCT.user=null; ACCT.checked=0; acctSave();
   TK.list=[]; TK.loaded=false;      // that shelf was somebody else's
+  AD.list=[];
   acctUI();
 }
 
@@ -5135,6 +5162,19 @@ function timesUI(){
       const t=document.createElement("span"); t.className="t";
       t.textContent=i===0?fmtTime(r.ms):"+"+((r.ms-lead)/1000).toFixed(3);
       d.appendChild(p); d.appendChild(n); d.appendChild(c); d.appendChild(t);
+      if(isAdminHere()){
+        /* one time off the board, for the times that could not have been driven */
+        const x=document.createElement("button"); x.className="ti-x"; x.textContent="×";
+        x.title="Remove this time";
+        x.addEventListener("click",async()=>{
+          x.disabled=true;
+          try{
+            await api("/api/admin/laps/delete",{method:"POST",token:ACCT.token,body:{circuit:LB.key,name:r.name}});
+            await lbFetch(true);
+          }catch(e){ x.disabled=false; }
+        });
+        d.appendChild(x);
+      }
       list.appendChild(d);
     });
     note.textContent = acctIn() ? "" : "Sign in and your times go on the board too.";
@@ -5308,6 +5348,74 @@ $("tkSave").addEventListener("click",async()=>{
     tkSay(r.replaced?"Replaced “"+r.track.name+"”.":"Saved.");
   }catch(e){ tkSay(e.message,true); }
   finally{ $("tkSave").disabled=false; $("tkSave").textContent="Save the circuit on the board"; }
+});
+
+/* =====================================================================
+   ADMIN
+   ===================================================================== */
+/* Shown only to accounts the relay names as admin. Everything here removes
+   something — an account, a time, a board — and nothing creates or edits,
+   because that is the whole of moderating a game whose lap times the server
+   cannot referee. The relay decides who is admin; the client just asks. */
+const AD={list:[]};
+const isAdminHere=()=>acctIn()&&!!ACCT.user.admin;
+function adSay(m,bad){ const e=$("adMsg"); e.textContent=m||""; e.classList.toggle("bad",!!bad); }
+function adminUI(){
+  const on=isAdminHere();
+  $("authAdmin").hidden=!on;
+  $("tiWipe").hidden=!on;
+  if(on&&!AD.list.length)adLoad();
+}
+async function adLoad(){
+  if(!isAdminHere())return;
+  adSay("Fetching accounts…");
+  try{
+    const r=await api("/api/admin/users",{token:ACCT.token});
+    AD.list=r.users||[]; adSay(AD.list.length+(AD.list.length===1?" account":" accounts"));
+  }catch(e){ adSay(e.message,true); }
+  adRender();
+}
+function adRender(){
+  const box=$("adUsers"); box.innerHTML="";
+  for(const u of AD.list){
+    const row=document.createElement("div"); row.className="ad-row";
+    const who=document.createElement("div"); who.className="ad-who";
+    const nm=document.createElement("b"); nm.textContent=u.name+(u.admin?" · admin":"");
+    const meta=document.createElement("span"); meta.className="ad-meta";
+    meta.textContent=u.email+" · "+new Date(u.created).toLocaleDateString()
+      +" · "+u.tracks+(u.tracks===1?" circuit":" circuits")+" · "+u.laps+(u.laps===1?" time":" times");
+    who.appendChild(nm); who.appendChild(meta);
+    const del=document.createElement("button"); del.className="chip tk-del"; del.textContent="Delete";
+    del.disabled=!!u.admin;               // admins are not removed from here
+    let armed=false,t=0;
+    del.addEventListener("click",async()=>{
+      if(!armed){
+        armed=true; del.classList.add("arm"); del.textContent="Sure?";
+        clearTimeout(t); t=setTimeout(()=>{ armed=false; del.classList.remove("arm"); del.textContent="Delete"; },3000);
+        return;
+      }
+      clearTimeout(t); del.disabled=true; del.textContent="…";
+      try{
+        await api("/api/admin/users/delete",{method:"POST",token:ACCT.token,body:{name:u.name}});
+        AD.list=AD.list.filter(x=>x.name!==u.name); adRender(); adSay("Deleted "+u.name+".");
+      }catch(e){ adSay(e.message,true); del.disabled=false; del.textContent="Delete"; }
+    });
+    row.appendChild(who); row.appendChild(del); box.appendChild(row);
+  }
+}
+$("adRefresh").addEventListener("click",()=>{ AD.list=[]; adLoad(); });
+/* Clearing a whole board asks first, in the button. */
+let wipeArm=0;
+$("tiWipe").addEventListener("click",async()=>{
+  const bt=$("tiWipe");
+  if(!bt.dataset.armed){
+    bt.dataset.armed="1"; bt.textContent="Clear all times?";
+    clearTimeout(wipeArm); wipeArm=setTimeout(()=>{ delete bt.dataset.armed; bt.textContent="Clear board"; },3000);
+    return;
+  }
+  clearTimeout(wipeArm); delete bt.dataset.armed; bt.textContent="Clear board";
+  try{ await api("/api/admin/laps/wipe",{method:"POST",token:ACCT.token,body:{circuit:LB.key}}); await lbFetch(true); }
+  catch(e){ $("tiNote").textContent=e.message; $("tiNote").hidden=false; }
 });
 
 function netSay(msg){ $("netHint").textContent=msg; }

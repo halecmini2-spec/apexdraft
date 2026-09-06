@@ -101,6 +101,19 @@ Times need an account to appear, but the board is readable without one.
 cannot referee one, and all it checks is that a time is plausible. Treat the
 board as a scoreboard among people you know rather than as a record book.
 
+### Admin
+
+Accounts named in `ADMIN_USERS` on the relay (comma-separated usernames, set
+in the Render dashboard) get an **Admin** section on their account page and
+two extra controls on the leaderboard. Everything there removes something —
+an account and everything it saved, one lap time, a whole board — and
+nothing creates or edits, which is the whole of moderating a game whose lap
+times are claims the server cannot referee.
+
+There is deliberately no way to become an admin from inside the game, and an
+admin cannot delete their own account or another admin's from there. Every
+removal is logged on the relay with who did it.
+
 ### The small print
 
 There is **no verification email and no password reset**, and the UI says so

@@ -14,6 +14,7 @@ const { open } = require("./store");
 const { makeAuth } = require("./auth");
 const { makeTracks } = require("./tracks");
 const { makeLaps } = require("./laps");
+const { makeAdmin } = require("./admin");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
@@ -22,6 +23,7 @@ const store = open();
 const auth = makeAuth(store);
 const tracks = makeTracks(store, auth.userFor);
 const laps = makeLaps(store, auth.userFor);
+const admin = makeAdmin(store, auth.userFor);
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;
@@ -103,6 +105,7 @@ const server = http.createServer((req, res) => {
      because one address is one thing to wake. */
   const handle = url.pathname.startsWith("/api/tracks") ? tracks.route
                 : url.pathname.startsWith("/api/laps") ? laps.route
+                : url.pathname.startsWith("/api/admin") ? admin.route
                 : auth.route;
   handle(req, res, url)
     .then((handled) => { if (!handled) res.writeHead(404).end(); })

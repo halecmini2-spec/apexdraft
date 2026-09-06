@@ -47,6 +47,11 @@ services:
         fromDatabase:
           name: apexdraft-db
           property: connectionString
+      # Usernames that get the admin controls, comma-separated. Set by hand
+      # in the dashboard — it must never live in the repository, and there is
+      # deliberately no way to grant it from inside the game.
+      - key: ADMIN_USERS
+        sync: false
 
 # Free Postgres on Render expires 30 days after it is created. To keep the
 # accounts past that, make a database somewhere that doesn't expire (Neon's
