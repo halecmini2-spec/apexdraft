@@ -28,7 +28,7 @@
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="application-name" content="Apex Drawn">
 <link rel="canonical" href="https://apexdrawn.onrender.com/">
-<link rel="manifest" href="/manifest.webmanifest">
+<link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/icon-192.png">
@@ -6386,7 +6386,7 @@ $("pBack").addEventListener("click",()=>{
 (function moved(){
   if(location.hostname!=="apexdraft.onrender.com")return;
   const to="https://apexdrawn.onrender.com";
-  fetch(to+"/manifest.webmanifest",{mode:"cors",cache:"no-store"})
+  fetch(to+"/manifest.json",{mode:"cors",cache:"no-store"})
     .then(r=>{ if(r.ok) location.replace(to+location.pathname+location.search+location.hash); })
     .catch(()=>{});
 })();

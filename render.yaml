@@ -34,7 +34,7 @@ services:
       # The old address checks this file exists here before sending anyone
       # over, so the move cannot strand a visitor on a name that never came
       # up. A cross-origin fetch needs the header.
-      - path: /manifest.webmanifest
+      - path: /manifest.json
         name: Access-Control-Allow-Origin
         value: "*"
 
