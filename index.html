@@ -3251,9 +3251,6 @@ function bodyKart(b,M){
   /* crown vent */
   const vent=new THREE.Mesh(lens(0.075,0.026,0.02),sealM);
   vent.position.set(0,HP.y+HR*0.96,HP.z+0.02); vent.rotation.x=Math.PI/2-0.30; b.add(vent);
-  /* the stripe over the crown, in the driver's colour */
-  const stripe=onShell(new THREE.Mesh(new THREE.TorusGeometry(HR*0.975,0.040,6,18,Math.PI),M.paint));
-  stripe.rotation.y=Math.PI/2;
 
   const tailMats=addLamps(b,null,{w:0.12,h:0.055,y:0.225,z:-1.09,x:[0]});
   return {tailMats,
