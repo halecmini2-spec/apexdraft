@@ -16,7 +16,6 @@ const { makeTracks } = require("./tracks");
 const { makeLaps } = require("./laps");
 const { makeAdmin } = require("./admin");
 const { makeVisits } = require("./visits");
-const openTrack = require("./open");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
@@ -32,13 +31,11 @@ const liveNow = () => ({
   players: wss ? wss.clients.size : 0,
   rooms: [...rooms.values()].filter((r) => r.players.size).length,
   racing: [...rooms.values()].filter((r) => r.live && r.players.size).length,
-  open: OPEN.players.size,
 });
 const admin = makeAdmin(store, auth.userFor, liveNow);
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;
-const MAX_OPEN = 12;             // the open track takes a few more than a party
 const MAX_ROOMS = 500;
 const IDLE_MS = 60_000;          // no traffic at all from a socket -> drop it
 const MAX_MSG = 64 * 1024;       // a track is a few KB; nothing legitimate is bigger
@@ -46,9 +43,6 @@ const MAX_MSG = 64 * 1024;       // a track is a few KB; nothing legitimate is b
 /* Codes people read aloud, so no O/0 or I/1 to mishear. */
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const rooms = new Map();
-/* The open track: one room that is always there, live, with no host. */
-const OPEN = openTrack.makeOpenRoom();
-rooms.set(OPEN.code, OPEN);
 
 function makeCode() {
   for (let attempt = 0; attempt < 40; attempt++) {
@@ -96,10 +90,10 @@ function leave(ws) {
   if (!room) return;
   room.players.delete(ws.id);
   ws.room = null;
-  if (room.players.size === 0) { if (!room.public) rooms.delete(room.code); return; }
+  if (room.players.size === 0) { rooms.delete(room.code); return; }
   /* The host leaving would strand everyone, so the room is handed to whoever
      has been in it longest rather than being torn down under them. */
-  if (room.hostId === ws.id && !room.public) {
+  if (room.hostId === ws.id) {
     const next = room.players.values().next().value;
     room.hostId = next.id;
     broadcast(room, { t: "host", id: next.id });
@@ -117,7 +111,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === "/health" || url.pathname === "/") {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: wss ? wss.clients.size : 0, open: OPEN.players.size }));
+    res.end(JSON.stringify({ ok: true, rooms: rooms.size, players: wss ? wss.clients.size : 0 }));
     return;
   }
 
@@ -198,8 +192,7 @@ wss.on("connection", (ws) => {
       const code = String(m.code || "").toUpperCase().trim();
       const room = rooms.get(code);
       if (!room) return send(ws, { t: "err", m: "No party with that code." });
-      if (room.public) openTrack.refresh(room);          // a new day, if nobody is on it
-      if (room.players.size >= (room.public ? MAX_OPEN : MAX_PLAYERS)) return send(ws, { t: "err", m: room.public ? "The open track is full just now — try again in a minute." : "That party is full." });
+      if (room.players.size >= MAX_PLAYERS) return send(ws, { t: "err", m: "That party is full." });
       await named(ws, m, "Driver");
       if (ws.readyState !== 1) return;
       ws.room = code;
@@ -214,9 +207,8 @@ wss.on("connection", (ws) => {
                  live: !!room.live, track: room.track || null });
       played();
       broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
-      /* Ask the host to re-send the circuit for the newcomer. The open
-         track has no host; its circuit went with the welcome. */
-      const host = room.hostId ? room.players.get(room.hostId) : null;
+      /* Ask the host to re-send the circuit for the newcomer. */
+      const host = room.players.get(room.hostId);
       if (host) send(host, { t: "want-track", id: ws.id });
       return;
     }
