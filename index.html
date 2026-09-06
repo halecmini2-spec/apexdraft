@@ -439,9 +439,21 @@ body.inparty .lb-party{display:none}
 .lb-party .joingo{margin-top:0}
 /* The one button that opens a door the game does not otherwise have, so it
    is allowed to look like a door rather than like a checkbox. */
-.chip.go-party{border-color:var(--amber-deep);color:var(--amber);background:var(--amber-glow)}
-.chip.go-party:hover{background:var(--amber);border-color:var(--amber);color:#120E04}
-.chip.go-party:disabled:hover{background:var(--amber-glow);border-color:var(--amber-deep);color:var(--amber)}
+/* Everything about racing other people is the party red, so the online
+   half of the bar reads as one thing and never as a second Drive button. */
+.chip.go-party{border-color:var(--party-deep);color:var(--party);background:var(--party-glow)}
+.chip.go-party:hover{background:var(--party);border-color:var(--party);color:#1A0603}
+.chip.go-party:disabled:hover{background:var(--party-glow);border-color:var(--party-deep);color:var(--party)}
+.lb-party .chip:not(.go-party){border-color:var(--party-deep);color:#F0B7AF}
+.lb-party .chip:not(.go-party):hover{border-color:var(--party);color:var(--ink);background:var(--party-glow)}
+.lb-party .hint{color:#C79289}
+.codein{border-color:var(--party-deep)}
+.codein:focus{border-color:var(--party)!important}
+.grp-lobby > h2{color:var(--party)}
+#netLive .roster .who{border-color:var(--party-deep)}
+#netWho{color:#C79289}
+#lbLeave{border-color:var(--party-deep);color:#F0B7AF}
+#lbLeave:hover{border-color:var(--party);color:var(--ink);background:var(--party-glow)}
 
 /* Racing is not the moment to be reminded whose party it is: the bar would
    sit across the top of the track, which is the last place there is room. */
