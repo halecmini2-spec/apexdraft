@@ -1,9 +1,14 @@
 # Render blueprint — https://render.com/docs/blueprint-spec
-# Apex Draft is a single self-contained HTML file, so it deploys as a
+# Apex Drawn is a single self-contained HTML file, so it deploys as a
 # static site: no build step, no container, no server process.
+# The site and the relay are named apexdrawn. They were apexdraft: a Render
+# service keeps the .onrender.com address it was born with whatever it is
+# later called, so the only way to the new address was new services under
+# the new names. The database keeps its name, because that is where the
+# accounts are.
 services:
   - type: web
-    name: apexdraft
+    name: apexdrawn
     runtime: static
     staticPublishPath: .
     # Any path serves the game, so deep links and refreshes don't 404.
@@ -26,13 +31,19 @@ services:
       - path: /*
         name: Cache-Control
         value: public, max-age=0, s-maxage=30, must-revalidate
+      # The old address checks this file exists here before sending anyone
+      # over, so the move cannot strand a visitor on a name that never came
+      # up. A cross-origin fetch needs the header.
+      - path: /manifest.webmanifest
+        name: Access-Control-Allow-Origin
+        value: "*"
 
   # The game itself stays static and free. The relay is the only process,
   # and it does two things: pass messages between players in a room, which
   # it keeps nothing of, and keep accounts, which is the one thing here that
   # has to outlive a connection.
   - type: web
-    name: apexdraft-relay
+    name: apexdrawn-relay
     runtime: node
     rootDir: relay
     plan: free

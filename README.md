@@ -48,7 +48,7 @@ a room. It knows nothing about racing and keeps nothing about a race — a room
 exists while someone is in it and is forgotten when the last player leaves.
 
 It is deployed alongside the game by the same blueprint. The page finds it by
-name (`apexdraft` → `apexdraft-relay`), and `?relay=ws://localhost:8080`
+name (`apexdrawn` → `apexdrawn-relay`), and `?relay=ws://localhost:8080`
 points it somewhere else for local work.
 
 ## Accounts
@@ -164,8 +164,12 @@ description as visible text on the board. Ranking is up to the search
 engines; submitting the sitemap in Google Search Console and Bing Webmaster
 Tools is the one step worth doing by hand.
 
-The game was called Apex Draft; the services on Render keep that name, and
-the URL with it, because renaming them would move the game.
+The game lives at https://apexdrawn.onrender.com/. It was Apex Draft, at
+apexdraft.onrender.com: a Render service keeps the address it was created
+with whatever it is later renamed, so the move meant new services under the
+new names — the blueprint declares `apexdrawn` and `apexdrawn-relay`, and
+the old address checks the new one is up and then sends people on. The
+database kept its name, and the accounts with it.
 
 ## Hosting
 

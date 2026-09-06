@@ -27,7 +27,7 @@
 <meta name="keywords" content="racing game, free racing game, browser racing game, online racing game, track maker, track designer, track builder, draw your own racetrack, circuit designer, time trial, lap times, multiplayer racing game, car game, kart racing, formula racing, 3D racing game, play in browser, no download">
 <meta name="robots" content="index,follow,max-image-preview:large">
 <meta name="application-name" content="Apex Drawn">
-<link rel="canonical" href="https://apexdraft.onrender.com/">
+<link rel="canonical" href="https://apexdrawn.onrender.com/">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
@@ -36,15 +36,15 @@
 <meta property="og:site_name" content="Apex Drawn">
 <meta property="og:title" content="Apex Drawn — draw a racetrack and race it">
 <meta property="og:description" content="Free browser racing game and track maker. Draw any circuit, race it in 3D, chase lap times, and race friends online. No download.">
-<meta property="og:url" content="https://apexdraft.onrender.com/">
-<meta property="og:image" content="https://apexdraft.onrender.com/og.png">
+<meta property="og:url" content="https://apexdrawn.onrender.com/">
+<meta property="og:image" content="https://apexdrawn.onrender.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="A GT race car on a hand-drawn 3D circuit in Apex Drawn">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Apex Drawn — draw a racetrack and race it">
 <meta name="twitter:description" content="Free browser racing game and track maker. Draw any circuit, race it in 3D, chase lap times, and race friends online.">
-<meta name="twitter:image" content="https://apexdraft.onrender.com/og.png">
+<meta name="twitter:image" content="https://apexdrawn.onrender.com/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -53,8 +53,8 @@
       "@type": "VideoGame",
       "name": "Apex Drawn",
       "alternateName": ["Apex Draft", "ApexDrawn"],
-      "url": "https://apexdraft.onrender.com/",
-      "image": "https://apexdraft.onrender.com/og.png",
+      "url": "https://apexdrawn.onrender.com/",
+      "image": "https://apexdrawn.onrender.com/og.png",
       "description": "A free browser racing game and track maker. Draw any circuit and race it in 3D — time trials, per-circuit leaderboards, saved tracks and online multiplayer.",
       "genre": ["Racing", "Driving", "Time trial", "Track builder", "Multiplayer"],
       "keywords": "racing game, track maker, track designer, draw a racetrack, time trial, multiplayer racing, kart, formula, GT, browser game",
@@ -69,7 +69,7 @@
     {
       "@type": "WebApplication",
       "name": "Apex Drawn",
-      "url": "https://apexdraft.onrender.com/",
+      "url": "https://apexdrawn.onrender.com/",
       "applicationCategory": "GameApplication",
       "browserRequirements": "Requires WebGL",
       "operatingSystem": "Any",
@@ -4977,7 +4977,7 @@ const NET={
   status:"off", sendAt:0, wantTrack:false, left:false,
   live:false        // the host is out on track, and the room is open to join
 };
-const PUBLIC_RELAY="wss://apexdraft-relay.onrender.com";
+const PUBLIC_RELAY="wss://apexdrawn-relay.onrender.com";
 /* Sits in a bar an inch high now, so it says the offer and stops. What
    hosting means is one press away and obvious once you are there. */
 const NET_IDLE="Race live with other people";
@@ -4999,8 +4999,8 @@ function relayURL(){
      the only relay such a page can reach. Point it elsewhere with
      ?relay=ws://localhost:8080 when running one locally. */
   if(!h||h==="localhost"||h==="127.0.0.1") return PUBLIC_RELAY;
-  /* the blueprint names the relay after the site, so apexdraft.onrender.com
-     is served by apexdraft-relay.onrender.com */
+  /* the blueprint names the relay after the site, so apexdrawn.onrender.com
+     is served by apexdrawn-relay.onrender.com */
   const parts=h.split(".");
   parts[0]+="-relay";
   return "wss://"+parts.join(".");
@@ -6378,6 +6378,18 @@ $("pBack").addEventListener("click",()=>{
 });
 
 /* ---- boot ---- */
+/* The game moved from apexdraft.onrender.com to apexdrawn.onrender.com.
+   Anyone arriving by the old link is sent on, keeping their path and query,
+   but only after the new address has answered: a redirect to a name that
+   has not come up yet, or came up under a different spelling, would strand
+   them on nothing. Until then the old copy simply keeps working. */
+(function moved(){
+  if(location.hostname!=="apexdraft.onrender.com")return;
+  const to="https://apexdrawn.onrender.com";
+  fetch(to+"/manifest.webmanifest",{mode:"cors",cache:"no-store"})
+    .then(r=>{ if(r.ok) location.replace(to+location.pathname+location.search+location.hash); })
+    .catch(()=>{});
+})();
 (function boot(){
   const bars=$("gearbar");
   for(let i=0;i<14;i++)bars.appendChild(document.createElement("i"));
