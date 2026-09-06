@@ -70,6 +70,10 @@ input,textarea{-webkit-user-select:text;user-select:text;-webkit-touch-callout:d
 /* Out on track nothing should pan, zoom or select at all. The rail is not on
    screen to be scrolled, so there is nothing left worth allowing. */
 body.driving,body.driving *{touch-action:none}
+/* The one thing on track that does scroll is the pause card on a phone,
+   and touch-action:none on it means a finger cannot move it at all. A
+   vertical pan is allowed back there, and nothing else. */
+body.driving .pause,body.driving .pause *{touch-action:pan-y}
 button{font-family:inherit;color:inherit}
 :focus-visible{outline:2px solid var(--amber); outline-offset:2px}
 
