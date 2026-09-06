@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /README.md
+
+Sitemap: https://apexdraft.onrender.com/sitemap.xml

@@ -1,4 +1,4 @@
-# Apex Draft
+# Apex Drawn
 
 Draw a closed loop and it becomes a 3D circuit you drive immediately — elevation,
 per-corner banking, kerbs, tyre walls, and lap/sector timing. No account, no install.
@@ -153,6 +153,19 @@ cd relay && npm install && node server.js
 ```
 
 then open the game with `?relay=ws://localhost:8080`.
+
+## Being found
+
+The page carries what a search engine or a link preview needs: a real
+document head with a description, Open Graph and Twitter cards, JSON-LD
+describing it as a free browser racing game and track maker, a canonical
+URL, a web manifest with icons, `robots.txt` and `sitemap.xml`, and the same
+description as visible text on the board. Ranking is up to the search
+engines; submitting the sitemap in Google Search Console and Bing Webmaster
+Tools is the one step worth doing by hand.
+
+The game was called Apex Draft; the services on Render keep that name, and
+the URL with it, because renaming them would move the game.
 
 ## Hosting
 

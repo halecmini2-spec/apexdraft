@@ -68,6 +68,7 @@ const NAME_RE = /^[A-Za-z0-9_]{3,16}$/;
 const RESERVED = new Set([
   "host", "admin", "administrator", "you", "driver", "apexdraft", "apex",
   "system", "root", "moderator", "mod", "null", "undefined", "anonymous",
+  "apexdrawn",
 ]);
 
 function nameProblem(name) {

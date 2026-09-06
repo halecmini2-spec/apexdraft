@@ -1,3 +1,6 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
 <!-- Without this a phone lays the page out at a ~980px virtual viewport and
      scales the result down, shrinking every control to roughly 40% and taking
@@ -14,9 +17,67 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Apex Draft">
+<meta name="apple-mobile-web-app-title" content="Apex Drawn">
 <meta name="theme-color" content="#0A0F10">
-<title>Apex Draft</title>
+<title>Apex Drawn — draw a racetrack and race it. Free online racing game and track maker</title>
+<!-- What the page is, for anyone finding it rather than opening it: search
+     engines, link previews, the home-screen installer. All of it describes
+     the game as it is; the visible text on the board says the same. -->
+<meta name="description" content="Apex Drawn is a free browser racing game and track maker. Draw any circuit and race it in 3D in seconds — GT, Formula, kart or hatchback — with time-trial lap times, per-circuit leaderboards, saved tracks and online multiplayer with friends. No download, no account needed.">
+<meta name="keywords" content="racing game, free racing game, browser racing game, online racing game, track maker, track designer, track builder, draw your own racetrack, circuit designer, time trial, lap times, multiplayer racing game, car game, kart racing, formula racing, 3D racing game, play in browser, no download">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<meta name="application-name" content="Apex Drawn">
+<link rel="canonical" href="https://apexdraft.onrender.com/">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Apex Drawn">
+<meta property="og:title" content="Apex Drawn — draw a racetrack and race it">
+<meta property="og:description" content="Free browser racing game and track maker. Draw any circuit, race it in 3D, chase lap times, and race friends online. No download.">
+<meta property="og:url" content="https://apexdraft.onrender.com/">
+<meta property="og:image" content="https://apexdraft.onrender.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="A GT race car on a hand-drawn 3D circuit in Apex Drawn">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Apex Drawn — draw a racetrack and race it">
+<meta name="twitter:description" content="Free browser racing game and track maker. Draw any circuit, race it in 3D, chase lap times, and race friends online.">
+<meta name="twitter:image" content="https://apexdraft.onrender.com/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "VideoGame",
+      "name": "Apex Drawn",
+      "alternateName": ["Apex Draft", "ApexDrawn"],
+      "url": "https://apexdraft.onrender.com/",
+      "image": "https://apexdraft.onrender.com/og.png",
+      "description": "A free browser racing game and track maker. Draw any circuit and race it in 3D — time trials, per-circuit leaderboards, saved tracks and online multiplayer.",
+      "genre": ["Racing", "Driving", "Time trial", "Track builder", "Multiplayer"],
+      "keywords": "racing game, track maker, track designer, draw a racetrack, time trial, multiplayer racing, kart, formula, GT, browser game",
+      "applicationCategory": "Game",
+      "gamePlatform": ["Web browser", "Android", "iOS", "Windows", "macOS"],
+      "playMode": ["SinglePlayer", "MultiPlayer"],
+      "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 8 },
+      "operatingSystem": "Any",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    },
+    {
+      "@type": "WebApplication",
+      "name": "Apex Drawn",
+      "url": "https://apexdraft.onrender.com/",
+      "applicationCategory": "GameApplication",
+      "browserRequirements": "Requires WebGL",
+      "operatingSystem": "Any",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+    }
+  ]
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -341,6 +402,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .go:hover{filter:brightness(1.08)}
 .go:active{transform:translateY(1px)}
 .go:disabled{background:var(--raise);color:var(--faint);cursor:not-allowed}
+.foot-note.about{margin:22px 0 4px;line-height:1.55;color:var(--faint);font-size:11px}
 .foot-note{margin:9px 0 0;font-size:11px;color:var(--faint);text-align:center;letter-spacing:.03em}
 
 /* board */
@@ -531,6 +593,24 @@ body.touchcap .touchonly{display:block}
 .pbtn .s{font-family:var(--mono);font-size:11px;color:var(--faint)}
 .pbtn.primary .s{color:rgba(20,13,0,.6)}
 .pbtn .on{color:var(--green)} .pbtn .off{color:var(--faint)}
+
+/* A phone held upright. The whole game is laid out for landscape — the
+   rail beside the board, the view with its tower and map — so instead of
+   squeezing it, ask. Above everything, including the pause and the sheets;
+   dismissable, because someone may have a reason. */
+.rotate{position:fixed;inset:0;z-index:120;background:rgba(6,10,11,.96);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  padding:24px;text-align:center;pointer-events:auto}
+.rotate .phone{width:34px;height:58px;border:3px solid var(--amber);border-radius:7px;position:relative;
+  animation:turn 1.8s ease-in-out infinite}
+.rotate .phone::after{content:"";position:absolute;left:50%;bottom:4px;width:8px;height:3px;margin-left:-4px;
+  border-radius:2px;background:var(--amber)}
+@keyframes turn{0%,25%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+.rotate h2{margin:6px 0 0;font-size:16px;letter-spacing:.16em;text-transform:uppercase}
+.rotate p{margin:0;max-width:300px;font-size:13px;line-height:1.6;color:var(--dim)}
+.rotate button{margin-top:6px;background:transparent;border:1px solid var(--line);color:var(--faint);
+  padding:9px 14px;font-size:12px;letter-spacing:.06em;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.rotate .phone{animation:none;transform:rotate(-90deg)}}
 
 /* loading */
 .loading{position:absolute;inset:0;background:var(--ground);display:flex;flex-direction:column;
@@ -839,8 +919,16 @@ body.admining #lobbybar{display:none}
   .amail{margin-bottom:12px}
 }
 </style>
+</head>
+<body>
 
 <div id="bootErr" class="boot-err" hidden></div>
+<div class="rotate" id="rotate" hidden role="dialog" aria-live="polite">
+  <div class="phone"></div>
+  <h2>Please rotate your phone</h2>
+  <p>The game is made for landscape. Turn your phone sideways and it will fill the screen.</p>
+  <button id="rotateAnyway">Carry on upright</button>
+</div>
 <script>
 /* Fails loudly instead of silently: if the main script never finishes parsing
    (or throws on the way up), say so rather than leaving a dead board. */
@@ -869,7 +957,7 @@ body.admining #lobbybar{display:none}
        that was impossible to find at the bottom of a column of sliders,
        looking like another setting. -->
   <div id="lobbybar" hidden>
-    <span class="lb-brand">Apex<span>Draft</span></span>
+    <span class="lb-brand">Apex<span>Drawn</span></span>
     <small class="lb-ver">v4.0</small>
     <span class="lb-role" id="lbRole">Host</span>
     <!-- the grid at a glance, so a host building a circuit can see who has
@@ -994,6 +1082,12 @@ body.admining #lobbybar{display:none}
             <button class="sw" data-color="#2ED47A" style="background:#2ED47A" title="Verde"></button>
           </div>
         </div>
+        <!-- What this is, in words, at the end of the rail: for the person who
+             scrolled down wondering, and for anything that reads pages. -->
+        <p class="foot-note about">Apex Drawn is a free online racing game and track maker.
+          Draw a circuit, race it in 3D in a GT, Formula, kart or hatchback, chase your lap
+          times on every circuit's leaderboard, save your favourite tracks, and race friends
+          in multiplayer time trials — all in the browser, on phone or desktop.</p>
       </div>
       <div class="rail-foot">
         <button class="go" id="btnDrive">Drive it</button>
@@ -1124,7 +1218,7 @@ body.admining #lobbybar{display:none}
        is a form, so a password manager can fill it and Enter submits it. -->
   <section id="auth" class="screen" hidden>
     <div class="auth-card">
-      <h1 class="auth-brand">Apex<span>Draft</span></h1>
+      <h1 class="auth-brand">Apex<span>Drawn</span></h1>
       <p class="auth-sub" id="auSub">Race under your own name</p>
 
       <div id="authForms">
@@ -6163,6 +6257,24 @@ function isHandheld(){
   return !!coarse&&small;
 }
 let a2hsSeen=false;
+/* Asked once per turn of the phone: dismiss it and it stays away until the
+   phone has been sideways and comes back upright. Desktops and tablets in
+   portrait are left alone — a laptop is never "held wrong". */
+let rotateSeen=false;
+function portrait(){
+  const mq=window.matchMedia&&window.matchMedia("(orientation: portrait)");
+  return mq?mq.matches:innerHeight>innerWidth;
+}
+function rotateUI(){
+  const up=isHandheld()&&portrait();
+  if(!up)rotateSeen=false;
+  $("rotate").hidden=!up||rotateSeen;
+}
+$("rotateAnyway").addEventListener("click",()=>{ rotateSeen=true; rotateUI(); });
+addEventListener("resize",rotateUI);
+addEventListener("orientationchange",()=>setTimeout(rotateUI,80));
+if(window.matchMedia) try{ window.matchMedia("(orientation: portrait)").addEventListener("change",rotateUI); }catch(e){}
+setTimeout(rotateUI,0);
 function a2hsWanted(){
   /* Answered it is gone for the rest of the visit, which makes it impossible
      to look at again — so ?a2hs brings it back for checking the wording. */
@@ -6305,3 +6417,5 @@ $("pBack").addEventListener("click",()=>{
 })();
 
 </script>
+</body>
+</html>
