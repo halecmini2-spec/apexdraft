@@ -4973,6 +4973,10 @@ function showAuth(on){
   if(on){
     acctUI();
     if(!acctIn()){ authTab(AU_MODE); setTimeout(()=>{ try{$("auName").focus();}catch(e){} },40); }
+    /* Opening this page is a deliberate look at the account, so ask the
+       relay afresh rather than trusting the stored copy — otherwise being
+       made an admin means signing out and in again before it shows. */
+    else acctVerify(true);
   }else{
     auSay(""); auNote("");
     fitPad();                    // the board has the width back
