@@ -8,8 +8,10 @@ Open `index.html` in any modern browser, or host it as-is.
 ## Playing
 
 The page opens on a home page with four doors — **Draw & drive**, **Multiplayer**,
-**Daily time trial**, and a **Shop** that says coming soon — with the account, admin
-and About links beside them. Each mode shows only its own controls, and a
+**Daily time trial**, and a **Shop** that says coming soon — with an account strip
+under them that says what an account is for and that it is free, and opens
+straight onto the sign-up form; signed in, it names you instead. Admin and
+About links sit beside it. Each mode shows only its own controls, and a
 **Home** button in the bar, the wordmark, and a Home row in the pause menu all
 lead back.
 
@@ -90,7 +92,7 @@ points it somewhere else for local work.
 ## Accounts
 
 Optional, and they settle one thing: the name other people see on your car.
-Sign in from the bar along the top — a username, an email and a password, and
+Sign in from the home page — a username, an email and a password, and
 nothing else asked for. You can host and join parties without one.
 
 The name comes from the session token rather than from the client, so a

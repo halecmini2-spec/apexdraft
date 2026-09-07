@@ -556,6 +556,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
   .home-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
   .home-head .auth-brand.big{font-size:20px}
   .home-head .auth-sub{margin-top:2px}
+  .home-acct{padding:9px 12px 9px 16px;gap:12px}
+  .home-acct-txt b{font-size:13px}
+  .home-acct-txt span{font-size:11px;line-height:1.35}
+  .home-acct-btns{flex-direction:row}
+  .home-acct .go{padding:9px 14px;font-size:12px}
 }
 .mu-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:640px){.home-cards,.mu-cards{grid-template-columns:1fr}}
@@ -572,6 +577,20 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .home-card.grey{cursor:default;opacity:.6} .home-card.grey:hover{transform:none;border-color:var(--line)}
 .home-card.static{cursor:default} .home-card.static:hover{transform:none}
 .home-links{justify-content:center}
+.home-acct{position:relative;display:flex;align-items:center;gap:16px;padding:14px 18px 14px 22px;border:1px solid rgba(46,212,122,.45);border-radius:4px;
+  background:linear-gradient(90deg,rgba(46,212,122,.14),rgba(16,24,26,.86) 55%);backdrop-filter:blur(3px)}
+.home-acct::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;background:var(--green)}
+.home-acct-txt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
+.home-acct-txt b{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.home-acct-txt span{font-size:12.5px;line-height:1.5;color:var(--dim)}
+.home-acct-btns{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:8px}
+.home-acct .go{width:auto;padding:12px 18px;font-size:13px;white-space:nowrap}
+.go.green{background:var(--green);color:#052A14}
+.home-acct .chip{white-space:nowrap}
+.home-acct.in{border-color:var(--line);background:rgba(16,24,26,.86)}
+.home-acct.in::before{background:var(--green)}
+.home-acct.in #hmSignUp{display:none}
+@media (max-width:640px){.home-acct{flex-direction:column;align-items:stretch;text-align:center}.home-acct-btns{flex-direction:row;justify-content:center}}
 .mu-join{display:flex;gap:9px;align-items:center;margin-top:8px}
 .mu-join .codein{width:120px;padding:7px 8px;font-size:16px}
 .chip.home{margin-left:10px;color:var(--amber);border-color:var(--amber-deep)}
@@ -1358,8 +1377,20 @@ body.admining #lobbybar{display:none}
         <button class="home-card purple" id="hmDaily"><i></i><b>Daily time trial</b><span>Today's circuit, the world's times, your ranking, and a ghost to chase.</span></button>
         <button class="home-card grey" id="hmShop"><i></i><b>Shop</b><span>Coming soon.</span></button>
       </div>
+      <!-- The account, sold rather than mentioned: it is free and takes a
+           moment, and it is what puts your name on your car and your laps
+           on every device. Signed in, the strip just says who you are. -->
+      <div class="home-acct" id="hmAcct">
+        <div class="home-acct-txt">
+          <b id="hmAcctHead">Easy and free: make an account</b>
+          <span id="hmAcctSub">A name, an email and a password. Nothing to verify, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.</span>
+        </div>
+        <div class="home-acct-btns">
+          <button class="go green" id="hmSignUp">Create free account</button>
+          <button class="chip" id="hmAccount">Sign in</button>
+        </div>
+      </div>
       <div class="home-links chips">
-        <button class="chip" id="hmAccount">Sign in</button>
         <button class="chip on" id="hmAdmin" hidden>Admin</button>
         <button class="chip" id="hmAbout">About</button>
       </div>
@@ -6068,7 +6099,8 @@ $("hmDraw").addEventListener("click",goDraw);
 $("hmMulti").addEventListener("click",goMulti);
 $("hmDaily").addEventListener("click",goDaily);
 $("hmShop").addEventListener("click",()=>{ const b=$("hmShop").querySelector("span"); b.textContent="Coming soon — nothing to buy yet."; setTimeout(()=>{ b.textContent="Coming soon."; },1800); });
-$("hmAccount").addEventListener("click",()=>showAuth(true));
+$("hmAccount").addEventListener("click",()=>{ AU_MODE="in"; showAuth(true); });
+$("hmSignUp").addEventListener("click",()=>{ AU_MODE="up"; showAuth(true); });
 $("hmAdmin").addEventListener("click",()=>showAdmin(true));
 $("hmAbout").addEventListener("click",()=>showAbout(true));
 $("muHost").addEventListener("click",()=>{ $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true); $("btnHost").click(); });
@@ -6303,7 +6335,11 @@ function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
   chip.textContent=on?ACCT.user.name:"Sign in";
   chip.classList.toggle("on",on);
-  $("hmAccount").textContent=chip.textContent; $("hmAccount").classList.toggle("on",on);
+  $("hmAccount").textContent=on?"Your account":"Sign in"; $("hmAccount").classList.toggle("on",on);
+  $("hmAcct").classList.toggle("in",on);
+  $("hmAcctHead").textContent=on?"Signed in as "+ACCT.user.name:"Easy and free: make an account";
+  $("hmAcctSub").textContent=on?"Your name is on your car, and your laps and saved circuits follow you to any device."
+    :"A name, an email and a password. Nothing to verify, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.";
   $("authForms").hidden=on;
   $("authWho").hidden=!on;
   $("auSub").textContent=on?"Your account":"Race under your own name";
