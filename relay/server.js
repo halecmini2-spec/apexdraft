@@ -211,7 +211,8 @@ wss.on("connection", (ws) => {
          a start that has already happened. The host is still asked below, in
          case what it has is newer than what the room remembers. */
       send(ws, { t: "joined", code, id: ws.id, hostId: room.hostId, peers,
-                 live: !!room.live, track: room.track || null });
+                 live: !!room.live, track: room.track || null,
+                 cfg: room.cfg || null, race: room.race || null });
       played();
       broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
       /* Ask the host to re-send the circuit for the newcomer. */
@@ -251,7 +252,37 @@ wss.on("connection", (ws) => {
          the host sets the circuit. */
       if (ws.id !== room.hostId) return;
       room.live = true;                    // and stays so while the room lasts
+      room.race = null;                    // practice: no laps to count
       broadcast(room, { t: "go" }, ws.id);
+      return;
+    }
+    /* ---- a race: so many laps, from a grid the host set ---- */
+    const raceCfg = (m) => ({
+      laps: Math.max(0, Math.min(50, m.laps | 0)),
+      grid: Array.isArray(m.grid) ? m.grid.map(String).slice(0, MAX_PLAYERS) : [],
+    });
+    if (m.t === "rcfg") {
+      /* the settings as the host changes them, so the room can see what it
+         is about to line up for; kept, so a latecomer sees them too */
+      if (ws.id !== room.hostId) return;
+      room.cfg = raceCfg(m);
+      broadcast(room, Object.assign({ t: "rcfg" }, room.cfg), ws.id);
+      return;
+    }
+    if (m.t === "race") {
+      if (ws.id !== room.hostId) return;
+      room.live = true;
+      room.race = raceCfg(m);
+      room.cfg = room.race;
+      broadcast(room, Object.assign({ t: "race" }, room.race), ws.id);
+      return;
+    }
+    if (m.t === "rlap") {
+      broadcast(room, { t: "rlap", id: ws.id, lap: m.lap | 0, ms: +m.ms || 0 }, ws.id);
+      return;
+    }
+    if (m.t === "finish") {
+      broadcast(room, { t: "finish", id: ws.id, ms: +m.ms || 0 }, ws.id);
       return;
     }
     if (m.t === "bye") { leave(ws); return; }

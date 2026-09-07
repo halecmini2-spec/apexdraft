@@ -57,6 +57,20 @@ lead back.
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
 
+## Racing a party
+
+A party can race rather than just share a circuit. The host picks the
+number of laps — one, three, five or ten, or **Practice** for the old free
+run — and sets the **starting grid**: move anyone up or down, take the join
+order, or make it random. Everyone sees the settings as they change. **Start
+race** lines everyone up on that grid, the lights go for all of them at
+once, and the laps are counted from the lights. The running order sits under
+the timing tower and the lap counter reads 2/3 · P1; the first driver to
+complete the laps is the winner, and each driver gets the finishing order,
+with gaps, as they cross the line for the last time. A latecomer joins the
+race late. Recover while racing only puts the car back on the road, never
+back at the start.
+
 ## The daily time trial
 
 **Daily** in the bar is one circuit a day, the same for everyone, always

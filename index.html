@@ -390,6 +390,22 @@ body.inparty .lb-ver{display:none}
 /* escaped rather than typed, so no tool can mangle the glyph on its way in */
 .rrow.host b::after{content:" \2022 host";color:var(--party);font-weight:600;font-size:10px;letter-spacing:.06em}
 .rrow.me b{color:var(--amber)}
+/* the race settings */
+.race-ctl{margin:2px 0 8px}
+.race-ctl .race-k{font-size:9.5px!important;letter-spacing:.16em;text-transform:uppercase;color:var(--party)!important;margin:8px 0 5px!important}
+.race-ctl .chips{margin-bottom:2px}
+.rrow .gpos{font-family:var(--mono);font-size:10px;color:var(--faint);width:14px;flex:0 0 14px}
+.rrow .gbtn{margin-left:auto;display:flex;gap:3px}
+.gbtn button{background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:2px;width:26px;height:24px;cursor:pointer;font-size:11px;padding:0;line-height:1}
+.gbtn button:hover{border-color:var(--faint);color:var(--ink)}
+.gbtn button:disabled{opacity:.35;cursor:default}
+#raceSum{margin-top:6px}
+body[data-mode="guest"] #raceLaps,body[data-mode="guest"] #gridBtns,body[data-mode="guest"] .gbtn{display:none}
+body[data-mode="host"] #raceSum{display:none}
+.standings .sr .l{font-family:var(--mono);font-size:10px;color:var(--faint);margin-left:6px;white-space:nowrap}
+.standings .sr.fin .t{color:var(--green)}
+#reList .ti-row.me{background:var(--amber-glow)}
+#reList .ti-row:first-child .t{color:var(--amber)}
 
 /* ---- somebody else's circuit ---- */
 .boardtag{
@@ -1210,6 +1226,10 @@ body.admining #lobbybar{display:none}
   body[data-mode="guest"] .rail{width:min(32vw,250px);flex:0 0 min(32vw,250px)}
 }
 
+/* the grid stays on a phone, where the rest of the roster stands down */
+@media (max-width:860px),(pointer:coarse) and (max-height:560px){
+  body.inparty #netLive #raceGrid{display:flex}
+}
 /* A landscape phone is about 400px tall, and the card as it stands is taller
    than that: the wordmark went off the top and the button off the bottom, so
    you could not see what you were filling in and what it would do at the
@@ -1692,6 +1712,25 @@ body.admining #lobbybar{display:none}
               <b id="netShow">----</b>
             </div>
             <div class="roster" id="netWhos"></div>
+            <!-- The race: how many laps, and the grid. The host sets both;
+                 everyone else sees what they are about to line up for. -->
+            <div class="race-ctl" id="raceCtl">
+              <p class="hint race-k">Race</p>
+              <div class="chips" id="raceLaps">
+                <button class="chip" data-laps="0">Practice</button>
+                <button class="chip" data-laps="1">1 lap</button>
+                <button class="chip" data-laps="3" aria-pressed="true">3 laps</button>
+                <button class="chip" data-laps="5">5 laps</button>
+                <button class="chip" data-laps="10">10 laps</button>
+              </div>
+              <p class="hint race-k">Starting grid</p>
+              <div class="roster" id="raceGrid"></div>
+              <div class="chips" id="gridBtns">
+                <button class="chip" id="gridShuffle">Random grid</button>
+                <button class="chip" id="gridJoin">Join order</button>
+              </div>
+              <p class="hint" id="raceSum"></p>
+            </div>
             <p class="hint" id="netWho">Waiting for players…</p>
             <div class="chips" id="solidBox">
               <button class="chip" id="btnSolid">Contact <span class="s" id="solidState">Off</span></button>
@@ -1867,6 +1906,21 @@ body.admining #lobbybar{display:none}
           <button class="pbtn" id="pTouch">On-screen controls <span class="s on" id="touchState">On</span></button>
           <button class="pbtn" id="pBack">Back to the drawing board</button>
           <button class="pbtn" id="pHome">Home</button>
+        </div>
+      </div>
+    </div>
+    <!-- The chequered flag: who won, where you came, and the order. -->
+    <div class="pause sheet" id="raceEnd" hidden>
+      <div class="card">
+        <h3 id="reTitle">Race over</h3>
+        <p id="reSub"></p>
+        <div class="times">
+          <div class="ti-head"><span>Finishing order</span><span class="ti-n" id="reN"></span></div>
+          <div class="ti-list" id="reList"></div>
+        </div>
+        <div class="btns">
+          <button class="pbtn primary" id="reGo">Keep driving</button>
+          <button class="pbtn" id="reBoard">Back to the board</button>
         </div>
       </div>
     </div>
@@ -4503,7 +4557,7 @@ addEventListener("keydown",e=>{
      puts it back at the start — the line, or the daily's rolling start. */
   if(e.code==="KeyR"){
     const now=performance.now();
-    if(now-lastR<450){ resetCar(true); lastR=0; } else { resetCar(false); lastR=now; }
+    if(now-lastR<450){ resetCar(RACE.on?false:true); lastR=0; } else { resetCar(false); lastR=now; }
   }
   if(e.code==="KeyC")G.camMode=(G.camMode+1)%3;
   if(e.code==="KeyM")setSound(!SOUND);
@@ -4955,6 +5009,13 @@ function completeLap(ms){
   standingsUI();
   CAR.lapNo++;
   CAR.curMs=0; CAR.lapDist=0; CAR.secIdx=0;   // sector times stay on screen until overwritten
+  /* in a race the laps are counted from the lights, and the last one is
+     the finish */
+  if(RACE.on&&RACE.mine==null&&RACE.t0){
+    const done=CAR.lapNo-1, rms=Math.round(performance.now()-RACE.t0);
+    netSend({t:"rlap",lap:done,ms:rms});
+    if(done>=RACE.laps){ netSend({t:"finish",ms:rms}); raceFinish(NET.id,myName(),rms,true); }
+  }
 }
 
 /* ---------- camera ---------- */
@@ -5136,10 +5197,11 @@ function updateHUD(dt){
   $("tCur").textContent=fmtTime(CAR.curMs);
   const kph=Math.round(Math.abs(Math.hypot(CAR.vx,CAR.vz))*3.6);
   $("spd").textContent=kph;
-  $("lapNo").textContent=CAR.lapNo;
+  $("lapNo").textContent=RACE.on?(Math.min(CAR.lapNo,RACE.laps)+"/"+RACE.laps+(RACE.pos?" \u00B7 P"+RACE.pos:"")):CAR.lapNo;
   hudAcc+=dt;
   if(hudAcc>0.1){
     hudAcc=0;
+    if(RACE.on)standingsUI();       // positions move every moment in a race
     $("tLast").textContent=fmtTime(CAR.lastMs);
     $("tBest").textContent=fmtTime(CAR.bestMs);
     $("tLast").classList.toggle("pb",CAR.lastMs!=null&&CAR.bestMs!=null&&CAR.lastMs<=CAR.bestMs);
@@ -5461,6 +5523,7 @@ function frame(now){
       CAR.state="run"; CAR.curMs=0; CAR.lapDist=0; CAR.lastP=0;
       lights.classList.remove("on");
       showFlash("Go","#2ED47A","");
+      if(RACE.on&&!RACE.t0)RACE.t0=performance.now();
     }
   }
 
@@ -6478,8 +6541,13 @@ function fsUI(){
 const NET={
   ws:null, id:null, code:null, hostId:null, peers:new Map(),
   status:"off", sendAt:0, wantTrack:false, left:false,
-  live:false        // the host is out on track, and the room is open to join
+  live:false,       // the host is out on track, and the room is open to join
+  raceLaps:3,       // what the host will start: 0 is practice
+  grid:[]           // player ids, front of the grid first; empty = join order
 };
+/* A race, once one has been started: how many laps, who started where,
+   and who has crossed the line for the last time, in order. */
+const RACE={on:false,laps:0,grid:[],t0:0,finished:[],mine:null,pos:0};
 const PUBLIC_RELAY="wss://apexdrawn-relay.onrender.com";
 /* Sits in a bar an inch high now, so it says the offer and stops. What
    hosting means is one press away and obvious once you are there. */
@@ -6845,6 +6913,7 @@ function standingsUI(){
   const party=NET.status==="in";
   el.hidden=!party;
   if(!party)return;
+  if(RACE.on){ raceStandings(el); return; }
   const rows=[{name:myName(),ms:CAR&&CAR.bestMs!=null?CAR.bestMs:null,me:true}];
   for(const [id,p] of NET.peers) rows.push({name:p.name||"Driver",ms:p.bestMs==null?null:p.bestMs,me:false});
   /* Nobody has a time yet is a real state, and it sorts last. */
@@ -6864,6 +6933,30 @@ function standingsUI(){
   });
 }
 
+/* Running order: finishers first in the order they finished, then by laps
+   done and how far round the next. */
+function raceStandings(el){
+  const fin=id=>RACE.finished.findIndex(f=>f.id===String(id));
+  const rows=[{id:String(NET.id),name:myName(),me:true,fin:fin(NET.id),lap:Math.max(0,CAR.lapNo-1),prog:CAR.lastP||0}];
+  for(const [id,p] of NET.peers) rows.push({id:String(id),name:p.name||"Driver",me:false,fin:fin(id),lap:Math.max(p.lap|0,p.rlap|0),prog:p.prog||0});
+  rows.sort((a,b)=>{
+    if((a.fin>=0)!==(b.fin>=0)) return a.fin>=0?-1:1;
+    if(a.fin>=0) return a.fin-b.fin;
+    return (b.lap-a.lap)||(b.prog-a.prog);
+  });
+  el.innerHTML="";
+  rows.forEach((r,i)=>{
+    if(r.me)RACE.pos=i+1;
+    const d=document.createElement("div");
+    d.className="sr"+(r.me?" me":"")+(i===0?" lead":"")+(r.fin>=0?" fin":"");
+    const p=document.createElement("span"); p.className="p"; p.textContent=String(i+1);
+    const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
+    const t=document.createElement("span"); t.className="t";
+    t.textContent = r.fin>=0 ? fmtTime(RACE.finished[r.fin].ms) : "Lap "+Math.min(r.lap+1,RACE.laps);
+    d.appendChild(p); d.appendChild(n); d.appendChild(t);
+    el.appendChild(d);
+  });
+}
 function timesUI(){
   const list=$("tiList"), note=$("tiNote"), me=acctIn()?ACCT.user.name:null;
   list.innerHTML="";
@@ -7307,6 +7400,7 @@ function netUI(){
   const host=on&&NET.id===NET.hostId;
   const mode=!on?"solo":(host?"host":"guest");
   document.body.dataset.mode=mode;
+  if(!on&&RACE.on)raceOff();
 
   /* Shown in every mode now, and it changes what it says rather than
      appearing and disappearing. It starts hidden only so that the first
@@ -7368,6 +7462,7 @@ function netUI(){
     };
     row(myName(),ED.opts.color,ED.opts.car,host,true);
     for(const [id,p] of NET.peers) row(p.name||"Driver",p.colour,p.car,id===NET.hostId,false);
+    raceUI();
 
     const n=NET.peers.size;
     $("netWho").textContent = host
@@ -7381,7 +7476,7 @@ function netUI(){
    go, send everyone out, or wait to be sent. */
 function driveLabel(){
   const b=$("btnDrive"), m=document.body.dataset.mode;
-  if(m==="host") b.textContent="Start race";
+  if(m==="host") b.textContent=NET.raceLaps>0?"Start race \u00B7 "+NET.raceLaps+(NET.raceLaps===1?" lap":" laps"):"Start practice";
   else if(m==="guest") b.textContent=document.body.classList.contains("starting")
     ? "Race starting" : NET.live ? "Join the race" : "Waiting for host";
   else b.textContent="Drive it";
@@ -7450,13 +7545,26 @@ function netHandle(m){
        race should mean joining it, not waiting at the board for a start
        that already happened. */
     NET.live=!!m.live;
+    if(m.cfg){ NET.raceLaps=m.cfg.laps|0; NET.grid=(m.cfg.grid||[]).map(String); }
     if(m.t==="joined"&&m.track) netTakeTrack(m.track);
     netUI(); solidUI();
-    if(m.t==="joined"&&NET.live&&ED.track) netGo(true);
+    /* a race already under way is joined as a race, late; anything else
+       already out on track is joined as it was */
+    if(m.t==="joined"&&m.race&&m.race.laps>0&&ED.track) raceBegin(m.race);
+    else if(m.t==="joined"&&NET.live&&ED.track) netGo(true);
     return;
   }
-  if(m.t==="peer"){ NET.peers.set(m.id,{name:m.name,car:m.car,colour:m.colour,buf:[]}); netUI(); return; }
-  if(m.t==="gone"){ netDropCar(m.id); NET.peers.delete(m.id); netUI(); return; }
+  if(m.t==="rcfg"){ NET.raceLaps=m.laps|0; NET.grid=(m.grid||[]).map(String); raceUI(); driveLabel(); return; }
+  if(m.t==="race"){
+    NET.live=true;
+    if(NET.id===NET.hostId)return;
+    raceBegin({laps:m.laps|0,grid:(m.grid||[]).map(String)});
+    return;
+  }
+  if(m.t==="rlap"){ const p=NET.peers.get(m.id); if(p){ p.rlap=m.lap|0; p.rms=+m.ms||0; standingsUI(); } return; }
+  if(m.t==="finish"){ const p=NET.peers.get(m.id); raceFinish(m.id,p?(p.name||"Driver"):"Driver",+m.ms||0,false); return; }
+  if(m.t==="peer"){ NET.peers.set(m.id,{name:m.name,car:m.car,colour:m.colour,buf:[]}); netUI(); raceCfgSend(); return; }
+  if(m.t==="gone"){ netDropCar(m.id); NET.peers.delete(m.id); netUI(); raceCfgSend(); return; }
   if(m.t==="host"){ NET.hostId=m.id; netUI(); return; }
   if(m.t==="want-track"){ netSendTrack(); return; }
   if(m.t==="meta"){ const p=NET.peers.get(m.id); if(p){p.name=m.name;p.car=m.car;p.colour=m.colour;netDropCar(m.id);} netUI(); return; }
@@ -7472,6 +7580,8 @@ function netHandle(m){
     const p=NET.peers.get(m.id); if(!p)return;
     p.buf.push({t:performance.now(),p:m.p});
     if(p.buf.length>4)p.buf.shift();
+    /* where they are in the race: laps done and how far round the next */
+    if(m.p.length>9){ p.lap=m.p[8]|0; p.prog=+m.p[9]||0; }
     return;
   }
   /* Somebody out there went quicker. */
@@ -7483,6 +7593,97 @@ function netHandle(m){
     return;
   }
 }
+/* ---- the race ----
+   The host picks how many laps and who starts where; everyone lines up on
+   that grid, the lights go, and the first to complete the laps wins. A
+   practice (no laps) is the old free run. */
+function gridIds(){
+  const present=[NET.id,...NET.peers.keys()].map(String);
+  const kept=NET.grid.filter(id=>present.includes(id));
+  for(const id of present.sort((a,b)=>(+a)-(+b))) if(!kept.includes(id)) kept.push(id);
+  return kept;
+}
+function gridName(id){ return id===String(NET.id)?myName():((NET.peers.get(id)||{}).name||"Driver"); }
+function gridColour(id){ return id===String(NET.id)?ED.opts.color:((NET.peers.get(id)||{}).colour||"#8FA3A0"); }
+function raceCfgSend(){
+  if(NET.status!=="in"||NET.id!==NET.hostId)return;
+  NET.grid=gridIds();
+  netSend({t:"rcfg",laps:NET.raceLaps,grid:NET.grid});
+}
+function raceUI(){
+  if(NET.status!=="in")return;
+  const host=NET.id===NET.hostId, ids=gridIds();
+  for(const b of $("raceLaps").children) b.setAttribute("aria-pressed",String((+b.dataset.laps)===NET.raceLaps));
+  const g=$("raceGrid"); g.innerHTML="";
+  ids.forEach((id,i)=>{
+    const el=document.createElement("div"); el.className="rrow"+(id===String(NET.id)?" me":"");
+    const pos=document.createElement("span"); pos.className="gpos"; pos.textContent=String(i+1);
+    const dot=document.createElement("i"); dot.style.background=gridColour(id);
+    const b=document.createElement("b"); b.textContent=gridName(id);
+    el.appendChild(pos); el.appendChild(dot); el.appendChild(b);
+    if(host){
+      const bt=document.createElement("span"); bt.className="gbtn";
+      const up=document.createElement("button"); up.textContent="\u25B2"; up.disabled=i===0; up.title="Up the grid";
+      const dn=document.createElement("button"); dn.textContent="\u25BC"; dn.disabled=i===ids.length-1; dn.title="Down the grid";
+      up.addEventListener("click",()=>{ const a=gridIds(); [a[i-1],a[i]]=[a[i],a[i-1]]; NET.grid=a; raceUI(); raceCfgSend(); });
+      dn.addEventListener("click",()=>{ const a=gridIds(); [a[i+1],a[i]]=[a[i],a[i+1]]; NET.grid=a; raceUI(); raceCfgSend(); });
+      bt.appendChild(up); bt.appendChild(dn); el.appendChild(bt);
+    }
+    g.appendChild(el);
+  });
+  const me=ids.indexOf(String(NET.id));
+  $("raceSum").textContent=NET.raceLaps>0
+    ? NET.raceLaps+(NET.raceLaps===1?" lap":" laps")+" · you start P"+(me+1)+" of "+ids.length
+    : "Practice — no laps counted.";
+}
+$("raceLaps").addEventListener("click",e=>{
+  const b=e.target.closest("[data-laps]"); if(!b||NET.id!==NET.hostId)return;
+  NET.raceLaps=+b.dataset.laps; raceUI(); raceCfgSend(); driveLabel();
+});
+$("gridShuffle").addEventListener("click",()=>{
+  if(NET.id!==NET.hostId)return;
+  const a=gridIds(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  NET.grid=a; raceUI(); raceCfgSend();
+});
+$("gridJoin").addEventListener("click",()=>{ if(NET.id!==NET.hostId)return; NET.grid=[]; raceUI(); raceCfgSend(); });
+function raceBegin(cfg){
+  RACE.on=true; RACE.laps=Math.max(1,cfg.laps|0); RACE.grid=(cfg.grid||[]).map(String);
+  RACE.finished=[]; RACE.mine=null; RACE.t0=0; RACE.pos=0;
+  $("raceEnd").hidden=true;
+  const me=RACE.grid.indexOf(String(NET.id));
+  netSay(RACE.laps+(RACE.laps===1?"-lap race":"-lap race")+(me>=0?" — you start P"+(me+1):""));
+  driveNow();
+}
+function raceOff(){ RACE.on=false; RACE.finished=[]; RACE.mine=null; $("raceEnd").hidden=true; }
+/* somebody has done the laps: the first one is the winner */
+function raceFinish(id,name,ms,me){
+  if(!RACE.on||RACE.finished.some(f=>f.id===String(id)))return;
+  RACE.finished.push({id:String(id),name,ms});
+  const place=RACE.finished.length;
+  if(me)RACE.mine=ms;
+  if(place===1) showFlash(me?"You win!":name+" wins","#FFB020",fmtTime(ms));
+  else if(me) showFlash("P"+place,"#E6EEEC",fmtTime(ms));
+  standingsUI(); raceEndUI();
+}
+function raceEndUI(){
+  if(!RACE.on||RACE.mine==null)return;
+  const total=NET.peers.size+1, n=RACE.finished.length;
+  const me=RACE.finished.findIndex(f=>f.id===String(NET.id))+1;
+  $("reTitle").textContent=n>=total?"Race over":(me===1?"You win!":"Finished");
+  $("reSub").textContent=(RACE.finished[0].id===String(NET.id)?"You won":RACE.finished[0].name+" won")+" over "+RACE.laps+(RACE.laps===1?" lap":" laps")+" · you finished P"+me+" of "+total+(n<total?" · "+(total-n)+" still out there":"");
+  $("reN").textContent=n+" of "+total;
+  const list=$("reList"); list.innerHTML="";
+  RACE.finished.forEach((f,i)=>{
+    const row=document.createElement("div"); row.className="ti-row"+(f.id===String(NET.id)?" me":"");
+    const p=document.createElement("span"); p.className="p"; p.textContent=(i+1)+".";
+    const nm=document.createElement("span"); nm.className="n"; nm.textContent=f.name;
+    const t=document.createElement("span"); t.className="t"; t.textContent=i===0?fmtTime(f.ms):"+"+((f.ms-RACE.finished[0].ms)/1000).toFixed(3);
+    row.appendChild(p); row.appendChild(nm); row.appendChild(t); list.appendChild(row);
+  });
+  $("raceEnd").hidden=false;
+}
+$("reGo").addEventListener("click",()=>{ $("raceEnd").hidden=true; });
+$("reBoard").addEventListener("click",()=>{ $("raceEnd").hidden=true; $("pBack").click(); });
 /* Out onto the host's circuit. A start has a beat of "Race starting" so
    the button is seen to answer; joining a race already running does not
    wait for one. Only from the board — a guest already driving is out there
@@ -7569,6 +7770,7 @@ function netSendTrack(){
    having to agree on one. */
 function netSlot(){
   if(NET.status!=="in")return -1;                 // driving alone: dead centre
+  if(RACE.on&&RACE.grid.length){ const i=RACE.grid.indexOf(String(NET.id)); if(i>=0)return i; }
   const ids=[NET.id];
   for(const k of NET.peers.keys()) ids.push(k);
   ids.sort((a,b)=>(+a)-(+b));
@@ -7906,7 +8108,8 @@ function netTick(){
     +CAR.x.toFixed(2),+CAR.y.toFixed(2),+CAR.z.toFixed(2),
     +CAR.yaw.toFixed(3),
     +(c?c.rotation.x:0).toFixed(3), +(c?c.rotation.z:0).toFixed(3),
-    +CAR.steer.toFixed(2), +CAR.wheelSpin.toFixed(2)
+    +CAR.steer.toFixed(2), +CAR.wheelSpin.toFixed(2),
+    CAR.lapNo-1, +CAR.lastP.toFixed(3)
   ]});
 }
 
@@ -8041,8 +8244,15 @@ function driveOut(){
        socket, so everyone builds the final circuit before they are sent
        out onto it — however recently it was last touched. */
     netSendTrack();
-    netSend({t:"go"});                                       // take the room with you
     NET.live=true;                                           // the relay tells everyone else
+    if(NET.raceLaps>0){
+      const cfg={laps:NET.raceLaps,grid:gridIds()};
+      netSend(Object.assign({t:"race"},cfg));
+      raceBegin(cfg);
+      return;
+    }
+    raceOff();
+    netSend({t:"go"});                                       // take the room with you
   }
   driveNow();
 }
@@ -8090,7 +8300,7 @@ function driveNow(){
 }
 $("pResume").addEventListener("click",()=>togglePause(false));
 $("pReset").addEventListener("click",()=>{ resetCar(false); togglePause(false); });
-$("pRestart").addEventListener("click",()=>{ resetCar(true); togglePause(false); });
+$("pRestart").addEventListener("click",()=>{ resetCar(RACE.on?false:true); togglePause(false); });
 $("pFull").addEventListener("click",()=>{ fsToggle(); setTimeout(fsUI,120); });
 $("pSound").addEventListener("click",()=>setSound(!SOUND));
 $("pMusic").addEventListener("click",()=>setMusic(!MUSIC));
