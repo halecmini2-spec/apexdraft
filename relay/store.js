@@ -21,7 +21,7 @@ const path = require("path");
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [] };
+  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {} };
   let writing = null, again = false;
 
   try {
@@ -34,6 +34,7 @@ function fileStore(file) {
     db.days = db.days || {};
     db.log = db.log || [];
     db.ghosts = db.ghosts || [];
+    db.who = db.who || {};
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -198,6 +199,9 @@ function fileStore(file) {
       d[vid] = (d[vid] || 0) + 1;
       /* when, as well as how many: the last month of them */
       db.log.push({ at: at || Date.now(), vid, name: name || null });
+      /* Once a browser has been seen signed in, it is that person's — and
+         so were its earlier visits, which can be named after the fact. */
+      if (name) db.who[vid] = name;
       const cut = Date.now() - 31 * 86_400_000;
       if (db.log.length > 5000 || (db.log[0] && db.log[0].at < cut)) db.log = db.log.filter((l) => l.at >= cut).slice(-5000);
       await save();
@@ -209,7 +213,7 @@ function fileStore(file) {
       const out = db.log.slice(-limit).reverse();
       const first = {};
       for (const [day, m] of Object.entries(db.visits)) for (const v of Object.keys(m)) if (!first[v] || day < first[v]) first[v] = day;
-      return out.map((l) => ({ at: l.at, vid: l.vid, name: l.name || null, first: first[l.vid] || null }));
+      return out.map((l) => ({ at: l.at, vid: l.vid, name: l.name || db.who[l.vid] || null, known: !!l.name, first: first[l.vid] || null }));
     },
     async playing(day, players) {
       const d = db.days[day] || (db.days[day] = { plays: 0, peak: 0 });
@@ -329,6 +333,13 @@ function pgStore(url) {
           name TEXT
         )`);
       await pool.query(`ALTER TABLE visit_log ADD COLUMN IF NOT EXISTS name TEXT`);
+      /* Which browser is whose: the last account seen signed in on it, so
+         the visits it made before signing in can be named too. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS visitors (
+          vid  TEXT PRIMARY KEY,
+          name TEXT NOT NULL
+        )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS visit_log_at ON visit_log(at)`);
       /* Parties started per day, and the most people connected at once. */
       await pool.query(`
@@ -459,16 +470,18 @@ function pgStore(url) {
         `INSERT INTO visits (day,vid,n) VALUES ($1,$2,1)
          ON CONFLICT (day,vid) DO UPDATE SET n=visits.n+1`, [day, vid]);
       await pool.query(`INSERT INTO visit_log (at,vid,name) VALUES ($1,$2,$3)`, [at || Date.now(), vid, name || null]);
+      if (name) await pool.query(`INSERT INTO visitors (vid,name) VALUES ($1,$2) ON CONFLICT (vid) DO UPDATE SET name=EXCLUDED.name`, [vid, name]);
       /* a month of moments is plenty; the day counts keep the rest */
       if (Math.random() < 0.02) await pool.query(`DELETE FROM visit_log WHERE at < $1`, [Date.now() - 31 * 86_400_000]);
     },
     async recent(limit) {
-      const rows = (await pool.query(`SELECT at, vid, name FROM visit_log ORDER BY at DESC LIMIT $1`, [limit])).rows;
+      const rows = (await pool.query(
+        `SELECT l.at, l.vid, l.name, v.name AS who FROM visit_log l LEFT JOIN visitors v ON v.vid=l.vid ORDER BY l.at DESC LIMIT $1`, [limit])).rows;
       if (!rows.length) return [];
       const vids = [...new Set(rows.map((r) => r.vid))];
       const f = (await pool.query(`SELECT vid, MIN(day) AS first FROM visits WHERE vid = ANY($1) GROUP BY vid`, [vids])).rows;
       const first = {}; for (const r of f) first[r.vid] = r.first;
-      return rows.map((r) => ({ at: Number(r.at), vid: r.vid, name: r.name || null, first: first[r.vid] || null }));
+      return rows.map((r) => ({ at: Number(r.at), vid: r.vid, name: r.name || r.who || null, known: !!r.name, first: first[r.vid] || null }));
     },
     async playing(day, players) {
       await pool.query(

@@ -41,7 +41,7 @@ function makeAdmin(store, userFor, liveNow) {
          short tag made from it, enough to see the same browser twice. */
       const crypto = require("crypto");
       const tag = (v) => crypto.createHash("sha256").update("tag:" + v).digest("hex").slice(0, 4);
-      const recent = (await store.recent(400)).map((r) => ({ at: r.at, who: tag(r.vid), name: r.name || null, first: r.first }));
+      const recent = (await store.recent(400)).map((r) => ({ at: r.at, who: tag(r.vid), name: r.name || null, known: !!r.known, first: r.first }));
       return json(res, 200, {
         live: liveNow ? liveNow() : { players: 0, rooms: 0, racing: 0 },
         today: new Date().toISOString().slice(0, 10),

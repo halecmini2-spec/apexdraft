@@ -879,6 +879,7 @@ body.admining #lobbybar{display:none}
 .ad-log .w{color:var(--dim)}
 .ad-log .ad-row>span{white-space:nowrap}
 .ad-log .w.who{color:var(--ink);font-weight:600}
+.ad-log .w.who.later{color:var(--dim)}
 .ad-log .w .tag{color:var(--faint);font-weight:400}
 .ad-log .new{color:var(--amber);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-left:8px}
 .ad-log .back{color:var(--faint);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-left:8px}
@@ -6753,9 +6754,11 @@ function adRecent(recent,today){
     const dd=document.createElement("span"); dd.className="d"; dd.textContent=fmtD(d);
     left.appendChild(t); left.appendChild(dd);
     const right=document.createElement("span");
-    const w=document.createElement("span"); w.className=v.name?"w who":"w";
+    /* named outright when the visit was signed in; named from the browser's
+       later sign-in when it was not, and marked as such */
+    const w=document.createElement("span"); w.className=v.name?(v.known?"w who":"w who later"):"w";
     w.textContent=v.name?v.name:"visitor "+v.who;
-    if(v.name){ const tg=document.createElement("span"); tg.className="tag"; tg.textContent=" · "+v.who; w.appendChild(tg); }
+    if(v.name){ const tg=document.createElement("span"); tg.className="tag"; tg.textContent=" · "+v.who+(v.known?"":" · same browser"); w.appendChild(tg); }
     const tag=document.createElement("span");
     /* first seen the day this visit happened -> a newcomer that day */
     const isNew=!v.first||v.first===new Date(v.at).toISOString().slice(0,10);

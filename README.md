@@ -169,7 +169,9 @@ string, no path — enough to say how many came, and nothing about any one of
 them. Copies opened from disk or a dev server are not counted. The desk
 also lists when the recent visits happened, on the admin's own clock, with
 each browser shown as a short tag and marked as a newcomer or a return —
-or by account name, when the visitor was signed in.
+or by account name, when the visitor was signed in. A browser seen signed in
+once is that person's, so its earlier visits are named from it too, marked
+"same browser".
 "People" means different browsers: a phone and a laptop count twice, two
 people on one machine count once.
 
