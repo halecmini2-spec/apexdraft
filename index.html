@@ -542,7 +542,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 /* the home page */
 #home{position:relative;overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal));
   background:radial-gradient(ellipse at 18% 12%,rgba(255,176,32,.10),transparent 48%),radial-gradient(ellipse at 88% 92%,rgba(127,209,196,.08),transparent 46%),var(--ground)}
-.home-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.home-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.82}
 .home-wrap{position:relative;max-width:900px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;justify-content:center;gap:22px}
 .home-card{background:rgba(16,24,26,.86);backdrop-filter:blur(3px)}
 .home-head .auth-brand.big{font-size:30px;letter-spacing:.18em}
@@ -5977,35 +5977,39 @@ function homeArt(){
   for(let x=0.5;x<W;x+=40){ c.moveTo(x,0); c.lineTo(x,H); } for(let y=0.5;y<H;y+=40){ c.moveTo(0,y); c.lineTo(W,y); } c.stroke();
   c.strokeStyle="rgba(255,255,255,.06)"; c.beginPath();
   for(let x=0.5;x<W;x+=200){ c.moveTo(x,0); c.lineTo(x,H); } for(let y=0.5;y<H;y+=200){ c.moveTo(0,y); c.lineTo(W,y); } c.stroke();
-  /* the circuit, off to the right and a little turned, big enough to run
-     behind the cards */
-  const cfg={rx:1,ry:0.68,h:[[0.16,2,0.9],[0.12,3,2.1],[0.06,5,0.4]]}, n=220, P=[];
-  const R=Math.max(W,H)*0.46, cx=W*0.66, cy=H*0.52, rot=-0.35;
-  for(let i=0;i<n;i++){ const a=i/n*TAU; let r=1; for(const h of cfg.h) r+=h[0]*Math.sin(h[1]*a+h[2]);
-    const x=Math.cos(a)*cfg.rx*r*R, y=Math.sin(a)*cfg.ry*r*R;
-    P.push({x:cx+x*Math.cos(rot)-y*Math.sin(rot), y:cy+x*Math.sin(rot)+y*Math.cos(rot)}); }
-  const path=new Path2D(); path.moveTo(P[0].x,P[0].y); for(let i=1;i<n;i++) path.lineTo(P[i].x,P[i].y); path.closePath();
-  c.lineJoin="round"; c.lineCap="round";
-  const wRoad=Math.max(22,R*0.075);
-  c.strokeStyle="rgba(27,42,34,.55)"; c.lineWidth=wRoad+12; c.stroke(path);       // verge
-  c.strokeStyle="rgba(201,208,205,.22)"; c.lineWidth=wRoad; c.stroke(path);       // painted edges
-  c.strokeStyle="rgba(42,48,51,.85)"; c.lineWidth=wRoad-3; c.stroke(path);        // asphalt
-  c.setLineDash([12,14]); c.strokeStyle="rgba(214,219,216,.16)"; c.lineWidth=1.6; c.stroke(path); c.setLineDash([]);
-  /* the racing line: the same loop, pulled toward the inside of each bend */
-  c.beginPath();
-  for(let i=0;i<=n;i++){ const p=P[i%n], q=P[(i+3)%n], o=P[(i-3+n)%n]; const kx=(q.x+o.x)/2-p.x, ky=(q.y+o.y)/2-p.y; const m=Math.hypot(kx,ky)||1;
-    const pull=Math.min(wRoad*0.34,m*9); const x=p.x+kx/m*pull, y=p.y+ky/m*pull; i?c.lineTo(x,y):c.moveTo(x,y); }
-  c.closePath(); c.strokeStyle="rgba(255,176,32,.55)"; c.lineWidth=2.2; c.shadowColor="rgba(255,176,32,.55)"; c.shadowBlur=10; c.stroke(); c.shadowBlur=0;
-  /* start line, across the road */
-  const s0=P[0], s1=P[2], ang=Math.atan2(s1.y-s0.y,s1.x-s0.x);
-  c.save(); c.translate(s0.x,s0.y); c.rotate(ang);
-  const cell=wRoad/8;
-  for(let r0=0;r0<2;r0++) for(let k=0;k<8;k++){ c.fillStyle=((r0+k)%2)?"rgba(18,24,26,.9)":"rgba(237,239,238,.7)"; c.fillRect(r0*cell-cell,-wRoad/2+k*cell,cell,cell); }
-  c.restore();
-  /* direction arrows, sparse */
-  c.fillStyle="rgba(255,176,32,.45)";
-  for(let i=14;i<n;i+=Math.round(n/9)){ const a=P[(i-2+n)%n], b=P[(i+2)%n], t=Math.atan2(b.y-a.y,b.x-a.x);
-    c.save(); c.translate(P[i].x,P[i].y); c.rotate(t); c.beginPath(); c.moveTo(7,0); c.lineTo(-5,5); c.lineTo(-5,-5); c.closePath(); c.fill(); c.restore(); }
+  /* Lots of little circuits, one to a cell, each its own random loop drawn
+     the way the board draws a road — verge, edges, asphalt, centre line —
+     with the racing line over it in amber, a start line and an arrow.
+     Random each visit, sized to the screen. */
+  let seed=(Date.now()%100000)|0; const rnd=()=>{ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; };
+  const cell=Math.max(150,Math.min(240,Math.min(W,H)/3.2));
+  const cols=Math.ceil(W/cell), rows=Math.ceil(H/cell);
+  for(let r=0;r<rows;r++) for(let q=0;q<cols;q++){
+    const cx=(q+0.5)*cell+(rnd()-0.5)*cell*0.18, cy=(r+0.5)*cell+(rnd()-0.5)*cell*0.18;
+    const nH=2+Math.floor(rnd()*3), orders=[2,3,4,5,6].sort(()=>rnd()-0.5).slice(0,nH); let budget=0.22+rnd()*0.2;
+    const hs=orders.map((k,i)=>{ const share=i===orders.length-1?budget:budget*(0.35+rnd()*0.3); budget-=share; return [share,k,rnd()*TAU]; });
+    const rx=cell*0.36, ry=cell*(0.22+rnd()*0.12), rot=rnd()*TAU, n=90, P=[];
+    for(let i=0;i<n;i++){ const t=i/n*TAU; let rr=1; for(const h of hs) rr+=h[0]*Math.sin(h[1]*t+h[2]);
+      const x=Math.cos(t)*rx*rr, y=Math.sin(t)*ry*rr; P.push({x:cx+x*Math.cos(rot)-y*Math.sin(rot), y:cy+x*Math.sin(rot)+y*Math.cos(rot)}); }
+    const path=new Path2D(); path.moveTo(P[0].x,P[0].y); for(let i=1;i<n;i++) path.lineTo(P[i].x,P[i].y); path.closePath();
+    c.lineJoin="round"; c.lineCap="round";
+    const wRoad=cell*0.075;
+    c.strokeStyle="rgba(27,42,34,.55)"; c.lineWidth=wRoad+7; c.stroke(path);
+    c.strokeStyle="rgba(201,208,205,.22)"; c.lineWidth=wRoad; c.stroke(path);
+    c.strokeStyle="rgba(42,48,51,.88)"; c.lineWidth=wRoad-2; c.stroke(path);
+    c.setLineDash([5,6]); c.strokeStyle="rgba(214,219,216,.16)"; c.lineWidth=1; c.stroke(path); c.setLineDash([]);
+    c.beginPath();
+    for(let i=0;i<=n;i++){ const p=P[i%n], q2=P[(i+2)%n], o=P[(i-2+n)%n]; const kx=(q2.x+o.x)/2-p.x, ky=(q2.y+o.y)/2-p.y; const m=Math.hypot(kx,ky)||1;
+      const pull=Math.min(wRoad*0.32,m*6); const x=p.x+kx/m*pull, y=p.y+ky/m*pull; i?c.lineTo(x,y):c.moveTo(x,y); }
+    c.closePath(); c.strokeStyle="rgba(255,176,32,.5)"; c.lineWidth=1.3; c.shadowColor="rgba(255,176,32,.5)"; c.shadowBlur=6; c.stroke(); c.shadowBlur=0;
+    const s0=P[0], s1=P[2], ang=Math.atan2(s1.y-s0.y,s1.x-s0.x);
+    c.save(); c.translate(s0.x,s0.y); c.rotate(ang); const ck=wRoad/6;
+    for(let r0=0;r0<2;r0++) for(let k=0;k<6;k++){ c.fillStyle=((r0+k)%2)?"rgba(18,24,26,.9)":"rgba(237,239,238,.7)"; c.fillRect(r0*ck-ck,-wRoad/2+k*ck,ck,ck); }
+    c.restore();
+    const ai=Math.floor(n*0.45), a0=P[(ai-2+n)%n], a1=P[(ai+2)%n];
+    c.save(); c.translate(P[ai].x,P[ai].y); c.rotate(Math.atan2(a1.y-a0.y,a1.x-a0.x)); c.fillStyle="rgba(255,176,32,.5)";
+    c.beginPath(); c.moveTo(4.5,0); c.lineTo(-3.5,3.5); c.lineTo(-3.5,-3.5); c.closePath(); c.fill(); c.restore();
+  }
 }
 addEventListener("resize",()=>{ if(!$("home").hidden)homeArt(); });
 function baseShow(v){
