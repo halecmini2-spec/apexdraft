@@ -877,6 +877,8 @@ body.admining #lobbybar{display:none}
 .ad-log .t{color:var(--ink);font-variant-numeric:tabular-nums}
 .ad-log .d{color:var(--faint);margin-left:8px}
 .ad-log .w{color:var(--dim)}
+.ad-log .w.who{color:var(--ink);font-weight:600}
+.ad-log .w .tag{color:var(--faint);font-weight:400}
 .ad-log .new{color:var(--amber);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-left:8px}
 .ad-log .back{color:var(--faint);font-size:10px;letter-spacing:.08em;text-transform:uppercase;margin-left:8px}
 .ad-chart.hours{height:236px}
@@ -6649,7 +6651,9 @@ function adRecent(recent,today){
     const dd=document.createElement("span"); dd.className="d"; dd.textContent=fmtD(d);
     left.appendChild(t); left.appendChild(dd);
     const right=document.createElement("span");
-    const w=document.createElement("span"); w.className="w"; w.textContent="visitor "+v.who;
+    const w=document.createElement("span"); w.className=v.name?"w who":"w";
+    w.textContent=v.name?v.name:"visitor "+v.who;
+    if(v.name){ const tg=document.createElement("span"); tg.className="tag"; tg.textContent=" · "+v.who; w.appendChild(tg); }
     const tag=document.createElement("span");
     /* first seen the day this visit happened -> a newcomer that day */
     const isNew=!v.first||v.first===new Date(v.at).toISOString().slice(0,10);
@@ -7587,14 +7591,15 @@ $("pBack").addEventListener("click",()=>{
   $("tMenu").addEventListener("click",e=>{e.preventDefault();togglePause(true);});
   if(IS_TOUCH)document.body.classList.add("touchcap");
   /* One small beacon per load so the desk can count visits: a random id
-     this browser made up and keeps, and nothing else. Not from a copy on
-     disk or a dev server — those are not visits. */
+     this browser made up and keeps, and the account token if signed in so
+     the desk can put a name to the visit. Not from a copy on disk or a dev
+     server — those are not visits. */
   setTimeout(()=>{
     const h=location.hostname;
     if(!h||h==="localhost"||h==="127.0.0.1")return;
     let vid=store.get("ad.vid",null);
     if(!vid){ vid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,"0")).join(""); store.set("ad.vid",vid); }
-    try{ fetch(apiBase()+"/api/hit",{method:"POST",body:JSON.stringify({v:vid}),keepalive:true,headers:{"content-type":"text/plain"}}).catch(()=>{}); }catch(e){}
+    try{ fetch(apiBase()+"/api/hit",{method:"POST",body:JSON.stringify(ACCT.token?{v:vid,t:ACCT.token}:{v:vid}),keepalive:true,headers:{"content-type":"text/plain"}}).catch(()=>{}); }catch(e){}
   },1500);
   if(a2hsInstalled()) document.body.classList.add("standalone");
   updateCheck();                    // note the build we started on

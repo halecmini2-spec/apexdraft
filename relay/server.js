@@ -25,7 +25,7 @@ const store = open();
 const auth = makeAuth(store);
 const tracks = makeTracks(store, auth.userFor);
 const laps = makeLaps(store, auth.userFor);
-const visits = makeVisits(store);
+const visits = makeVisits(store, auth.userFor);
 const daily = makeDaily();
 /* What is happening right now, for the admin desk. A socket only connects
    to host or join, so every socket is somebody in a party. */
