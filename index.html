@@ -5982,7 +5982,7 @@ function homeArt(){
      through a handful of random points, in amber or pale grey, thin, some
      with a faint glow. New ones every visit. */
   let seed=(Date.now()%100000)|0; const rnd=()=>{ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; };
-  const count=Math.round((W*H)/42000)+8;
+  const count=Math.round((W*H)/85000)+5;
   c.lineCap="round"; c.lineJoin="round";
   for(let k=0;k<count;k++){
     /* From one edge of the page to another, never stopping in the middle:
