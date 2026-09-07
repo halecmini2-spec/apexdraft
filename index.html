@@ -869,7 +869,7 @@ body.admining #lobbybar{display:none}
 .ad-key .k-bar{background:var(--amber);opacity:.8}
 .ad-key .k-line{height:2px;background:#7FD1C4;vertical-align:2px}
 .ad-key .k-dot{width:7px;height:7px;border-radius:50%;background:var(--party)}
-.ad-when{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px;margin-top:6px}
+.ad-when{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;margin-top:6px}
 @media (max-width:700px){.ad-when{grid-template-columns:1fr}}
 .ad-when .ad-head{margin:6px 0 6px}
 #adminScreen .ad-log{max-height:236px;overflow-y:auto;gap:3px}
@@ -877,7 +877,9 @@ body.admining #lobbybar{display:none}
 .ad-log .t{color:var(--ink);font-variant-numeric:tabular-nums}
 .ad-log .d{color:var(--faint);margin-left:8px}
 .ad-log .w{color:var(--dim)}
-.ad-log .ad-row>span{white-space:nowrap}
+.ad-log .ad-row{flex-wrap:nowrap}
+.ad-log .ad-row>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ad-log .ad-row>span:last-child{display:inline-flex;align-items:baseline;flex:0 0 auto;white-space:nowrap}
 .ad-log .w.who{color:var(--ink);font-weight:600}
 .ad-log .w.who.later{color:var(--dim)}
 .ad-log .w .tag{color:var(--faint);font-weight:400}
