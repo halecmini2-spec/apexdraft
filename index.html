@@ -1539,7 +1539,7 @@ body.admining #lobbybar{display:none}
       <div class="home-acct" id="hmAcct">
         <div class="home-acct-txt">
           <b id="hmAcctHead">Easy and free: make an account</b>
-          <span id="hmAcctSub">A name, an email and a password. Nothing to verify, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.</span>
+          <span id="hmAcctSub">A name and a password. No email, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.</span>
         </div>
         <div class="home-acct-btns">
           <button class="go green" id="hmSignUp">Create free account</button>
@@ -1872,7 +1872,7 @@ body.admining #lobbybar{display:none}
   </section>
 
   <!-- ===================== ACCOUNT ===================== -->
-  <!-- A username, an email and a password, and nothing else asked for. It
+  <!-- A username and a password, and nothing else asked for. It
        is a form, so a password manager can fill it and Enter submits it. -->
   <section id="auth" class="screen" hidden>
     <div class="auth-card">
@@ -1892,12 +1892,6 @@ body.admining #lobbybar{display:none}
                    autocapitalize="none" autocorrect="off" spellcheck="false">
           </label>
           <p class="anote" id="auNote"></p>
-
-          <label class="afield" id="auMailRow" hidden>
-            <span>Email</span>
-            <input id="auMail" type="email" maxlength="120" autocomplete="email"
-                   autocapitalize="none" autocorrect="off" spellcheck="false">
-          </label>
 
           <label class="afield">
             <span>Password</span>
@@ -2136,7 +2130,12 @@ function canonRaw(raw,fit){
   return raw.map(p=>({x:cx+(p.x-cx)/f, y:cy+(p.y-cy)/f}));
 }
 
+/* A drawing that cannot be a circuit, and why not: thrown out of the
+   builder and said on the board. */
+class BuildError extends Error{}
+let BUILD_WHY=null;
 function buildCircuit(raw,opts,fit){
+  BUILD_WHY=null;
   if(!raw||raw.length<8)return null;
   /* Before anything else, so that resampling, smoothing and the minimum
      corner radius — all of which are measured in pad units — see the same
@@ -2208,9 +2207,19 @@ function buildCircuit(raw,opts,fit){
   {
     const near2=(HW0*2.3)*(HW0*2.3);
     const seen=new Uint8Array(N);
+    /* A loop that comes back over itself once or twice is a circuit with a
+       bridge. One that does it all over the place, or that runs back along
+       itself so the two roads merge, is not a circuit: the decks would pile
+       up and one road's barriers would stand on the other's tarmac. Those
+       are refused here, with the reason, rather than built badly. */
+    let junctions=0;
+    /* two roads side by side need room between their edges for the verge
+       and the barriers of each; closer than this and they are one road */
+    const nearPar2=(HW0*2+7)*(HW0*2+7);
+    const heading=i=>{ const a=(i-2+N)%N, b=(i+2)%N; const dx=X[b]-X[a], dz=Z[b]-Z[a], m=Math.hypot(dx,dz)||1; return [dx/m,dz/m]; };
     for(let i=0;i<N;i++){
       if(seen[i])continue;
-      let bj=-1, bd=near2;
+      let bj=-1, bd=nearPar2;
       for(let j=0;j<N;j++){
         let ad=Math.abs(i-j); ad=Math.min(ad,N-ad);
         if(ad<45)continue;               // adjacent road, not a crossing
@@ -2218,6 +2227,12 @@ function buildCircuit(raw,opts,fit){
         if(dd<bd){ bd=dd; bj=j; }
       }
       if(bj<0)continue;
+      const ha=heading(i), hb=heading(bj);
+      const sin=Math.abs(ha[0]*hb[1]-ha[1]*hb[0]);
+      if(sin<0.42) throw new BuildError("This loop runs back along itself, so one road's barriers would sit on the other's tarmac. Draw it so the roads cross rather than merge.");
+      if(bd>=near2)continue;             // passes nearby at an angle, without meeting
+      junctions++;
+      if(junctions>2) throw new BuildError("This loop crosses itself too many times to be a circuit. Two crossovers is the most that can be bridged.");
       /* claim both approaches so one junction is not lifted several times */
       for(let t=-50;t<=50;t++){ seen[(i+t+N*4)%N]=1; seen[(bj+t+N*4)%N]=1; }
       /* whichever is already higher goes over — least earth moved */
@@ -5721,8 +5736,8 @@ function finalise(){
   const L=plen(ED.raw);
   const gap=Math.hypot(ED.raw[0].x-ED.raw[ED.raw.length-1].x,ED.raw[0].y-ED.raw[ED.raw.length-1].y);
   rebuild();
-  if(!ED.track){ msg("That line couldn't be made into a circuit — try a rounder, closed loop."); return; }
-  if(ED.track.crosses) msg("This circuit crosses itself — you'll drive straight through the junction.");
+  if(!ED.track){ msg(BUILD_WHY?"Not a valid circuit: "+BUILD_WHY:"That line couldn't be made into a circuit — try a rounder, closed loop."); return; }
+  if(ED.track.crosses) msg("This circuit crosses itself — the road goes over on a bridge.");
   else if(gap>L*0.30) msg("Loop closed for you — the open ends were joined up.");
 }
 function rebuild(){
@@ -5730,8 +5745,9 @@ function rebuild(){
   try{
     ED.track=buildCircuit(ED.raw,ED.opts,ED.fit);
   }catch(err){
-    ED.track=null; console.error(err);
-    msg("Couldn't build that circuit — try a simpler loop.");
+    ED.track=null;
+    if(err instanceof BuildError){ BUILD_WHY=err.message; msg("Not a valid circuit: "+err.message); }
+    else { console.error(err); msg("Couldn't build that circuit — try a simpler loop."); }
   }
   store.set("ad.raw",ED.raw); store.set("ad.opts",ED.opts);
   syncBank();                      // corner count may have changed
@@ -5903,7 +5919,7 @@ function drawCircuitMap(ctx,T){
 function updateReadout(){
   const el=$("readout"), T=ED.track;
   $("btnDrive").disabled=!T;
-  if(!T){ el.innerHTML='<div class="cell"><span class="k">Circuit</span><span class="v">—</span></div>'; return; }
+  if(!T){ el.innerHTML='<div class="cell"><span class="k">Circuit</span><span class="v">'+(BUILD_WHY?"Not valid":"—")+'</span></div>'; return; }
   const s=T.stats;
   const cells=[
     ["Length",(s.length/1000).toFixed(2),"km"],
@@ -6478,7 +6494,7 @@ function relayURL(){
 /* =====================================================================
    ACCOUNTS
    ===================================================================== */
-/* A username, an email and a password, and the account settles exactly one
+/* A username and a password, and the account settles exactly one
    thing: the name other people see on your car, and that nobody else can
    turn up wearing it. There is no verification mail and no password reset,
    so nothing here is written as though there were.
@@ -6544,7 +6560,7 @@ function acctUI(){
   $("hmAcct").classList.toggle("in",on);
   $("hmAcctHead").textContent=on?"Signed in as "+ACCT.user.name:"Easy and free: make an account";
   $("hmAcctSub").textContent=on?"Your name is on your car, and your laps and saved circuits follow you to any device."
-    :"A name, an email and a password. Nothing to verify, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.";
+    :"A name and a password. No email, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.";
   $("authForms").hidden=on;
   $("authWho").hidden=!on;
   $("auSub").textContent=on?"Your account":"Race under your own name";
@@ -6582,7 +6598,7 @@ let AU_MODE="in";
 const AU_WHY={
   in:"An account puts your own name on your car when you race other people, "+
      "and keeps anyone else turning up wearing it.",
-  up:"Three things, and nothing else asked for. There is no verification email "+
+  up:"A name and a password, and nothing else asked for. There is no email "+
      "and no password reset, so pick a password you will remember.",
 };
 function auSay(msg,bad){ const e=$("auMsg"); e.textContent=msg||""; e.classList.toggle("bad",!!bad); }
@@ -6596,7 +6612,6 @@ function authTab(mode){
   AU_MODE=mode;
   $("tabIn").setAttribute("aria-pressed",String(mode==="in"));
   $("tabUp").setAttribute("aria-pressed",String(mode==="up"));
-  $("auMailRow").hidden=mode!=="up";
   /* Tells a password manager to offer a new one rather than an old one. */
   $("auPass").setAttribute("autocomplete",mode==="up"?"new-password":"current-password");
   $("auGo").textContent=mode==="up"?"Create account":"Sign in";
@@ -6650,7 +6665,6 @@ $("authForm").addEventListener("submit",async ev=>{
   ev.preventDefault();
   const up=AU_MODE==="up";
   const username=$("auName").value.trim();
-  const email=$("auMail").value.trim();
   const password=$("auPass").value;
   $("auGo").disabled=true;
   auNote("");
@@ -6660,7 +6674,7 @@ $("authForm").addEventListener("submit",async ev=>{
   try{
     const r=await api(up?"/api/signup":"/api/signin",{
       method:"POST",
-      body:up?{username,email,password}:{username,password},
+      body:{username,password},
     });
     ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind();
     TK.list=[]; TK.loaded=false;         // fetch this account's own
@@ -7146,7 +7160,7 @@ function adRender(){
     const who=document.createElement("div"); who.className="ad-who";
     const nm=document.createElement("b"); nm.textContent=u.name+(u.admin?" · admin":"");
     const meta=document.createElement("span"); meta.className="ad-meta";
-    meta.textContent=u.email+" · "+new Date(u.created).toLocaleDateString()
+    meta.textContent=(u.email?u.email+" · ":"")+new Date(u.created).toLocaleDateString()
       +" · "+u.tracks+(u.tracks===1?" circuit":" circuits")+" · "+u.laps+(u.laps===1?" time":" times");
     who.appendChild(nm); who.appendChild(meta);
     const del=document.createElement("button"); del.className="chip tk-del"; del.textContent="Delete";

@@ -274,6 +274,13 @@ function pgStore(url) {
           pass        TEXT NOT NULL,
           created     BIGINT NOT NULL
         )`);
+      /* Accounts made before the email was dropped have one; new ones do
+         not, so the columns may be empty now. */
+      await pool.query(`ALTER TABLE users ALTER COLUMN email DROP NOT NULL`);
+      await pool.query(`ALTER TABLE users ALTER COLUMN email_lower DROP NOT NULL`);
+      /* uniqueness of an email, where one is given, is checked before the
+         insert; the index cannot hold the empty ones */
+      await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_lower_key`);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           token_hash TEXT PRIMARY KEY,

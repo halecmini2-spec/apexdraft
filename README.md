@@ -17,6 +17,10 @@ lead back.
 
 - **Draw** a loop on the board. The direction you draw is the racing
   direction, and where you start becomes the start/finish line.
+- **A loop that crosses itself** once or twice gets a bridge at each
+  crossing. One that crosses more than twice, or that runs back along itself
+  so two roads would share their barriers, is refused as not a valid circuit,
+  with the reason on the board, and Drive stays off until it is redrawn.
 - **Bank a corner** by clicking its number on the map, then using the slider.
 - **Start line** — it sits where you began drawing unless you move it:
   **Move the start line** on the board, then tap the circuit. Either way, a
@@ -105,8 +109,8 @@ points it somewhere else for local work.
 ## Accounts
 
 Optional, and they settle one thing: the name other people see on your car.
-Sign in from the home page — a username, an email and a password, and
-nothing else asked for. You can host and join parties without one.
+Sign in from the home page — a username and a password, and nothing else
+asked for. You can host and join parties without one.
 
 The name comes from the session token rather than from the client, so a
 signed-in driver races under their own name and nobody else can turn up
@@ -192,7 +196,7 @@ people on one machine count once.
 
 ### The small print
 
-There is **no verification email and no password reset**, and the UI says so
+There is **no email and no password reset**, and the UI says so
 where you choose a password. Passwords are hashed with scrypt and a random
 salt per account; sessions are stored as a hash of the token, so a copy of
 the database is not a set of keys to everyone's account.

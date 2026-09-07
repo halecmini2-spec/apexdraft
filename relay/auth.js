@@ -1,7 +1,7 @@
 /* Accounts: signing up, signing in, and saying who a token belongs to.
  *
- * Deliberately small. A username, an email and a password is the whole of
- * it — there is no password reset, no email verification and no profile, so
+ * Deliberately small. A username and a password is the whole of it — there
+ * is no email, no password reset and no profile, so
  * nothing here should imply otherwise to the person filling the form in.
  *
  * What it does take seriously is the password. It is hashed with scrypt and
@@ -240,23 +240,25 @@ function makeAuth(store) {
         return json(res, 429, { error: "Too many accounts from here just now. Try again shortly." }), true;
 
       const name = String(body.username || "").trim();
+      /* No email is asked for any more. One is still accepted if an older
+         client sends it, and checked as before, but nothing needs it. */
       const email = String(body.email || "").trim();
       const pass = String(body.password || "");
 
-      const problem = nameProblem(name) || emailProblem(email) || passProblem(pass);
+      const problem = nameProblem(name) || (email && emailProblem(email)) || passProblem(pass);
       if (problem) return json(res, 400, { error: problem }), true;
 
       if (await store.userByName(name.toLowerCase()))
         return json(res, 409, { error: "That username is taken." }), true;
-      if (await store.userByEmail(email.toLowerCase()))
+      if (email && await store.userByEmail(email.toLowerCase()))
         return json(res, 409, { error: "That email already has an account." }), true;
 
       const user = {
         id: crypto.randomUUID(),
         name,
         name_lower: name.toLowerCase(),
-        email,
-        email_lower: email.toLowerCase(),
+        email: email || null,
+        email_lower: email ? email.toLowerCase() : null,
         pass: await hash(pass),
         created: Date.now(),
       };
