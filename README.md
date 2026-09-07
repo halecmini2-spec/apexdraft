@@ -71,6 +71,20 @@ with gaps, as they cross the line for the last time. A latecomer joins the
 race late. Recover while racing only puts the car back on the road, never
 back at the start.
 
+## AI opponents (being tried out)
+
+Racing alone can be a race too. An **AI opponents** group on the board, shown
+for one account only while it is being tested, sets how many machine-driven
+cars line up (up to four), their **strength**, the laps, and whether you
+start at the front, the back or wherever the draw puts you. **Drive it**
+then starts a race against them, with the grid, the lights, the running
+order and the finishing order of a party race. They are not driven through
+the car model: each runs the centreline at a speed worked out from the road
+ahead and the strength, cutting to the inside of the corners and keeping a
+lane of its own on the straights. Below full strength each has a pace of its
+own, and now and then lifts, wobbles or runs wide; the weaker, the more
+often and the worse. They do not collide with you yet.
+
 ## The daily time trial
 
 **Daily** in the bar is one circuit a day, the same for everyone, always

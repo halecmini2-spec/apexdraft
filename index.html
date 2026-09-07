@@ -523,6 +523,12 @@ body.inparty #netHint{color:#C79289}
 .slider .val{font-family:var(--mono);font-size:12px;color:var(--amber);font-variant-numeric:tabular-nums}
 .startrow .hint{font-size:11.5px;margin-top:2px}
 .startrow .lab{flex-wrap:wrap;gap:0 8px}
+/* the AI group: one account, for now */
+.grp-ai{display:none}
+body.aiok[data-mode="solo"]:not(.daily) .grp-ai{display:block}
+.ai-tag{font-size:8.5px;letter-spacing:.14em;color:var(--purple);border:1px solid var(--purple);border-radius:2px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.grp-ai .aiRow .lab{margin-bottom:5px}
+.grp-ai .chips{margin-bottom:6px}
 #pad.picking{cursor:crosshair}
 input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0;
@@ -1738,6 +1744,40 @@ body.admining #lobbybar{display:none}
               <button class="chip" id="btnLeave">Leave party</button>
             </div>
           </div>
+        </div>
+
+        <!-- AI opponents. Only one account sees this for now. -->
+        <div class="grp grp-ai" id="grpAi">
+          <h2>AI opponents <span class="ai-tag">testing</span></h2>
+          <div class="chips" id="aiCount">
+            <button class="chip" data-n="0" aria-pressed="true">None</button>
+            <button class="chip" data-n="1">1</button>
+            <button class="chip" data-n="2">2</button>
+            <button class="chip" data-n="3">3</button>
+            <button class="chip" data-n="4">4</button>
+          </div>
+          <div class="slider" id="aiStrengthRow">
+            <div class="lab"><span>Strength</span><span class="val" id="vAi">Club</span></div>
+            <input type="range" id="sAi" min="10" max="100" step="5" value="60">
+          </div>
+          <div class="slider aiRow">
+            <div class="lab"><span>Laps</span></div>
+            <div class="chips" id="aiLaps">
+              <button class="chip" data-laps="1">1</button>
+              <button class="chip" data-laps="3" aria-pressed="true">3</button>
+              <button class="chip" data-laps="5">5</button>
+              <button class="chip" data-laps="10">10</button>
+            </div>
+          </div>
+          <div class="slider aiRow">
+            <div class="lab"><span>Your grid slot</span></div>
+            <div class="chips" id="aiSlot">
+              <button class="chip" data-slot="random" aria-pressed="true">Random</button>
+              <button class="chip" data-slot="front">Front</button>
+              <button class="chip" data-slot="back">Back</button>
+            </div>
+          </div>
+          <p class="hint" id="aiHint">Pick how many, and Drive it starts a race against them.</p>
         </div>
 
         <div class="grp grp-gar">
@@ -5015,7 +5055,7 @@ function completeLap(ms){
   if(RACE.on&&RACE.mine==null&&RACE.t0){
     const done=CAR.lapNo-1, rms=Math.round(performance.now()-RACE.t0);
     netSend({t:"rlap",lap:done,ms:rms});
-    if(done>=RACE.laps){ netSend({t:"finish",ms:rms}); raceFinish(NET.id,myName(),rms,true); }
+    if(done>=RACE.laps){ netSend({t:"finish",ms:rms}); raceFinish(myId(),myName(),rms,true); }
   }
 }
 
@@ -5536,6 +5576,7 @@ function frame(now){
   updateCarMesh();
   if(DAILY.on){ if(CAR.state==="run")ghostRecord(); ghostUpdate(); }
   netTick(); netUpdateCars();
+  if(AI.on)aiTick(dt);
   if(G.smoke)updateSmoke(dt);
   updateCamera(dt);
   netTags();                    /* after the camera moves, so the tags do not lag it */
@@ -6549,6 +6590,12 @@ const NET={
 /* A race, once one has been started: how many laps, who started where,
    and who has crossed the line for the last time, in order. */
 const RACE={on:false,laps:0,grid:[],t0:0,finished:[],mine:null,pos:0};
+/* Opponents driven by the machine, for racing alone. Each has a pace of its
+   own around the strength you set, and the weaker ones make mistakes. For
+   now only one account can see them, while they are being tried out. */
+const AI={on:false,count:0,strength:60,laps:3,slot:"random",cars:[],okName:"cosmo38"};
+const AI_NAMES=["Vettori","Okada","Lindqvist","Marsh","Duarte","Kowalczyk","Ferreira","Nakamura","Brandt","Silva","Reyes","Halvorsen"];
+const AI_COLOURS=["#F2C230","#2E7BE8","#E8EDEC","#1B2427","#2ED47A","#E2482B","#B24FE8"];
 const PUBLIC_RELAY="wss://apexdrawn-relay.onrender.com";
 /* Sits in a bar an inch high now, so it says the offer and stops. What
    hosting means is one press away and obvious once you are there. */
@@ -6592,6 +6639,7 @@ const ACCT={
   checked:store.get("ad.checked",0),
 };
 const myName=()=>(ACCT.token&&ACCT.user&&ACCT.user.name)||"You";
+const myId=()=>NET.id!=null?String(NET.id):"me";
 
 /* Same host as the party relay, over http rather than websocket. */
 function apiBase(){ return relayURL().replace(/^ws/,"http").replace(/\/+$/,""); }
@@ -6673,6 +6721,7 @@ function acctSave(){
 function acctIn(){ return !!(ACCT.token&&ACCT.user); }
 function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
+  document.body.classList.toggle("aiok",on&&ACCT.user.name===AI.okName);
   chip.textContent=on?ACCT.user.name:"Sign in";
   chip.classList.toggle("on",on);
   $("hmAccount").textContent=on?"Your account":"Sign in"; $("hmAccount").classList.toggle("on",on);
@@ -6911,7 +6960,7 @@ async function lbPost(ms){
    their improvements over the relay, so this is everyone out there now. */
 function standingsUI(){
   const el=$("standings");
-  const party=NET.status==="in";
+  const party=NET.status==="in"||AI.on;
   el.hidden=!party;
   if(!party)return;
   if(RACE.on){ raceStandings(el); return; }
@@ -6938,8 +6987,9 @@ function standingsUI(){
    done and how far round the next. */
 function raceStandings(el){
   const fin=id=>RACE.finished.findIndex(f=>f.id===String(id));
-  const rows=[{id:String(NET.id),name:myName(),me:true,fin:fin(NET.id),lap:Math.max(0,CAR.lapNo-1),prog:CAR.lastP||0}];
+  const rows=[{id:myId(),name:myName(),me:true,fin:fin(myId()),lap:Math.max(0,CAR.lapNo-1),prog:CAR.lastP||0}];
   for(const [id,p] of NET.peers) rows.push({id:String(id),name:p.name||"Driver",me:false,fin:fin(id),lap:Math.max(p.lap|0,p.rlap|0),prog:p.prog||0});
+  if(AI.on) for(const c of AI.cars) rows.push({id:c.id,name:c.name,me:false,fin:fin(c.id),lap:c.laps,prog:c.prog});
   rows.sort((a,b)=>{
     if((a.fin>=0)!==(b.fin>=0)) return a.fin>=0?-1:1;
     if(a.fin>=0) return a.fin-b.fin;
@@ -6953,7 +7003,7 @@ function raceStandings(el){
     const p=document.createElement("span"); p.className="p"; p.textContent=String(i+1);
     const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
     const t=document.createElement("span"); t.className="t";
-    t.textContent = r.fin>=0 ? fmtTime(RACE.finished[r.fin].ms) : "Lap "+Math.min(r.lap+1,RACE.laps);
+    t.textContent = r.fin>=0 ? fmtTime(RACE.finished[r.fin].ms) : "Lap "+Math.max(1,Math.min(r.lap+1,RACE.laps));
     d.appendChild(p); d.appendChild(n); d.appendChild(t);
     el.appendChild(d);
   });
@@ -7401,7 +7451,7 @@ function netUI(){
   const host=on&&NET.id===NET.hostId;
   const mode=!on?"solo":(host?"host":"guest");
   document.body.dataset.mode=mode;
-  if(!on&&RACE.on)raceOff();
+  if(!on&&RACE.on&&!AI.on)raceOff();
 
   /* Shown in every mode now, and it changes what it says rather than
      appearing and disappearing. It starts hidden only so that the first
@@ -7480,7 +7530,7 @@ function driveLabel(){
   if(m==="host") b.textContent=NET.raceLaps>0?"Start race \u00B7 "+NET.raceLaps+(NET.raceLaps===1?" lap":" laps"):"Start practice";
   else if(m==="guest") b.textContent=document.body.classList.contains("starting")
     ? "Race starting" : NET.live ? "Join the race" : "Waiting for host";
-  else b.textContent="Drive it";
+  else b.textContent=(aiAllowed()&&AI.count>0&&!DAILY.on)?"Race "+AI.count+" AI \u00B7 "+AI.laps+(AI.laps===1?" lap":" laps"):"Drive it";
   document.body.classList.toggle("live",m==="guest"&&NET.live);
 }
 function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
@@ -7594,6 +7644,150 @@ function netHandle(m){
     return;
   }
 }
+/* ---- AI opponents ----
+   They are not driven through the car model. Each one runs along the
+   centreline at a speed set by the road ahead, cutting to the inside of the
+   corners and holding a lane of its own on the straights, and is drawn as a
+   car where that puts it. The strength sets the grip and power that speed
+   is worked out from; below full strength each has a pace of its own, and
+   now and then lifts, wobbles or runs wide — the weaker, the more often
+   and the worse. They wait for the lights, count their own laps, and take
+   their place in the finishing order. */
+function aiAllowed(){ return acctIn()&&ACCT.user.name===AI.okName; }
+function aiLabel(v){ return v<=25?"Rookie":v<=45?"Club":v<=65?"Quick":v<=85?"Pro":"Alien"; }
+function aiSave(){ store.set("ad.ai",{count:AI.count,strength:AI.strength,laps:AI.laps,slot:AI.slot}); }
+function aiUI(){
+  pressGroup($("aiCount"),"n",String(AI.count));
+  pressGroup($("aiLaps"),"laps",String(AI.laps));
+  pressGroup($("aiSlot"),"slot",AI.slot);
+  $("sAi").value=AI.strength; $("vAi").textContent=aiLabel(AI.strength)+" · "+AI.strength+"%";
+  $("aiHint").textContent=AI.count?("Drive it starts a "+AI.laps+"-lap race against "+AI.count+(AI.count===1?" opponent.":" opponents.")):"Pick how many, and Drive it starts a race against them.";
+  driveLabel();
+}
+$("aiCount").addEventListener("click",e=>{ const b=e.target.closest("[data-n]"); if(!b)return; AI.count=+b.dataset.n; aiSave(); aiUI(); });
+$("aiLaps").addEventListener("click",e=>{ const b=e.target.closest("[data-laps]"); if(!b)return; AI.laps=+b.dataset.laps; aiSave(); aiUI(); });
+$("aiSlot").addEventListener("click",e=>{ const b=e.target.closest("[data-slot]"); if(!b)return; AI.slot=b.dataset.slot; aiSave(); aiUI(); });
+$("sAi").addEventListener("input",()=>{ AI.strength=+$("sAi").value; aiSave(); aiUI(); });
+(function(){ const v=store.get("ad.ai",null); if(v){ AI.count=Math.max(0,Math.min(4,v.count|0)); AI.strength=Math.max(10,Math.min(100,v.strength|0||60)); AI.laps=[1,3,5,10].includes(v.laps)?v.laps:3; AI.slot=["random","front","back"].includes(v.slot)?v.slot:"random"; } aiUI(); })();
+
+/* a race against them, from the board */
+function aiRaceStart(){
+  const n=Math.max(1,Math.min(4,AI.count));
+  const ids=[]; for(let i=1;i<=n;i++) ids.push("ai"+i);
+  if(AI.slot==="front") ids.unshift(myId());
+  else if(AI.slot==="back") ids.push(myId());
+  else ids.splice(Math.floor(Math.random()*(ids.length+1)),0,myId());
+  AI.on=true; AI.cars=[];
+  raceBegin({laps:AI.laps,grid:ids});
+}
+function aiClear(){
+  for(const c of AI.cars){ if(c.mesh&&G.scene){ G.scene.remove(c.mesh); disposeTree(c.mesh); } }
+  AI.cars=[]; AI.on=false;
+}
+/* the point of the centreline a distance s round the lap */
+function aiAt(T,s){
+  const N=T.N, sp=T.len/N; let u=s/sp; u=((u%N)+N)%N;
+  const i=Math.floor(u), j=(i+1)%N, t=u-i;
+  return {x:lerp(T.X[i],T.X[j],t), z:lerp(T.Z[i],T.Z[j],t), tx:lerp(T.TX[i],T.TX[j],t), tz:lerp(T.TZ[i],T.TZ[j],t),
+          rx:lerp(T.RX[i],T.RX[j],t), rz:lerp(T.RZ[i],T.RZ[j],t), k:lerp(T.K[i],T.K[j],t), i};
+}
+function aiSpawn(){
+  if(!AI.on||!G.T||!G.scene)return;
+  const T=G.T, n=RACE.grid.filter(id=>id.startsWith("ai")).length;
+  const names=AI_NAMES.slice().sort(()=>Math.random()-0.5);
+  const colours=AI_COLOURS.filter(c=>c.toLowerCase()!==String(ED.opts.color).toLowerCase()).sort(()=>Math.random()-0.5);
+  const k=AI.strength/100;
+  AI.cars=[];
+  for(let a=0;a<n;a++){
+    const id="ai"+(a+1), slot=RACE.grid.indexOf(id);
+    const row=Math.floor(slot/2), col=slot%2;
+    const s0=((T.len-row*2*(T.len/T.N))%T.len+T.len)%T.len;
+    const car={id,name:names[a],colour:colours[a%colours.length],kind:ED.opts.car,
+      s:s0,d:(col?1:-1)*T.halfW*0.44,v:0,laps:s0>T.len/2?-1:0,prog:s0/T.len,fin:false,dMax:0,
+      pace:1+(Math.random()-0.5)*0.14*(1.2-k),       // a driver of their own, more so when weaker
+      lane:((a%4)-1.5)/1.5*0.32*T.halfW,
+      mistake:null,next:(8+40*k)*(0.5+Math.random()),mistakes:0,
+      x:0,y:0,z:0,yaw:0,spin:0,steer:0,mesh:null};
+    const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
+    car.mesh=buildCar(car.colour,car.kind); car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
+    car.mesh.position.set(car.x,car.y,car.z); car.mesh.rotation.order="YXZ"; car.mesh.rotation.y=car.yaw;
+    G.scene.add(car.mesh);
+    AI.cars.push(car);
+  }
+}
+function aiTick(dt){
+  if(!AI.on||!G.T)return;
+  const T=G.T, perf=carPerf(ED.opts.car), k=AI.strength/100;
+  const go=CAR.state==="run";
+  for(const c of AI.cars){
+    const kk=Math.min(1.05,k*c.pace);
+    const aLat=(4+10*kk)*perf.grip, vmax=(30+34*kk)*perf.top, accel=(4.5+7*kk)*perf.power, brake=8+9*kk;
+    /* mistakes: scheduled, and worse the weaker the driver */
+    let vMul=1, dAdd=0;
+    if(go&&k<0.97){
+      if(c.mistake){ c.mistake.t-=dt; if(c.mistake.t<=0)c.mistake=null; }
+      else { c.next-=dt; if(c.next<=0){ const r=Math.random(); const sev=(1-k)*(0.6+0.8*Math.random());
+        c.mistake=r<0.4?{type:"lift",t:1.2+sev*1.5,sev}:r<0.7?{type:"wobble",t:1.0+sev,sev}:{type:"wide",t:1.4+sev*2,sev,side:0};
+        c.mistakes++; c.next=(10+55*k)*(0.5+Math.random()); } }
+      const m=c.mistake;
+      if(m){ if(m.type==="lift") vMul=1-0.28*Math.min(1,m.sev+0.3);
+             else if(m.type==="wobble") dAdd=Math.sin(performance.now()/1000*11)*(0.8+m.sev*1.6);
+             else if(m.type==="wide"){ const here=aiAt(T,c.s); if(!m.side) m.side=here.k>0?1:-1; dAdd=m.side*(T.halfW*0.9+m.sev*3.5); vMul=0.82; } }
+    }
+    /* the road ahead sets the speed: the tightest thing coming, braked for
+       in time */
+    const sp=T.len/T.N;
+    let vAllow=vmax;
+    for(let m=0;m<=Math.round(160/sp);m++){
+      const q=(aiAt(T,c.s).i+m)%T.N, kq=Math.abs(T.K[q]);
+      const vT=Math.min(vmax,Math.sqrt(aLat/Math.max(kq,1e-4)));
+      const dist=Math.max(0,m*sp-6);
+      vAllow=Math.min(vAllow,Math.sqrt(vT*vT+2*brake*dist));
+    }
+    vAllow*=vMul;
+    if(Math.abs(c.d)>T.halfW) vAllow=Math.min(vAllow,vmax*0.6);           // on the grass
+    if(go) c.v+=clamp(vAllow-c.v,-brake*dt,accel*dt); else c.v=0;
+    c.v=Math.max(0,c.v);
+    /* the line: inside of the bend, a lane of their own on the straight */
+    const here=aiAt(T,c.s);
+    const bend=Math.min(1,Math.abs(here.k)*260);
+    const dT=lerp(c.lane,-Math.sign(here.k)*T.halfW*0.5,bend)+dAdd;
+    const dMax=T.halfW*0.86+(Math.abs(dAdd)?4:0);
+    const dWant=clamp(dT,-dMax,dMax);
+    const rate=(2.2+c.v*0.06)*dt;
+    const dPrev=c.d; c.d+=clamp(dWant-c.d,-rate,rate); c.dMax=Math.max(c.dMax||0,Math.abs(c.d));
+    /* along the lap; a lap is a lap */
+    const sPrev=c.s; c.s+=c.v*dt;
+    if(c.s>=T.len){ c.s-=T.len; c.laps++;
+      if(RACE.on&&!c.fin&&c.laps>=RACE.laps){ c.fin=true; raceFinish(c.id,c.name,Math.round(performance.now()-(RACE.t0||performance.now())),false); } }
+    c.prog=c.s/T.len;
+    /* where that is, and which way it faces */
+    const p=aiAt(T,c.s);
+    const nx=p.x+p.rx*c.d, nz=p.z+p.rz*c.d;
+    const dx=nx-c.x, dz=nz-c.z;
+    if(c.v>1.5){ let want=Math.atan2(dx,dz); let dy=want-c.yaw; while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU; c.yaw+=dy*Math.min(1,dt*9); }
+    c.x=nx; c.z=nz;
+    const yHint=c.y; c.y=heightAt(T,c.x,c.z,null,yHint);
+    c.steer=clamp((c.d-dPrev)/Math.max(0.01,dt)*0.25+here.k*40,-1,1);
+    c.spin+=c.v*dt/0.36;
+    aiPose(c);
+  }
+}
+function aiPose(c){
+  const T=G.T, m=c.mesh; if(!m)return;
+  const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), rx=-Math.cos(c.yaw), rz=Math.sin(c.yaw);
+  const hF=heightAt(T,c.x+fx*1.5,c.z+fz*1.5,null,c.y), hB=heightAt(T,c.x-fx*1.5,c.z-fz*1.5,null,c.y);
+  const hR=heightAt(T,c.x+rx*0.9,c.z+rz*0.9,null,c.y), hL=heightAt(T,c.x-rx*0.9,c.z-rz*0.9,null,c.y);
+  m.position.set(c.x,c.y,c.z);
+  m.rotation.order="YXZ"; m.rotation.y=c.yaw;
+  m.rotation.x=lerp(m.rotation.x,-Math.atan2(hF-hB,3.0),0.14);
+  m.rotation.z=lerp(m.rotation.z,Math.atan2(hL-hR,1.8),0.14);
+  const w=m.userData.wheels, sp=m.userData.spin||1;
+  if(w){ const st=-c.steer*0.44; for(let i=0;i<4;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<2?st:0; w[i].rotation.x=c.spin*sp; } }
+  const bp=m.userData.bop, bd=m.userData.body;
+  if(bp&&bd){ const q=Math.tanh(Math.sin((G.bopT||0)*bp.freq)*2.8); bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx); bd.position.y=-(bp.pivot||0)*q*bp.sy; }
+}
+function raceTotal(){ return NET.peers.size+1+(AI.on?AI.cars.length:0); }
 /* ---- the race ----
    The host picks how many laps and who starts where; everyone lines up on
    that grid, the lights go, and the first to complete the laps wins. A
@@ -7604,8 +7798,8 @@ function gridIds(){
   for(const id of present.sort((a,b)=>(+a)-(+b))) if(!kept.includes(id)) kept.push(id);
   return kept;
 }
-function gridName(id){ return id===String(NET.id)?myName():((NET.peers.get(id)||{}).name||"Driver"); }
-function gridColour(id){ return id===String(NET.id)?ED.opts.color:((NET.peers.get(id)||{}).colour||"#8FA3A0"); }
+function gridName(id){ return id===myId()?myName():((NET.peers.get(id)||{}).name||"Driver"); }
+function gridColour(id){ return id===myId()?ED.opts.color:((NET.peers.get(id)||{}).colour||"#8FA3A0"); }
 function raceCfgSend(){
   if(NET.status!=="in"||NET.id!==NET.hostId)return;
   NET.grid=gridIds();
@@ -7617,7 +7811,7 @@ function raceUI(){
   for(const b of $("raceLaps").children) b.setAttribute("aria-pressed",String((+b.dataset.laps)===NET.raceLaps));
   const g=$("raceGrid"); g.innerHTML="";
   ids.forEach((id,i)=>{
-    const el=document.createElement("div"); el.className="rrow"+(id===String(NET.id)?" me":"");
+    const el=document.createElement("div"); el.className="rrow"+(id===myId()?" me":"");
     const pos=document.createElement("span"); pos.className="gpos"; pos.textContent=String(i+1);
     const dot=document.createElement("i"); dot.style.background=gridColour(id);
     const b=document.createElement("b"); b.textContent=gridName(id);
@@ -7632,7 +7826,7 @@ function raceUI(){
     }
     g.appendChild(el);
   });
-  const me=ids.indexOf(String(NET.id));
+  const me=ids.indexOf(myId());
   $("raceSum").textContent=NET.raceLaps>0
     ? NET.raceLaps+(NET.raceLaps===1?" lap":" laps")+" · you start P"+(me+1)+" of "+ids.length
     : "Practice — no laps counted.";
@@ -7651,11 +7845,11 @@ function raceBegin(cfg){
   RACE.on=true; RACE.laps=Math.max(1,cfg.laps|0); RACE.grid=(cfg.grid||[]).map(String);
   RACE.finished=[]; RACE.mine=null; RACE.t0=0; RACE.pos=0;
   $("raceEnd").hidden=true;
-  const me=RACE.grid.indexOf(String(NET.id));
+  const me=RACE.grid.indexOf(myId());
   netSay(RACE.laps+(RACE.laps===1?"-lap race":"-lap race")+(me>=0?" — you start P"+(me+1):""));
   driveNow();
 }
-function raceOff(){ RACE.on=false; RACE.finished=[]; RACE.mine=null; $("raceEnd").hidden=true; }
+function raceOff(){ RACE.on=false; RACE.finished=[]; RACE.mine=null; $("raceEnd").hidden=true; if(AI.on)aiClear(); }
 /* somebody has done the laps: the first one is the winner */
 function raceFinish(id,name,ms,me){
   if(!RACE.on||RACE.finished.some(f=>f.id===String(id)))return;
@@ -7668,14 +7862,14 @@ function raceFinish(id,name,ms,me){
 }
 function raceEndUI(){
   if(!RACE.on||RACE.mine==null)return;
-  const total=NET.peers.size+1, n=RACE.finished.length;
-  const me=RACE.finished.findIndex(f=>f.id===String(NET.id))+1;
+  const total=raceTotal(), n=RACE.finished.length;
+  const me=RACE.finished.findIndex(f=>f.id===myId())+1;
   $("reTitle").textContent=n>=total?"Race over":(me===1?"You win!":"Finished");
-  $("reSub").textContent=(RACE.finished[0].id===String(NET.id)?"You won":RACE.finished[0].name+" won")+" over "+RACE.laps+(RACE.laps===1?" lap":" laps")+" · you finished P"+me+" of "+total+(n<total?" · "+(total-n)+" still out there":"");
+  $("reSub").textContent=(RACE.finished[0].id===myId()?"You won":RACE.finished[0].name+" won")+" over "+RACE.laps+(RACE.laps===1?" lap":" laps")+" · you finished P"+me+" of "+total+(n<total?" · "+(total-n)+" still out there":"");
   $("reN").textContent=n+" of "+total;
   const list=$("reList"); list.innerHTML="";
   RACE.finished.forEach((f,i)=>{
-    const row=document.createElement("div"); row.className="ti-row"+(f.id===String(NET.id)?" me":"");
+    const row=document.createElement("div"); row.className="ti-row"+(f.id===myId()?" me":"");
     const p=document.createElement("span"); p.className="p"; p.textContent=(i+1)+".";
     const nm=document.createElement("span"); nm.className="n"; nm.textContent=f.name;
     const t=document.createElement("span"); t.className="t"; t.textContent=i===0?fmtTime(f.ms):"+"+((f.ms-RACE.finished[0].ms)/1000).toFixed(3);
@@ -7770,8 +7964,8 @@ function netSendTrack(){
    sorting them gives every machine the same running order without anybody
    having to agree on one. */
 function netSlot(){
+  if(RACE.on&&RACE.grid.length){ const i=RACE.grid.indexOf(myId()); if(i>=0)return i; }   // a race has a grid, alone or not
   if(NET.status!=="in")return -1;                 // driving alone: dead centre
-  if(RACE.on&&RACE.grid.length){ const i=RACE.grid.indexOf(String(NET.id)); if(i>=0)return i; }
   const ids=[NET.id];
   for(const k of NET.peers.keys()) ids.push(k);
   ids.sort((a,b)=>(+a)-(+b));
@@ -7987,7 +8181,7 @@ function netTags(){
   const c=tagCtx;
   c.setTransform(dpr,0,0,dpr,0,0);
   c.clearRect(0,0,W,H);
-  if(NET.status!=="in"||!G.camera||!G.running)return;
+  if((NET.status!=="in"&&!AI.on)||!G.camera||!G.running)return;
 
   /* The renderer refreshes these on draw, which is after this runs — and the
      camera has just moved. Doing it here costs one matrix inversion and
@@ -7996,7 +8190,8 @@ function netTags(){
   G.camera.matrixWorldInverse.copy(G.camera.matrixWorld).invert();
 
   const M=30, cx=W/2, cy=H/2;
-  for(const [id,p] of NET.peers){
+  const tagged=[...NET.peers.values()]; if(AI.on) for(const c of AI.cars) tagged.push(c);
+  for(const p of tagged){
     if(!p.mesh)continue;
     /* Above the roof, not at the wheels. */
     TAGV.copy(p.mesh.position); TAGV.y+=1.9;
@@ -8240,6 +8435,7 @@ function driveOut(){
   if(!ED.track)return;
   const m=document.body.dataset.mode;
   if(a2hsWanted()){ a2hsShow(); return; }                  // OK carries on into driveNow
+  if(m==="solo"&&!DAILY.on&&aiAllowed()&&AI.count>0){ aiRaceStart(); return; }
   if(m==="host"){
     /* The circuit first, then the flag. Messages arrive in order on one
        socket, so everyone builds the final circuit before they are sent
@@ -8291,6 +8487,7 @@ function driveNow(){
       startGame();
       musicStart(ED.track.opts.car);
       if(DAILY.on){ ghostAttach(); dailyUI(); }
+      if(AI.on){ aiSpawn(); standingsUI(); }
     }catch(err){
       $("loadLbl").textContent="Could not build that circuit — try a simpler loop.";
       console.error(err);
@@ -8315,6 +8512,7 @@ $("pBack").addEventListener("click",()=>{
      out — whether or not the host is out there just now. */
   G.running=false; togglePause(false); $("pause").hidden=true;
   musicStop();
+  if(AI.on){ raceOff(); }
   $("drive").hidden=true; $("editor").hidden=false;
   document.body.classList.remove("driving");
   driveLabel();
