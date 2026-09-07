@@ -912,6 +912,11 @@ body.admining #lobbybar{display:none}
 .ad-when{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px;margin-top:6px}
 @media (max-width:700px){.ad-when{grid-template-columns:1fr}}
 .ad-when .ad-head{margin:6px 0 6px}
+.ad-online .ad-head,.ad-stays .ad-head{margin:14px 0 6px}
+#adminScreen .ad-online .ad-log{max-height:190px}
+.ad-log .what{color:var(--green);margin-left:8px}
+.ad-log .what.away{color:var(--faint)}
+.ad-log .dur{color:var(--amber);margin-left:8px;font-variant-numeric:tabular-nums}
 #adminScreen .ad-log{max-height:236px;overflow-y:auto;gap:3px}
 .ad-log .ad-row{padding:5px 10px;font-family:var(--mono);font-size:11.5px}
 .ad-log .t{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -1940,7 +1945,8 @@ body.admining #lobbybar{display:none}
            a number per day against it. -->
       <div class="ad-stats" id="adStats">
         <div class="ad-tiles">
-          <div class="ad-tile live"><b id="stPlayers">–</b><span>playing now</span></div>
+          <div class="ad-tile live"><b id="stOnline">–</b><span>online now</span></div>
+          <div class="ad-tile live"><b id="stPlayers">–</b><span>in parties</span></div>
           <div class="ad-tile live"><b id="stRooms">–</b><span>parties open</span></div>
           <div class="ad-tile"><b id="stToday">–</b><span>visits today</span></div>
           <div class="ad-tile"><b id="stUniq">–</b><span>people today</span></div>
@@ -1954,6 +1960,12 @@ body.admining #lobbybar{display:none}
         <!-- When they came. Times are shown on the admin's own clock; each
              visitor is a four-character tag, the same tag each time the same
              browser comes back, and nothing more than that. -->
+        <!-- Who is on this minute: every open page, not only the parties,
+             with what it is doing, when it came and how long it has been. -->
+        <div class="ad-online">
+          <div class="ad-head"><span>Online now</span><span class="ad-meta" id="stOnlineN"></span></div>
+          <div class="ad-list ad-log" id="stOnline2"></div>
+        </div>
         <div class="ad-when">
           <div class="ad-recent">
             <div class="ad-head"><span>Recent visits</span><span class="ad-meta" id="stRecentN"></span></div>
@@ -1963,6 +1975,11 @@ body.admining #lobbybar{display:none}
             <div class="ad-head"><span>By hour of day</span><span class="ad-meta">last 7 days, your clock</span></div>
             <canvas id="stHours" class="ad-chart hours"></canvas>
           </div>
+        </div>
+        <!-- Stays that have ended: when each began and how long it lasted. -->
+        <div class="ad-stays">
+          <div class="ad-head"><span>Recent sessions</span><span class="ad-meta" id="stStaysN"></span></div>
+          <div class="ad-list ad-log" id="stStays"></div>
         </div>
       </div>
       <div class="ad-head"><span>Accounts</span></div>
@@ -6510,6 +6527,39 @@ const myName=()=>(ACCT.token&&ACCT.user&&ACCT.user.name)||"You";
 /* Same host as the party relay, over http rather than websocket. */
 function apiBase(){ return relayURL().replace(/^ws/,"http").replace(/\/+$/,""); }
 
+/* ---- the heartbeat ----
+   Every half minute while the page is open, one small ping says this
+   browser is here and what it is doing; when the page goes, a goodbye. The
+   desk lists who is on from these, not only from the parties. Not from a
+   copy on disk or a dev server, unless a relay was named on the URL. */
+function presenceVid(){
+  let vid=store.get("ad.vid",null);
+  if(!vid){ vid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,"0")).join(""); store.set("ad.vid",vid); }
+  return vid;
+}
+function presenceWhat(){
+  if(document.hidden)return "away";
+  if(document.body.classList.contains("driving")) return DAILY.on?"daily":(NET.status==="in"?"party":"driving");
+  if(NET.status==="in")return "party";
+  if(DAILY.on||APP.mode==="daily")return "daily";
+  return APP.mode==="home"?"home":"board";
+}
+function presencePing(bye){
+  const h=location.hostname, dev=new URLSearchParams(location.search).has("relay");
+  if(!dev&&(!h||h==="localhost"||h==="127.0.0.1"))return;
+  const body=JSON.stringify(Object.assign({v:presenceVid(),w:presenceWhat()},ACCT.token?{t:ACCT.token}:{},bye?{bye:1}:{}));
+  try{
+    if(bye&&navigator.sendBeacon){ navigator.sendBeacon(apiBase()+"/api/presence",body); return; }
+    fetch(apiBase()+"/api/presence",{method:"POST",body,keepalive:true,headers:{"content-type":"text/plain"}}).catch(()=>{});
+  }catch(e){}
+}
+function presenceStart(){
+  presencePing(false);
+  setInterval(()=>presencePing(false),30000);
+  document.addEventListener("visibilitychange",()=>presencePing(false));
+  addEventListener("pagehide",()=>presencePing(true));
+}
+
 async function api(path,opts){
   opts=opts||{};
   const ctrl=("AbortController" in window)?new AbortController():null;
@@ -7071,12 +7121,56 @@ async function adStats(){
     const n=(x)=>String(x==null?0:x);
     const today=(r.days||[]).find(d=>d.day===r.today)||{hits:0,uniques:0,plays:0};
     $("stPlayers").textContent=n(r.live.players); $("stRooms").textContent=n(r.live.rooms);
+    $("stOnline").textContent=n((r.online||[]).length);
+    adOnline(r.online||[]); adStays(r.stays||[]);
     $("stToday").textContent=n(today.hits); $("stUniq").textContent=n(today.uniques); $("stPlays").textContent=n(today.plays);
     $("stAll").textContent=n(r.totals.hits); $("stAllU").textContent=n(r.totals.uniques); $("stAcct").textContent=n(r.totals.accounts);
     adChart(r.days||[],r.today);
     adRecent(r.recent||[],r.today);
   }catch(e){ adSay(e.message,true); }
   stTimer=setTimeout(adStats,15000);
+}
+/* Who is on, what they are doing, since when and for how long. */
+const WHAT_SAID={home:"on the home page",board:"on the drawing board",driving:"driving",daily:"on the daily",party:"in a party",away:"in another tab"};
+function fmtDur(ms){ const m=Math.round(ms/60000); if(m<1)return "under a minute"; if(m<60)return m+" min"; const h=Math.floor(m/60); return h+" h "+String(m%60).padStart(2,"0"); }
+function adWho(v){
+  const w=document.createElement("span"); w.className=v.name?"w who":"w";
+  w.textContent=v.name?v.name:"visitor "+v.who;
+  if(v.name){ const tg=document.createElement("span"); tg.className="tag"; tg.textContent=" · "+v.who; w.appendChild(tg); }
+  return w;
+}
+function adOnline(online){
+  const box=$("stOnline2"); box.innerHTML="";
+  const now=Date.now(), fmtT=d=>d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  $("stOnlineN").textContent=online.length?(online.length+(online.length===1?" page open":" pages open")):"nobody right now";
+  for(const p of online){
+    const row=document.createElement("div"); row.className="ad-row";
+    const left=document.createElement("span");
+    const t=document.createElement("span"); t.className="t"; t.textContent="since "+fmtT(new Date(p.since));
+    const du=document.createElement("span"); du.className="dur"; du.textContent=fmtDur(now-p.since);
+    left.appendChild(t); left.appendChild(du);
+    const right=document.createElement("span"); right.appendChild(adWho(p));
+    const wh=document.createElement("span"); wh.className="what"+(p.what==="away"?" away":""); wh.textContent=WHAT_SAID[p.what]||p.what;
+    right.appendChild(wh);
+    row.appendChild(left); row.appendChild(right); box.appendChild(row);
+  }
+}
+function adStays(stays){
+  const box=$("stStays"); box.innerHTML="";
+  const now=new Date(), dayOf=d=>d.toDateString();
+  const fmtT=d=>d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const fmtD=d=>dayOf(d)===dayOf(now)?"today":(dayOf(d)===dayOf(new Date(now-86400000))?"yesterday":d.toLocaleDateString([],{day:"numeric",month:"short"}));
+  $("stStaysN").textContent=stays.length?("last "+stays.length):"none yet";
+  for(const x of stays.slice(0,150)){
+    const d=new Date(x.since), row=document.createElement("div"); row.className="ad-row";
+    const left=document.createElement("span");
+    const t=document.createElement("span"); t.className="t"; t.textContent=fmtT(d)+"–"+fmtT(new Date(x.until));
+    const dd=document.createElement("span"); dd.className="d"; dd.textContent=fmtD(d);
+    const du=document.createElement("span"); du.className="dur"; du.textContent=fmtDur(x.until-x.since);
+    left.appendChild(t); left.appendChild(dd); left.appendChild(du);
+    const right=document.createElement("span"); right.appendChild(adWho(x));
+    row.appendChild(left); row.appendChild(right); box.appendChild(row);
+  }
 }
 /* The list of moments, and the same moments folded onto a clock face. Both
    in the admin's own time zone, which is the only clock a person reads. */
@@ -8049,6 +8143,7 @@ $("pBack").addEventListener("click",()=>{
     if(!vid){ vid=Array.from(crypto.getRandomValues(new Uint8Array(12)),b=>b.toString(16).padStart(2,"0")).join(""); store.set("ad.vid",vid); }
     try{ fetch(apiBase()+"/api/hit",{method:"POST",body:JSON.stringify(ACCT.token?{v:vid,t:ACCT.token}:{v:vid}),keepalive:true,headers:{"content-type":"text/plain"}}).catch(()=>{}); }catch(e){}
   },1500);
+  presenceStart();
   if(a2hsInstalled()) document.body.classList.add("standalone");
   updateCheck();                    // note the build we started on
   applyTouchUI();

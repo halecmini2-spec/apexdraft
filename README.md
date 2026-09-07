@@ -190,7 +190,10 @@ also lists when the recent visits happened, on the admin's own clock, with
 each browser shown as a short tag and marked as a newcomer or a return —
 or by account name, when the visitor was signed in. A browser seen signed in
 once is that person's, so its earlier visits are named from it too, marked
-"same browser".
+"same browser". Every open page also sends a heartbeat every half minute, so
+the desk lists who is **online now** — everyone, not only the parties — with
+what they are doing, when they arrived and how long they have been on, and
+keeps a list of **recent sessions** with how long each lasted.
 "People" means different browsers: a phone and a laptop count twice, two
 people on one machine count once.
 

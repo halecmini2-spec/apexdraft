@@ -213,6 +213,18 @@ function fileStore(file) {
        or a return — judged by whether the id had been seen on an earlier
        day. */
     async bind(vid, name) { db.who[vid] = name; await save(); },
+    /* ---- how long each page stayed ---- */
+    async stay(vid, name, since, until) {
+      db.stays = db.stays || [];
+      db.stays.push({ vid, name: name || null, since, until });
+      if (name) db.who[vid] = name;
+      const cut = Date.now() - 31 * 86_400_000;
+      if (db.stays.length > 3000 || (db.stays[0] && db.stays[0].since < cut)) db.stays = db.stays.filter((x) => x.since >= cut).slice(-3000);
+      await save();
+    },
+    async stays(limit) {
+      return (db.stays || []).slice(-limit).reverse().map((x) => ({ vid: x.vid, name: x.name || db.who[x.vid] || null, since: x.since, until: x.until }));
+    },
     async recent(limit) {
       const out = db.log.slice(-limit).reverse();
       const first = {};
@@ -352,6 +364,15 @@ function pgStore(url) {
           name TEXT NOT NULL
         )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS visit_log_at ON visit_log(at)`);
+      /* How long each page stayed: from its first ping to its last. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS stays (
+          since BIGINT NOT NULL,
+          until BIGINT NOT NULL,
+          vid   TEXT NOT NULL,
+          name  TEXT
+        )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS stays_since ON stays(since)`);
       /* Parties started per day, and the most people connected at once. */
       await pool.query(`
         CREATE TABLE IF NOT EXISTS days (
@@ -490,6 +511,16 @@ function pgStore(url) {
     },
     async bind(vid, name) {
       await pool.query(`INSERT INTO visitors (vid,name) VALUES ($1,$2) ON CONFLICT (vid) DO UPDATE SET name=EXCLUDED.name`, [vid, name]);
+    },
+    async stay(vid, name, since, until) {
+      await pool.query(`INSERT INTO stays (since,until,vid,name) VALUES ($1,$2,$3,$4)`, [since, until, vid, name || null]);
+      if (name) await pool.query(`INSERT INTO visitors (vid,name) VALUES ($1,$2) ON CONFLICT (vid) DO UPDATE SET name=EXCLUDED.name`, [vid, name]);
+      if (Math.random() < 0.02) await pool.query(`DELETE FROM stays WHERE since < $1`, [Date.now() - 31 * 86_400_000]);
+    },
+    async stays(limit) {
+      const rows = (await pool.query(
+        `SELECT s.since, s.until, s.vid, s.name, v.name AS who FROM stays s LEFT JOIN visitors v ON v.vid=s.vid ORDER BY s.since DESC LIMIT $1`, [limit])).rows;
+      return rows.map((r) => ({ vid: r.vid, name: r.name || r.who || null, since: Number(r.since), until: Number(r.until) }));
     },
     async recent(limit) {
       const rows = (await pool.query(

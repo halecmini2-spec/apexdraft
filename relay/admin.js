@@ -10,7 +10,7 @@
  */
 const { json, readBody, cors, isAdmin } = require("./auth");
 
-function makeAdmin(store, userFor, liveNow) {
+function makeAdmin(store, userFor, liveNow, presence) {
   function bearer(req) {
     const h = req.headers.authorization || "";
     return h.startsWith("Bearer ") ? h.slice(7).trim() : null;
@@ -42,10 +42,14 @@ function makeAdmin(store, userFor, liveNow) {
       const crypto = require("crypto");
       const tag = (v) => crypto.createHash("sha256").update("tag:" + v).digest("hex").slice(0, 4);
       const recent = (await store.recent(400)).map((r) => ({ at: r.at, who: tag(r.vid), name: r.name || null, known: !!r.known, first: r.first }));
+      /* Who is on this minute, and the stays that have ended: each with
+         when it began and how long it lasted. */
+      const online = presence ? presence.online().map((p) => ({ who: tag(p.vid), name: p.name || null, what: p.what, since: p.since, last: p.last })) : [];
+      const stays = (await store.stays(200)).map((x) => ({ who: tag(x.vid), name: x.name || null, since: x.since, until: x.until }));
       return json(res, 200, {
         live: liveNow ? liveNow() : { players: 0, rooms: 0, racing: 0 },
         today: new Date().toISOString().slice(0, 10),
-        days: st.days, totals: st.totals, recent,
+        days: st.days, totals: st.totals, recent, online, stays,
       }), true;
     }
 
