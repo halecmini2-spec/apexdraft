@@ -3980,7 +3980,7 @@ function bodyYaris(b,M){
        the arches never come down over the wheels on the squash. The sideways
        swell is slight for the same reason: a body twelve percent wider put
        its flanks in front of the wheels. */
-    bop:{sy:0.22,sx:0.035,freq:2.8,pivot:2*R}};   // freq in rad/s: a squash about every 2.2 s
+    bop:{sy:0.22,sx:0.035,freq:8.6,pivot:2*R}};
 }
 
 /* ---- Kart: a competition kart ----
@@ -4994,7 +4994,7 @@ function updateCarMesh(){
      roof still bobs by the same amount, and the arches stay clear. */
   const bp=c.userData.bop, bd=c.userData.body;
   if(bp&&bd){
-    const q=Math.tanh(Math.sin(performance.now()/1000*bp.freq)*2.8);
+    const q=Math.tanh(Math.sin((G.bopT||0)*bp.freq)*2.8);
     bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx);
     bd.position.y=-(bp.pivot||0)*q*bp.sy;       // y = pivot + (y - pivot) * scale
   }
@@ -5379,6 +5379,9 @@ function frame(now){
   let dt=(now-G.lastT)/1000; G.lastT=now;
   if(!isFinite(dt))dt=0;
   dt=Math.min(dt,0.1);
+  /* The clock the Yaris bops to: game time, not the wall clock, so it
+     pauses with the game and runs true when frames are rendered slowly. */
+  G.bopT=(G.bopT||0)+dt;
 
   /* start-light sequence */
   if(CAR.state==="count"){
@@ -7740,7 +7743,7 @@ function netUpdateCars(){
        is a function of the clock, so each machine can work it out. */
     const bp=p.mesh.userData.bop, bd=p.mesh.userData.body;
     if(bp&&bd){
-      const q=Math.tanh(Math.sin(performance.now()/1000*bp.freq)*2.8);
+      const q=Math.tanh(Math.sin((G.bopT||0)*bp.freq)*2.8);
       bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx);
       bd.position.y=-(bp.pivot||0)*q*bp.sy;
     }
