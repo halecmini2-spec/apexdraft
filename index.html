@@ -5977,38 +5977,37 @@ function homeArt(){
   for(let x=0.5;x<W;x+=40){ c.moveTo(x,0); c.lineTo(x,H); } for(let y=0.5;y<H;y+=40){ c.moveTo(0,y); c.lineTo(W,y); } c.stroke();
   c.strokeStyle="rgba(255,255,255,.06)"; c.beginPath();
   for(let x=0.5;x<W;x+=200){ c.moveTo(x,0); c.lineTo(x,H); } for(let y=0.5;y<H;y+=200){ c.moveTo(0,y); c.lineTo(W,y); } c.stroke();
-  /* Lots of little circuits, one to a cell, each its own random loop drawn
-     the way the board draws a road — verge, edges, asphalt, centre line —
-     with the racing line over it in amber, a start line and an arrow.
-     Random each visit, sized to the screen. */
+  /* Random lines: loose strokes wandering across the grid, the way a loop
+     starts on the board before it is a circuit. Each is a smooth path
+     through a handful of random points, in amber or pale grey, thin, some
+     with a faint glow. New ones every visit. */
   let seed=(Date.now()%100000)|0; const rnd=()=>{ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; };
-  const cell=Math.max(150,Math.min(240,Math.min(W,H)/3.2));
-  const cols=Math.ceil(W/cell), rows=Math.ceil(H/cell);
-  for(let r=0;r<rows;r++) for(let q=0;q<cols;q++){
-    const cx=(q+0.5)*cell+(rnd()-0.5)*cell*0.18, cy=(r+0.5)*cell+(rnd()-0.5)*cell*0.18;
-    const nH=2+Math.floor(rnd()*3), orders=[2,3,4,5,6].sort(()=>rnd()-0.5).slice(0,nH); let budget=0.22+rnd()*0.2;
-    const hs=orders.map((k,i)=>{ const share=i===orders.length-1?budget:budget*(0.35+rnd()*0.3); budget-=share; return [share,k,rnd()*TAU]; });
-    const rx=cell*0.36, ry=cell*(0.22+rnd()*0.12), rot=rnd()*TAU, n=90, P=[];
-    for(let i=0;i<n;i++){ const t=i/n*TAU; let rr=1; for(const h of hs) rr+=h[0]*Math.sin(h[1]*t+h[2]);
-      const x=Math.cos(t)*rx*rr, y=Math.sin(t)*ry*rr; P.push({x:cx+x*Math.cos(rot)-y*Math.sin(rot), y:cy+x*Math.sin(rot)+y*Math.cos(rot)}); }
-    const path=new Path2D(); path.moveTo(P[0].x,P[0].y); for(let i=1;i<n;i++) path.lineTo(P[i].x,P[i].y); path.closePath();
-    c.lineJoin="round"; c.lineCap="round";
-    const wRoad=cell*0.075;
-    c.strokeStyle="rgba(27,42,34,.55)"; c.lineWidth=wRoad+7; c.stroke(path);
-    c.strokeStyle="rgba(201,208,205,.22)"; c.lineWidth=wRoad; c.stroke(path);
-    c.strokeStyle="rgba(42,48,51,.88)"; c.lineWidth=wRoad-2; c.stroke(path);
-    c.setLineDash([5,6]); c.strokeStyle="rgba(214,219,216,.16)"; c.lineWidth=1; c.stroke(path); c.setLineDash([]);
-    c.beginPath();
-    for(let i=0;i<=n;i++){ const p=P[i%n], q2=P[(i+2)%n], o=P[(i-2+n)%n]; const kx=(q2.x+o.x)/2-p.x, ky=(q2.y+o.y)/2-p.y; const m=Math.hypot(kx,ky)||1;
-      const pull=Math.min(wRoad*0.32,m*6); const x=p.x+kx/m*pull, y=p.y+ky/m*pull; i?c.lineTo(x,y):c.moveTo(x,y); }
-    c.closePath(); c.strokeStyle="rgba(255,176,32,.5)"; c.lineWidth=1.3; c.shadowColor="rgba(255,176,32,.5)"; c.shadowBlur=6; c.stroke(); c.shadowBlur=0;
-    const s0=P[0], s1=P[2], ang=Math.atan2(s1.y-s0.y,s1.x-s0.x);
-    c.save(); c.translate(s0.x,s0.y); c.rotate(ang); const ck=wRoad/6;
-    for(let r0=0;r0<2;r0++) for(let k=0;k<6;k++){ c.fillStyle=((r0+k)%2)?"rgba(18,24,26,.9)":"rgba(237,239,238,.7)"; c.fillRect(r0*ck-ck,-wRoad/2+k*ck,ck,ck); }
-    c.restore();
-    const ai=Math.floor(n*0.45), a0=P[(ai-2+n)%n], a1=P[(ai+2)%n];
-    c.save(); c.translate(P[ai].x,P[ai].y); c.rotate(Math.atan2(a1.y-a0.y,a1.x-a0.x)); c.fillStyle="rgba(255,176,32,.5)";
-    c.beginPath(); c.moveTo(4.5,0); c.lineTo(-3.5,3.5); c.lineTo(-3.5,-3.5); c.closePath(); c.fill(); c.restore();
+  const count=Math.round((W*H)/42000)+8;
+  c.lineCap="round"; c.lineJoin="round";
+  for(let k=0;k<count;k++){
+    /* a few control points drifting across the page, then a smooth curve
+       through them */
+    const pts=[]; const m=4+Math.floor(rnd()*4);
+    let x=rnd()*W, y=rnd()*H, dir=rnd()*TAU;
+    for(let i=0;i<m;i++){ pts.push({x,y}); dir+=(rnd()-0.5)*1.6; const step=Math.min(W,H)*(0.16+rnd()*0.22); x+=Math.cos(dir)*step; y+=Math.sin(dir)*step; }
+    const amber=rnd()<0.55;
+    const alpha=0.14+rnd()*0.26, wl=amber?1.0+rnd()*1.8:0.9+rnd()*1.3;
+    c.beginPath(); c.moveTo(pts[0].x,pts[0].y);
+    for(let i=0;i<pts.length-1;i++){
+      const p0=pts[Math.max(0,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(pts.length-1,i+2)];
+      for(let t=0.05;t<=1.0001;t+=0.05){ const t2=t*t, t3=t2*t;
+        const px=0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3);
+        const py=0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3);
+        c.lineTo(px,py); }
+    }
+    c.strokeStyle=amber?"rgba(255,176,32,"+alpha+")":"rgba(201,208,205,"+alpha*0.8+")";
+    c.lineWidth=wl;
+    if(rnd()<0.35){ c.setLineDash([6+rnd()*8,8+rnd()*10]); } else c.setLineDash([]);
+    if(amber&&rnd()<0.5){ c.shadowColor="rgba(255,176,32,.45)"; c.shadowBlur=8; } else c.shadowBlur=0;
+    c.stroke();
+    c.setLineDash([]); c.shadowBlur=0;
+    /* now and then a dot where the pen came down */
+    if(rnd()<0.5){ c.fillStyle=c.strokeStyle; c.beginPath(); c.arc(pts[0].x,pts[0].y,2.2,0,TAU); c.fill(); }
   }
 }
 addEventListener("resize",()=>{ if(!$("home").hidden)homeArt(); });
