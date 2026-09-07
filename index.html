@@ -1740,7 +1740,6 @@ body.admining #lobbybar{display:none}
             </div>
             <p class="hint" id="netWho">Waiting for players…</p>
             <div class="chips" id="solidBox">
-              <button class="chip" id="btnSolid">Contact <span class="s" id="solidState">Off</span></button>
               <button class="chip" id="btnLeave">Leave party</button>
             </div>
           </div>
@@ -1941,7 +1940,6 @@ body.admining #lobbybar{display:none}
           <!-- Only in a party, and only the host may turn it: if one car is
                solid and the other is not, one of you gets shoved and the
                other feels nothing. -->
-          <button class="pbtn" id="pSolid" hidden>Contact <span class="s off" id="pSolidState">Off</span></button>
           <button class="pbtn" id="pGhost" hidden>Record ghost <span class="s on" id="ghostState">On</span></button>
           <button class="pbtn" id="pFull" hidden>Fullscreen <span class="s off" id="fullState">Off</span></button>
           <button class="pbtn" id="pTouch">On-screen controls <span class="s on" id="touchState">On</span></button>
@@ -6593,7 +6591,7 @@ const RACE={on:false,laps:0,grid:[],t0:0,finished:[],mine:null,pos:0};
 /* Opponents driven by the machine, for racing alone. Each has a pace of its
    own around the strength you set, and the weaker ones make mistakes. For
    now only one account can see them, while they are being tried out. */
-const AI={on:false,count:0,strength:60,laps:3,slot:"random",cars:[],okName:"cosmo38"};
+const AI={on:false,count:0,strength:60,laps:3,slot:"random",cars:[],line:null,okName:"cosmo38"};
 const AI_NAMES=["Vettori","Okada","Lindqvist","Marsh","Duarte","Kowalczyk","Ferreira","Nakamura","Brandt","Silva","Reyes","Halvorsen"];
 const AI_COLOURS=["#F2C230","#2E7BE8","#E8EDEC","#1B2427","#2ED47A","#E2482B","#B24FE8"];
 const PUBLIC_RELAY="wss://apexdrawn-relay.onrender.com";
@@ -7490,7 +7488,7 @@ function netUI(){
   $("boardTag").hidden=mode!=="guest"&&!DAILY.on;
   if(DAILY.on)dailyRailUI();
   driveLabel();
-  solidUI();          // the contact row exists only inside a party
+  /* contact: always on */
 
   if(on){
     $("netShow").textContent=NET.code||"----";
@@ -7598,7 +7596,7 @@ function netHandle(m){
     NET.live=!!m.live;
     if(m.cfg){ NET.raceLaps=m.cfg.laps|0; NET.grid=(m.cfg.grid||[]).map(String); }
     if(m.t==="joined"&&m.track) netTakeTrack(m.track);
-    netUI(); solidUI();
+    netUI();
     /* a race already under way is joined as a race, late; anything else
        already out on track is joined as it was */
     if(m.t==="joined"&&m.race&&m.race.laps>0&&ED.track) raceBegin(m.race);
@@ -7684,6 +7682,60 @@ function aiClear(){
   for(const c of AI.cars){ if(c.mesh&&G.scene){ G.scene.remove(c.mesh); disposeTree(c.mesh); } }
   AI.cars=[]; AI.on=false;
 }
+/* ---- the racing line ----
+   Outside on the way in, the inside at the apex, outside again on the way
+   out: the line a driver takes is the one with the least curvature the
+   road's edges allow, and that is what this finds — an offset from the
+   centreline at every sample, chosen to make the path as straight as it
+   can be. Its own curvature, gentler than the road's, is what sets the
+   speed the machine can carry through a bend. */
+function aiLine(T){
+  /* Minimum-curvature line: the offset from the centreline at every sample
+     that makes the path as straight as the road edges allow. Solved
+     coarse-to-fine — a 4th-order smoothness problem crawls at full
+     resolution, but at forty-metre spacing the corners are a few samples
+     wide and it settles in a few hundred steps; the fine passes then tidy
+     the result. */
+  const N=T.N, m=T.halfW*0.74;
+  const solve=(X,Z,RX,RZ,d0,iters)=>{
+    const n=X.length, d=Float64Array.from(d0), px=new Float64Array(n), pz=new Float64Array(n), Lx=new Float64Array(n), Lz=new Float64Array(n), g=new Float64Array(n);
+    for(let it=0;it<iters;it++){
+      for(let i=0;i<n;i++){ px[i]=X[i]+RX[i]*d[i]; pz[i]=Z[i]+RZ[i]*d[i]; }
+      for(let i=0;i<n;i++){ const a=(i-1+n)%n,b=(i+1)%n; Lx[i]=px[a]-2*px[i]+px[b]; Lz[i]=pz[a]-2*pz[i]+pz[b]; }
+      let gm=1e-9;
+      for(let i=0;i<n;i++){ const a=(i-1+n)%n,b=(i+1)%n; g[i]=(Lx[a]-2*Lx[i]+Lx[b])*RX[i]+(Lz[a]-2*Lz[i]+Lz[b])*RZ[i]; gm=Math.max(gm,Math.abs(g[i])); }
+      const step=it<iters*0.7?0.25:0.08;
+      for(let i=0;i<n;i++){ d[i]=Math.max(-m,Math.min(m,d[i]-g[i]/gm*step)); }
+    }
+    return d;
+  };
+  let d=null;
+  for(const stride of [8,3,1]){
+    const n=Math.floor(N/stride), X=new Float64Array(n), Z=new Float64Array(n), RX=new Float64Array(n), RZ=new Float64Array(n), d0=new Float64Array(n);
+    for(let i=0;i<n;i++){ const j=i*stride; X[i]=T.X[j]; Z[i]=T.Z[j]; RX[i]=T.RX[j]; RZ[i]=T.RZ[j];
+      if(d){ const u=j/N*d.length; const a=Math.floor(u)%d.length, b=(a+1)%d.length, t=u-Math.floor(u); d0[i]=d[a]*(1-t)+d[b]*t; } }
+    d=solve(X,Z,RX,RZ,d0,stride===8?700:stride===3?250:120);
+  }
+  const df=new Float32Array(N);
+  for(let i=0;i<N;i++){ const u=i/N*d.length; const a=Math.floor(u)%d.length, b=(a+1)%d.length, t=u-Math.floor(u); df[i]=d[a]*(1-t)+d[b]*t; }
+  const px=new Float64Array(N), pz=new Float64Array(N), k=new Float32Array(N);
+  for(let i=0;i<N;i++){ px[i]=T.X[i]+T.RX[i]*df[i]; pz[i]=T.Z[i]+T.RZ[i]*df[i]; }
+  for(let i=0;i<N;i++){
+    const a=(i-3+N)%N, c=(i+3)%N;
+    const ax=px[i]-px[a], az=pz[i]-pz[a], bx=px[c]-px[i], bz=pz[c]-pz[i];
+    const cross=ax*bz-az*bx, la=Math.hypot(ax,az), lb=Math.hypot(bx,bz), lc=Math.hypot(px[c]-px[a],pz[c]-pz[a]);
+    k[i]=(la&&lb&&lc)?2*cross/(la*lb*lc):0;
+  }
+  const ks=new Float32Array(N); for(let i=0;i<N;i++){ let sum=0; for(let w=-3;w<=3;w++) sum+=k[(i+w+N)%N]; ks[i]=sum/7; }
+  return {d:df,k:ks};
+}
+
+/* a shove from a collision, taken as a shift along and across the road */
+function aiShove(c,dx,dz){
+  const T=G.T, p=aiAt(T,c.s);
+  c.d+=dx*p.rx+dz*p.rz;
+  c.s=((c.s+dx*p.tx+dz*p.tz)%T.len+T.len)%T.len;
+}
 /* the point of the centreline a distance s round the lap */
 function aiAt(T,s){
   const N=T.N, sp=T.len/N; let u=s/sp; u=((u%N)+N)%N;
@@ -7694,6 +7746,7 @@ function aiAt(T,s){
 function aiSpawn(){
   if(!AI.on||!G.T||!G.scene)return;
   const T=G.T, n=RACE.grid.filter(id=>id.startsWith("ai")).length;
+  AI.line=aiLine(T);
   const names=AI_NAMES.slice().sort(()=>Math.random()-0.5);
   const colours=AI_COLOURS.filter(c=>c.toLowerCase()!==String(ED.opts.color).toLowerCase()).sort(()=>Math.random()-0.5);
   const k=AI.strength/100;
@@ -7706,8 +7759,14 @@ function aiSpawn(){
       s:s0,d:(col?1:-1)*T.halfW*0.44,v:0,laps:s0>T.len/2?-1:0,prog:s0/T.len,fin:false,dMax:0,
       pace:1+(Math.random()-0.5)*0.14*(1.2-k),       // a driver of their own, more so when weaker
       lane:((a%4)-1.5)/1.5*0.32*T.halfW,
+      /* how much of the racing line they use, and where on it: the weaker
+         the driver, the more of their own idea of the line they keep */
+      mix:0.55+0.45*Math.min(1,k*(0.9+0.2*Math.random())),
+      shift:Math.round((Math.random()-0.5)*8),
+      wander:(Math.random()-0.5)*1.4,
+      gridD:(col?1:-1)*T.halfW*0.44, held:0,
       mistake:null,next:(8+40*k)*(0.5+Math.random()),mistakes:0,
-      x:0,y:0,z:0,yaw:0,spin:0,steer:0,mesh:null};
+      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,mesh:null};
     const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
     car.mesh=buildCar(car.colour,car.kind); car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
     car.mesh.position.set(car.x,car.y,car.z); car.mesh.rotation.order="YXZ"; car.mesh.rotation.y=car.yaw;
@@ -7721,7 +7780,7 @@ function aiTick(dt){
   const go=CAR.state==="run";
   for(const c of AI.cars){
     const kk=Math.min(1.05,k*c.pace);
-    const aLat=(4+10*kk)*perf.grip, vmax=(30+34*kk)*perf.top, accel=(4.5+7*kk)*perf.power, brake=8+9*kk;
+    const aLat=(4.5+11.5*kk)*perf.grip, vmax=(30+34*kk)*perf.top, accel=(4.5+7.5*kk)*perf.power, brake=8+9.5*kk;
     /* mistakes: scheduled, and worse the weaker the driver */
     let vMul=1, dAdd=0;
     if(go&&k<0.97){
@@ -7734,27 +7793,45 @@ function aiTick(dt){
              else if(m.type==="wobble") dAdd=Math.sin(performance.now()/1000*11)*(0.8+m.sev*1.6);
              else if(m.type==="wide"){ const here=aiAt(T,c.s); if(!m.side) m.side=here.k>0?1:-1; dAdd=m.side*(T.halfW*0.9+m.sev*3.5); vMul=0.82; } }
     }
-    /* the road ahead sets the speed: the tightest thing coming, braked for
-       in time */
-    const sp=T.len/T.N;
+    /* the road ahead sets the speed: the tightest thing coming on their
+       line, braked for in time */
+    const sp=T.len/T.N, L=AI.line, here=aiAt(T,c.s);
     let vAllow=vmax;
-    for(let m=0;m<=Math.round(160/sp);m++){
-      const q=(aiAt(T,c.s).i+m)%T.N, kq=Math.abs(T.K[q]);
+    for(let m=0;m<=Math.round(170/sp);m++){
+      const q=(here.i+m)%T.N, kq=L?Math.abs(L.k[q])*(0.55+0.45*c.mix)+Math.abs(T.K[q])*(0.45-0.45*c.mix):Math.abs(T.K[q]);
       const vT=Math.min(vmax,Math.sqrt(aLat/Math.max(kq,1e-4)));
       const dist=Math.max(0,m*sp-6);
       vAllow=Math.min(vAllow,Math.sqrt(vT*vT+2*brake*dist));
     }
     vAllow*=vMul;
     if(Math.abs(c.d)>T.halfW) vAllow=Math.min(vAllow,vmax*0.6);           // on the grass
-    if(go) c.v+=clamp(vAllow-c.v,-brake*dt,accel*dt); else c.v=0;
+    /* the line: their share of the racing line, the rest their own lane,
+       and a little wander that is theirs alone */
+    const li=L?((here.i+c.shift)%T.N+T.N)%T.N:here.i;
+    const lineD=L?L.d[li]:0;
+    let dT=lineD*c.mix+c.lane*(1-c.mix)+c.wander*Math.sin(c.s/90)+dAdd;
+    /* off the line the grid is left as it is, for the first moments */
+    if(go){ c.held+=dt; const h=Math.min(1,Math.max(0,(c.held-1.2)/2.5)); dT=lerp(c.gridD,dT,h*h*(3-2*h)); }
+    else dT=c.gridD;
+    /* traffic: a car ahead in their path is followed, not driven through,
+       and gone round where there is room */
+    let vCap=Infinity;
+    const ahead=aiTraffic(c);
+    if(ahead){
+      const gap=ahead.gap;
+      if(gap<16){ vCap=Math.max(0,ahead.v-(gap<8?2.5:0.6)); }
+      if(gap<28&&c.v>ahead.v-1){
+        /* move to whichever side has more road, away from the car ahead */
+        const room=T.halfW*0.86, side=(ahead.d>0?-1:1);
+        const want=clamp(ahead.d+side*2.6,-room,room);
+        dT=lerp(dT,want,Math.min(1,(28-gap)/14));
+      }
+    }
+    if(go) c.v+=clamp(Math.min(vAllow,vCap)-c.v,-brake*dt,accel*dt); else c.v=0;
     c.v=Math.max(0,c.v);
-    /* the line: inside of the bend, a lane of their own on the straight */
-    const here=aiAt(T,c.s);
-    const bend=Math.min(1,Math.abs(here.k)*260);
-    const dT=lerp(c.lane,-Math.sign(here.k)*T.halfW*0.5,bend)+dAdd;
     const dMax=T.halfW*0.86+(Math.abs(dAdd)?4:0);
     const dWant=clamp(dT,-dMax,dMax);
-    const rate=(2.2+c.v*0.06)*dt;
+    const rate=(2.4+c.v*0.07)*dt;
     const dPrev=c.d; c.d+=clamp(dWant-c.d,-rate,rate); c.dMax=Math.max(c.dMax||0,Math.abs(c.d));
     /* along the lap; a lap is a lap */
     const sPrev=c.s; c.s+=c.v*dt;
@@ -7766,12 +7843,37 @@ function aiTick(dt){
     const nx=p.x+p.rx*c.d, nz=p.z+p.rz*c.d;
     const dx=nx-c.x, dz=nz-c.z;
     if(c.v>1.5){ let want=Math.atan2(dx,dz); let dy=want-c.yaw; while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU; c.yaw+=dy*Math.min(1,dt*9); }
+    c.vx=(nx-c.x)/Math.max(1e-3,dt); c.vz=(nz-c.z)/Math.max(1e-3,dt);
     c.x=nx; c.z=nz;
     const yHint=c.y; c.y=heightAt(T,c.x,c.z,null,yHint);
     c.steer=clamp((c.d-dPrev)/Math.max(0.01,dt)*0.25+here.k*40,-1,1);
     c.spin+=c.v*dt/0.36;
-    aiPose(c);
   }
+  /* solid to each other too: overlapping cars are pushed apart, half each,
+     and the one behind gives up the speed */
+  const R2=2.3;
+  for(let i=0;i<AI.cars.length;i++) for(let j=i+1;j<AI.cars.length;j++){
+    const a=AI.cars[i], b=AI.cars[j];
+    if(Math.abs(a.y-b.y)>2.5)continue;
+    const dx=a.x-b.x, dz=a.z-b.z, d=Math.hypot(dx,dz);
+    if(d>=R2||d<1e-4)continue;
+    const nx=dx/d, nz=dz/d, half=(R2-d)*0.5;
+    aiShove(a,nx*half,nz*half); aiShove(b,-nx*half,-nz*half);
+    const ta=Math.sin(a.yaw), tz=Math.cos(a.yaw);
+    const aAhead=(dx*ta+dz*tz)>0;               // a is further along than b
+    if(aAhead) b.v=Math.min(b.v,a.v*0.95); else a.v=Math.min(a.v,b.v*0.95);
+  }
+  for(const c of AI.cars){ const p=aiAt(T,c.s); c.x=p.x+p.rx*c.d; c.z=p.z+p.rz*c.d; aiPose(c); }
+}
+/* the nearest car ahead of this one on the road: the player or another of
+   the machine's — how far ahead, how fast, and where across the road */
+function aiTraffic(c){
+  const T=G.T; let best=null;
+  const look=(s,d,v)=>{ let gap=s-c.s; if(gap<-T.len/2)gap+=T.len; if(gap>T.len/2)gap-=T.len;
+    if(gap<=0.5||gap>30||Math.abs(d-c.d)>2.6)return; if(!best||gap<best.gap) best={gap,v,d}; };
+  for(const o of AI.cars) if(o!==c) look(o.s,o.d,o.v);
+  if(G.running&&CAR.state!=="count"){ const np=nearest(T,CAR.x,CAR.z,null,CAR.y); look(np.s,np.d,Math.hypot(CAR.vx,CAR.vz)); }
+  return best;
 }
 function aiPose(c){
   const T=G.T, m=c.mesh; if(!m)return;
@@ -7981,7 +8083,7 @@ function takeTrack(d){
   ED.opts=Object.assign({},OPTS0,d.opts);
   ED.opts.car=keep; ED.opts.color=keepC;      // your car stays yours
   ED.fit=1;
-  rebuild(); syncSliders(); solidUI();
+  rebuild(); syncSliders();
   pressGroup($("themes"),"theme",ED.opts.theme);
   return true;
 }
@@ -8023,59 +8125,43 @@ $("btnLeave").addEventListener("click",()=>{
   netSend({t:"bye"});
   if(NET.ws)NET.ws.close();
 });
-/* Contact is a rule of the party, not a personal preference: if one car is
-   solid and the other is not, one of you gets shoved and the other feels
-   nothing. The host sets it and it travels with the circuit, so everyone in
-   a room is playing the same game. */
-/* Reachable from the rail before you go out and from the pause menu once you
-   are, because whether cars touch is the sort of thing you decide two laps
-   in rather than in advance. */
-function solidToggle(where){
-  if(NET.status!=="in")return;
-  if(NET.id!==NET.hostId){
-    if(where==="pause")flashPause("Only the host can change contact.");
-    else netSay("Only the host can change contact.");
-    return;
-  }
-  ED.opts.solid=!ED.opts.solid;
-  store.set("ad.opts",ED.opts);
-  solidUI(); netSendTrack();
-}
-$("btnSolid").addEventListener("click",()=>solidToggle("rail"));
-$("pSolid").addEventListener("click",()=>solidToggle("pause"));
+/* Cars are solid. Always: there is no setting for it any more, in a party
+   or against the machine. */
 
 /* The pause menu has nowhere to put a sentence, so it borrows the button. */
 let pauseSayT=0;
 function flashPause(msg){
-  const b=$("pSolid"), keep=b.dataset.label||(b.dataset.label=b.firstChild.textContent);
+  const b=$("pGarage"), keep=b.dataset.label||(b.dataset.label=b.firstChild.textContent);
   b.firstChild.textContent=msg+" ";
   clearTimeout(pauseSayT);
   pauseSayT=setTimeout(()=>{ b.firstChild.textContent=keep; },2200);
 }
 
-function solidUI(){
-  const on=!!ED.opts.solid, host=NET.id===NET.hostId, party=NET.status==="in";
-  for(const id of ["solidState","pSolidState"]){
-    const s=$(id);
-    if(!s)continue;
-    s.textContent=on?"On":"Off";
-    s.className="s "+(on?"on":"off");
-  }
-  $("btnSolid").disabled=!host;
-  $("btnSolid").title=host?"":"Only the host can change this";
-  /* Alone there is nothing to touch, so the row is not there at all. */
-  $("pSolid").hidden=!party;
-  $("pSolid").disabled=!host;
-  $("pSolid").title=host?"":"Only the host can change this";
-}
+function solidUI(){}   /* contact is always on; the rows that set it are gone */
 
-/* Other cars are solid only when the party says so. Both machines push
-   themselves out of the overlap rather than one being told where to go, so
-   there is no authority to argue over — each of you feels the same shunt
-   from your own side of it. */
+/* Other cars are solid. Both machines push themselves out of the overlap
+   rather than one being told where to go, so there is no authority to argue
+   over — each of you feels the same shunt from your own side of it. The
+   machine's cars are shoved the same way, and shove back. */
 function netCollide(){
-  if(!ED.opts.solid||NET.status!=="in")return;
   const R=2.3;                                  // two cars, roughly
+  if(AI.on) for(const c of AI.cars){
+    if(Math.abs(CAR.y-c.y)>2.5)continue;
+    const dx=CAR.x-c.x, dz=CAR.z-c.z, d=Math.hypot(dx,dz);
+    if(d>=R||d<1e-4)continue;
+    const nx=dx/d, nz=dz/d, half=(R-d)*0.5;
+    CAR.x+=nx*half; CAR.z+=nz*half;
+    aiShove(c,-nx*half,-nz*half);
+    const vin=(CAR.vx-c.vx)*nx+(CAR.vz-c.vz)*nz;
+    if(vin<0){
+      CAR.vx-=nx*vin*0.9; CAR.vz-=nz*vin*0.9;
+      /* what we lose along the line of the hit, they gain */
+      const tx=Math.sin(c.yaw), tz=Math.cos(c.yaw);
+      c.v=Math.max(0,c.v-(nx*tx+nz*tz)*vin*0.5);
+      if(-vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-vin/30); thud(-vin); CAR.hitCool=0.16; }
+    }
+  }
+  if(NET.status!=="in")return;
   for(const p of NET.peers.values()){
     if(!p.mesh)continue;
     const m=p.mesh.position;
@@ -8563,7 +8649,6 @@ $("pBack").addEventListener("click",()=>{
   pressGroup($("themes"),"theme",ED.opts.theme);
   pressGroup($("colors"),"color",ED.opts.color);
   pressGroup($("garCards"),"car",ED.opts.car); garLabel();
-  solidUI();
   fsUI();
   acctUI();                         // your own name, from the last visit
   netUI();                          // settles the screen into solo before anything else

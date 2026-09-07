@@ -79,11 +79,14 @@ cars line up (up to four), their **strength**, the laps, and whether you
 start at the front, the back or wherever the draw puts you. **Drive it**
 then starts a race against them, with the grid, the lights, the running
 order and the finishing order of a party race. They are not driven through
-the car model: each runs the centreline at a speed worked out from the road
-ahead and the strength, cutting to the inside of the corners and keeping a
-lane of its own on the straights. Below full strength each has a pace of its
-own, and now and then lifts, wobbles or runs wide; the weaker, the more
-often and the worse. They do not collide with you yet.
+the car model: each runs a racing line — the least-curvature path the road
+edges allow, worked out for the circuit when the race starts — at a speed set
+by that line and the strength, braking in time for what is coming. Each keeps
+a line of its own around it, follows rather than drives through a car ahead
+and goes round it where there is room, holds its grid slot off the line, and
+is solid to you and to the others. Below full strength each has a pace of
+its own and now and then lifts, wobbles or runs wide; the weaker, the more
+often and the worse.
 
 ## The daily time trial
 
@@ -184,10 +187,8 @@ are. When they are off the screen — behind you, or round the next corner —
 the tag pins itself to the edge nearest them and points, so you always know
 where somebody is even when you cannot see them.
 
-**Contact** — whether cars touch or drive through each other — is in the
-pause menu as well as on the drawing board, since it is the sort of thing you
-decide two laps in. Only the host can change it: if one car is solid and the
-other is not, one of you gets shoved and the other feels nothing.
+**Contact** is always on: cars are solid to each other, in a party and against
+the machine, and both sides feel the same shunt from their own side of it.
 
 Times need an account to appear, but the board is readable without one.
 
