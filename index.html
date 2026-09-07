@@ -6211,6 +6211,13 @@ async function api(path,opts){
   return j;
 }
 
+/* Tells the desk this browser is this account's, so the visits it made
+   before signing in are named. Not a visit: nothing is counted. */
+function acctBind(){
+  const h=location.hostname; if(!h||h==="localhost"||h==="127.0.0.1")return;
+  const vid=store.get("ad.vid",null); if(!vid||!ACCT.token)return;
+  try{ fetch(apiBase()+"/api/hit",{method:"POST",body:JSON.stringify({v:vid,t:ACCT.token,bind:1}),keepalive:true,headers:{"content-type":"text/plain"}}).catch(()=>{}); }catch(e){}
+}
 function acctSave(){
   store.set("ad.token",ACCT.token);
   store.set("ad.user",ACCT.user);
@@ -6339,7 +6346,7 @@ $("authForm").addEventListener("submit",async ev=>{
       method:"POST",
       body:up?{username,email,password}:{username,password},
     });
-    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave();
+    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind();
     TK.list=[]; TK.loaded=false;         // fetch this account's own
 
     $("auPass").value="";                  // not left sitting in the DOM

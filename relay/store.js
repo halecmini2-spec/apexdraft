@@ -209,6 +209,7 @@ function fileStore(file) {
     /* The most recent visits, newest first, each marked as a first visit
        or a return — judged by whether the id had been seen on an earlier
        day. */
+    async bind(vid, name) { db.who[vid] = name; await save(); },
     async recent(limit) {
       const out = db.log.slice(-limit).reverse();
       const first = {};
@@ -473,6 +474,9 @@ function pgStore(url) {
       if (name) await pool.query(`INSERT INTO visitors (vid,name) VALUES ($1,$2) ON CONFLICT (vid) DO UPDATE SET name=EXCLUDED.name`, [vid, name]);
       /* a month of moments is plenty; the day counts keep the rest */
       if (Math.random() < 0.02) await pool.query(`DELETE FROM visit_log WHERE at < $1`, [Date.now() - 31 * 86_400_000]);
+    },
+    async bind(vid, name) {
+      await pool.query(`INSERT INTO visitors (vid,name) VALUES ($1,$2) ON CONFLICT (vid) DO UPDATE SET name=EXCLUDED.name`, [vid, name]);
     },
     async recent(limit) {
       const rows = (await pool.query(

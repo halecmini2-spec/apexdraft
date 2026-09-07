@@ -20,15 +20,20 @@ function makeVisits(store, userFor) {
        the visitor's problem. */
     cors(res);
     if (store.ready === false || overRate("h:" + clientIp(req), 40, 10 * 60_000)) { res.writeHead(204).end(); return true; }
-    let vid = null, name = null;
+    let vid = null, name = null, bind = false;
     try {
-      const b = await readBody(req, 1024); vid = String(b.v || "");
+      const b = await readBody(req, 1024); vid = String(b.v || ""); bind = !!b.bind;
       /* A signed-in visitor is named on the desk. The token is the same one
          the account desk already trusts; it is never stored, only resolved. */
       if (b.t && userFor) { const u = await userFor(String(b.t)); if (u) name = u.name; }
     } catch (e) { vid = null; }
     if (vid && VID.test(vid)) {
-      try { await store.hit(today(), vid, Date.now(), name); } catch (e) { console.error("hit:", e && e.message); }
+      try {
+        /* Signing in mid-visit binds the browser to the account without
+           counting another visit: the earlier visits from it get the name. */
+        if (bind) { if (name) await store.bind(vid, name); }
+        else await store.hit(today(), vid, Date.now(), name);
+      } catch (e) { console.error("hit:", e && e.message); }
     }
     res.writeHead(204).end();
     return true;
