@@ -5985,13 +5985,18 @@ function homeArt(){
   const count=Math.round((W*H)/42000)+8;
   c.lineCap="round"; c.lineJoin="round";
   for(let k=0;k<count;k++){
-    /* a few control points drifting across the page, then a smooth curve
-       through them */
-    const pts=[]; const m=4+Math.floor(rnd()*4);
-    let x=rnd()*W, y=rnd()*H, dir=rnd()*TAU;
-    for(let i=0;i<m;i++){ pts.push({x,y}); dir+=(rnd()-0.5)*1.6; const step=Math.min(W,H)*(0.16+rnd()*0.22); x+=Math.cos(dir)*step; y+=Math.sin(dir)*step; }
+    /* From one edge of the page to another, never stopping in the middle:
+       an entry and an exit just outside two different edges, and a few
+       points between them pushed sideways at random, so the line wanders
+       on its way across. */
+    const edge=(e)=>e===0?{x:-60,y:rnd()*H}:e===1?{x:W+60,y:rnd()*H}:e===2?{x:rnd()*W,y:-60}:{x:rnd()*W,y:H+60};
+    const e0=Math.floor(rnd()*4); let e1=Math.floor(rnd()*4); if(e1===e0)e1=(e0+1+Math.floor(rnd()*3))%4;
+    const A=edge(e0), B=edge(e1), m=3+Math.floor(rnd()*3), pts=[A];
+    const nx=-(B.y-A.y), ny=(B.x-A.x), nl=Math.hypot(nx,ny)||1, sway=Math.min(W,H)*0.28;
+    for(let i=1;i<=m;i++){ const t=i/(m+1), o=(rnd()-0.5)*2*sway; pts.push({x:A.x+(B.x-A.x)*t+nx/nl*o, y:A.y+(B.y-A.y)*t+ny/nl*o}); }
+    pts.push(B);
     const amber=rnd()<0.55;
-    const alpha=0.16+rnd()*0.26, wl=amber?2.2+rnd()*3.2:1.8+rnd()*2.6;
+    const alpha=0.16+rnd()*0.26, wl=amber?3.5+rnd()*4.5:3.0+rnd()*3.5;
     c.beginPath(); c.moveTo(pts[0].x,pts[0].y);
     for(let i=0;i<pts.length-1;i++){
       const p0=pts[Math.max(0,i-1)], p1=pts[i], p2=pts[i+1], p3=pts[Math.min(pts.length-1,i+2)];
@@ -6006,8 +6011,6 @@ function homeArt(){
     if(amber&&rnd()<0.5){ c.shadowColor="rgba(255,176,32,.45)"; c.shadowBlur=8; } else c.shadowBlur=0;
     c.stroke();
     c.setLineDash([]); c.shadowBlur=0;
-    /* now and then a dot where the pen came down */
-    if(rnd()<0.5){ c.fillStyle=c.strokeStyle; c.beginPath(); c.arc(pts[0].x,pts[0].y,2.2,0,TAU); c.fill(); }
   }
 }
 addEventListener("resize",()=>{ if(!$("home").hidden)homeArt(); });
