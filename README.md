@@ -29,8 +29,9 @@ lead back.
   or a Yaris that never quite settles on its springs, each drawn from its own
   model in the colour you choose. Each keeps its own best lap, since they
   don't lap at the same pace. The garage is in the pause menu too.
-- **Drive it** — `WASD`/arrows, `R` recover, `C` camera, `M` sound, `Esc`
-  menu. On a phone, on-screen controls appear automatically.
+- **Drive it** — `WASD`/arrows, `R` recover, `R` twice to restart from the
+  line, `C` camera, `M` sound, `Esc` menu. On a phone, on-screen controls
+  appear automatically, and the pause menu has **Back to the start**.
 - **On a phone** the layout is a phone layout, not a shrunk desktop, in
   either orientation and in Safari, Chrome and Edge alike. Sideways: the
   doors, the garage, the daily page and the pause menu each fit one screen,
@@ -58,7 +59,10 @@ lead back.
 in the GT. The relay draws it from the date — harmonics on an oval, with
 the width, the hills, the smoothing, the scenery and a few banked corners
 all rolled with the shape — so every machine builds exactly the same lap
-and nothing has to be stored. It changes at midnight UTC.
+and nothing has to be stored. It changes at midnight UTC. There are no
+start lights: you are dropped in just before the last corner, moving off
+in your own time, and the clock starts as you cross the line. Restarting
+puts you back there, not on the line.
 
 The Daily page shows the circuit, the world record so far and who holds
 it, your own best and where it stands ("14th of 213"), and the day's times.

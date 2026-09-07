@@ -1591,7 +1591,7 @@ body.admining #lobbybar{display:none}
           <div class="dy-tile you"><span class="k">You</span><b id="dyYou">—:—.———</b><span class="w" id="dyYouRank"></span></div>
           <button class="go" id="dyDrive">Drive today's circuit</button>
           <button class="chip" id="dyGhost">Record ghost <span class="s on" id="dyGhostState">On</span></button>
-          <p class="ahint" id="dyNote">The same circuit for everyone until midnight UTC, always in the GT. Times need an account; the ghost is the fastest lap so far, driven beside you.</p>
+          <p class="ahint" id="dyNote">The same circuit for everyone until midnight UTC, always in the GT. You start rolling, just before the last corner, and the clock starts at the line. Times need an account; the ghost is the fastest lap so far, driven beside you.</p>
         </div>
       </div>
       <div class="times dy-times">
@@ -1796,7 +1796,7 @@ body.admining #lobbybar{display:none}
       <canvas class="tagcv" id="tagcv"></canvas>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
-        <div>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover</div>
+        <div>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover · <kbd>R</kbd><kbd>R</kbd> restart</div>
         <div><kbd>C</kbd> camera · <kbd>M</kbd> sound · <kbd>Esc</kbd> menu</div>
       </div>
       <div class="mapbox"><canvas id="minimap" width="264" height="264"></canvas></div>
@@ -1835,6 +1835,7 @@ body.admining #lobbybar{display:none}
         <div class="btns">
           <button class="pbtn primary" id="pResume">Resume <span class="s">Esc</span></button>
           <button class="pbtn" id="pReset">Recover car <span class="s">R</span></button>
+          <button class="pbtn" id="pRestart">Back to the start <span class="s">R R</span></button>
           <!-- A pit stop. Change car without going back to the board: the
                new car is built where you stand and you restart from the
                line, since its laps are a different record. -->
@@ -4408,7 +4409,16 @@ function resetCar(toStart){
      order, which every machine works out identically, so nobody has to be
      told where to stand. */
   const slot=(toStart&&typeof netSlot==="function")?netSlot():-1;
-  if(slot>=0){
+  /* The daily has no start lights. You are dropped in a little before the
+     last corner, moving off in your own time, and the clock starts as you
+     cross the line — the way a hot lap is driven, not a standing start. */
+  const rolling=toStart&&DAILY.on;
+  if(rolling){
+    const spacing=T.len/T.N, back=Math.round(30/spacing);
+    const last=T.corners&&T.corners.length?T.corners[T.corners.length-1]:null;
+    i=last?((last.a-back)%T.N+T.N)%T.N:((T.N-Math.round(80/spacing))%T.N+T.N)%T.N;
+  }
+  if(slot>=0&&!rolling){
     const row=Math.floor(slot/2), col=slot%2;
     i=(i-row*2+T.N*2)%T.N;                        // ~14m between rows
     const lat=(col?1:-1)*T.halfW*0.44;
@@ -4426,6 +4436,7 @@ function resetCar(toStart){
     CAR.lastP=0;CAR.lapDist=0;CAR.lapNo=1;CAR.curMs=0;CAR.lastMs=null;
     CAR.sectors=[null,null,null];CAR.secIdx=0;CAR.secStart=0;
     CAR.state="count";CAR.countT=0;
+    if(rolling){ CAR.state="out"; CAR.lastP=T.S[i]/T.len; showFlash("Out lap","#E6EEEC","the clock starts at the line"); }
     CAR.bestMs=store.get("ad.best."+trackKey(T),null);
     CAR.bestSectors=store.get("ad.bsec."+trackKey(T),[null,null,null]);
   }
@@ -4437,6 +4448,7 @@ function trackKey(T){
 }
 
 /* ---------- input ---------- */
+let lastR=0;
 addEventListener("keydown",e=>{
   if(e.repeat)return;
   /* Space and the arrows are swallowed below so the page cannot scroll out
@@ -4448,7 +4460,12 @@ addEventListener("keydown",e=>{
   if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].indexOf(e.code)>=0)e.preventDefault();
   if(document.getElementById("drive").hidden)return;
   if(e.code==="Escape")togglePause();
-  if(e.code==="KeyR")resetCar(false);
+  /* R once puts the car back on the road where it is; R twice, quickly,
+     puts it back at the start — the line, or the daily's rolling start. */
+  if(e.code==="KeyR"){
+    const now=performance.now();
+    if(now-lastR<450){ resetCar(true); lastR=0; } else { resetCar(false); lastR=now; }
+  }
   if(e.code==="KeyC")G.camMode=(G.camMode+1)%3;
   if(e.code==="KeyM")setSound(!SOUND);
 });
@@ -4836,7 +4853,15 @@ function step(dt){
   CAR.wheelSpin+=vLong*dt/0.36;
 
   /* lap timing */
-  if(CAR.state!=="count"){
+  if(CAR.state==="out"){
+    const p=np2.s/T.len; let d=p-CAR.lastP;
+    if(d>0.5)d-=1; if(d<-0.5)d+=1;
+    if(CAR.lastP>0.6&&p<0.4&&d>0){
+      CAR.state="run"; CAR.curMs=0; CAR.lapDist=0; CAR.secIdx=0;
+      showFlash("Go","#2ED47A","");
+    }
+    CAR.lastP=p;
+  } else if(CAR.state!=="count"){
     CAR.curMs+=dt*1000;
     const p=np2.s/T.len;
     let d=p-CAR.lastP;
@@ -7943,6 +7968,7 @@ function driveNow(){
 }
 $("pResume").addEventListener("click",()=>togglePause(false));
 $("pReset").addEventListener("click",()=>{ resetCar(false); togglePause(false); });
+$("pRestart").addEventListener("click",()=>{ resetCar(true); togglePause(false); });
 $("pFull").addEventListener("click",()=>{ fsToggle(); setTimeout(fsUI,120); });
 $("pSound").addEventListener("click",()=>setSound(!SOUND));
 $("pMusic").addEventListener("click",()=>setMusic(!MUSIC));
