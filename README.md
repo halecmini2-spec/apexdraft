@@ -7,6 +7,12 @@ Open `index.html` in any modern browser, or host it as-is.
 
 ## Playing
 
+The page opens on a home page with four doors — **Draw & drive**, **Multiplayer**,
+**Daily time trial**, and a **Shop** that says coming soon — with the account, admin
+and About links beside them. Each mode shows only its own controls, and a
+**Home** button in the bar, the wordmark, and a Home row in the pause menu all
+lead back.
+
 - **Draw** a loop on the board. The direction you draw is the racing
   direction, and where you start becomes the start/finish line.
 - **Bank a corner** by clicking its number on the map, then using the slider.

@@ -539,6 +539,40 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .go:active{transform:translateY(1px)}
 .go:disabled{background:var(--raise);color:var(--faint);cursor:not-allowed}
 /* the about section: quiet until opened */
+/* the home page */
+#home{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
+.home-wrap{max-width:900px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;justify-content:center;gap:22px}
+.home-head .auth-brand.big{font-size:30px;letter-spacing:.18em}
+.home-head .auth-sub{margin:6px 0 0;font-size:13px}
+.home-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-height:430px){.home-wrap{gap:12px;justify-content:flex-start}.home-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.home-head .auth-brand.big{font-size:20px}}
+.mu-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.home-cards,.mu-cards{grid-template-columns:1fr}}
+.home-card{position:relative;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:4px;
+  padding:18px 18px 18px 22px;display:flex;flex-direction:column;gap:6px;color:var(--dim);cursor:pointer;min-height:118px;
+  transition:border-color .12s,background .12s,transform .12s}
+.home-card i{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;background:var(--faint)}
+.home-card b{font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.home-card span{font-size:12.5px;line-height:1.5}
+.home-card:hover{border-color:var(--faint);transform:translateY(-1px)}
+.home-card.amber i{background:var(--amber)} .home-card.amber:hover{border-color:var(--amber);background:var(--amber-glow)}
+.home-card.red i{background:var(--party)} .home-card.red:hover{border-color:var(--party);background:var(--party-glow)}
+.home-card.purple i{background:var(--purple)} .home-card.purple:hover{border-color:var(--purple);background:rgba(178,79,232,.12)}
+.home-card.grey{cursor:default;opacity:.6} .home-card.grey:hover{transform:none;border-color:var(--line)}
+.home-card.static{cursor:default} .home-card.static:hover{transform:none}
+.home-links{justify-content:center}
+.mu-join{display:flex;gap:9px;align-items:center;margin-top:8px}
+.mu-join .codein{width:120px;padding:7px 8px;font-size:16px}
+.chip.home{margin-left:10px;color:var(--amber);border-color:var(--amber-deep)}
+.chip.home:hover{background:var(--amber);color:#140D00;border-color:var(--amber)}
+#brand{cursor:pointer}
+/* what the bar shows depends on where you are */
+body[data-app="home"] #btnHome{display:none}
+body[data-app="home"] #btnTracks{display:none}
+body:not([data-app="home"]) #btnAbout,body:not([data-app="home"]) #btnAccount,body:not([data-app="home"]) #btnAdmin{display:none}
+body[data-app="daily"] #btnTracks{display:none}
+#btnDaily{display:none}
+body:not([data-app="multi"]) .lb-party{display:none!important}
 /* the daily */
 #dailyScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .dy-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
@@ -1184,7 +1218,8 @@ body.admining #lobbybar{display:none}
        that was impossible to find at the bottom of a column of sliders,
        looking like another setting. -->
   <div id="lobbybar" hidden>
-    <h1 class="lb-brand">Apex<span>Drawn</span></h1>
+    <h1 class="lb-brand" id="brand">Apex<span>Drawn</span></h1>
+    <button class="chip home" id="btnHome">⌂ Home</button>
     <small class="lb-ver">v4.0</small>
     <span class="lb-role" id="lbRole">Host</span>
     <!-- the grid at a glance, so a host building a circuit can see who has
@@ -1275,6 +1310,51 @@ body.admining #lobbybar{display:none}
 
   <!-- The daily time trial: one circuit a day, the same for everyone, the
        GT for everyone, and the world's times on it. -->
+  <!-- The front door: four ways in, and the account beside them. Every
+       other screen has a Home button in the bar back to here. -->
+  <section id="home" class="screen">
+    <div class="home-wrap">
+      <div class="home-head">
+        <h1 class="auth-brand big">Apex<span>Drawn</span></h1>
+        <p class="auth-sub">Draw a racetrack. Race it.</p>
+      </div>
+      <div class="home-cards">
+        <button class="home-card amber" id="hmDraw"><i></i><b>Draw &amp; drive</b><span>Sketch a circuit on the board and drive it straight away.</span></button>
+        <button class="home-card red" id="hmMulti"><i></i><b>Multiplayer</b><span>Host or join a party and race friends live, on a circuit you draw or one you saved.</span></button>
+        <button class="home-card purple" id="hmDaily"><i></i><b>Daily time trial</b><span>Today's circuit, the world's times, your ranking, and a ghost to chase.</span></button>
+        <button class="home-card grey" id="hmShop"><i></i><b>Shop</b><span>Coming soon.</span></button>
+      </div>
+      <div class="home-links chips">
+        <button class="chip" id="hmAccount">Sign in</button>
+        <button class="chip on" id="hmAdmin" hidden>Admin</button>
+        <button class="chip" id="hmAbout">About</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="multiScreen" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head">
+        <div>
+          <h1 class="auth-brand">Multi<span>player</span></h1>
+          <p class="auth-sub">Race friends live. The host sets the circuit — drawn on the board, or one from the shelf.</p>
+        </div>
+        <div class="chips"><button class="chip" id="muBack">Home</button></div>
+      </div>
+      <div class="mu-cards">
+        <button class="home-card red" id="muHost"><i></i><b>Host a party</b><span>You get a four-letter code. Draw a circuit or load a saved one, then start the race for everyone.</span></button>
+        <div class="home-card red static">
+          <i></i><b>Join a party</b><span>Enter the host's code.</span>
+          <div class="mu-join">
+            <input id="muCode" class="codein" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <button class="chip go-party" id="muJoin">Join</button>
+          </div>
+          <p class="hint" id="muHint"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="dailyScreen" class="screen" hidden>
     <div class="tk-wrap">
       <div class="tk-head">
@@ -1560,6 +1640,7 @@ body.admining #lobbybar{display:none}
           <button class="pbtn" id="pFull" hidden>Fullscreen <span class="s off" id="fullState">Off</span></button>
           <button class="pbtn" id="pTouch">On-screen controls <span class="s on" id="touchState">On</span></button>
           <button class="pbtn" id="pBack">Back to the drawing board</button>
+          <button class="pbtn" id="pHome">Home</button>
         </div>
       </div>
     </div>
@@ -5577,7 +5658,7 @@ function garLabel(){
 }
 function showGarage(on){
   $("garage").hidden=!on;
-  $("editor").hidden=on;
+  baseShow(!on);
   document.body.classList.toggle("garaging",on);
   if(on){
     pressGroup($("garCards"),"car",ED.opts.car);
@@ -5604,7 +5685,7 @@ async function dailyLoad(force){
   return d;
 }
 function showDaily(on){
-  $("dailyScreen").hidden=!on; $("editor").hidden=on;
+  $("dailyScreen").hidden=!on; baseShow(!on);
   document.body.classList.toggle("dailying",on);
   if(on){ dyRender(); dyRefresh(); } else fitPad();
 }
@@ -5745,16 +5826,71 @@ function ghostUpdate(){
   m.visible=true;
 }
 $("btnDaily").addEventListener("click",()=>{ if(NET.status==="in"){ netSay("Leave the party first — the daily is driven alone."); return; } showDaily(true); });
-$("dyBack").addEventListener("click",()=>showDaily(false));
+$("dyBack").addEventListener("click",()=>{ if(DAILY.on)showDaily(false); else goHome(); });
 $("dyRefresh").addEventListener("click",dyRefresh);
 $("dyDrive").addEventListener("click",enterDaily);
 $("dyOpen").addEventListener("click",()=>showDaily(true));
-$("dyLeave").addEventListener("click",leaveDaily);
+$("dyLeave").addEventListener("click",goHome);
 $("dyGhost").addEventListener("click",()=>setGhost(!GH.on));
 $("pGhost").addEventListener("click",()=>setGhost(!GH.on));
 addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("dailyScreen").hidden)showDaily(false); });
+/* ---- home, and the modes ----
+   One page under everything: Draw & drive, Multiplayer and the Daily are
+   modes the board is put into, and Home is always one press away. */
+const APP={mode:"home"};
+function setApp(mode){ APP.mode=mode; document.body.dataset.app=mode; }
+/* what shows when nothing else is over it */
+function baseShow(v){
+  if(APP.mode==="home"){ $("home").hidden=!v; $("editor").hidden=true; }
+  else { $("home").hidden=true; $("editor").hidden=!v; if(v)fitPad(); }
+}
+function closeScreens(){
+  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen"]) $(id).hidden=true;
+  for(const c of ["garaging","dailying","abouting","authing","shelving","admining"]) document.body.classList.remove(c);
+}
+function goHome(){
+  if(document.body.classList.contains("driving")) $("pBack").click();
+  if(NET.status==="in") $("btnLeave").click();
+  if(DAILY.on) leaveDaily();
+  closeScreens();
+  setApp("home"); baseShow(true);
+}
+function goDraw(){
+  if(NET.status==="in") $("btnLeave").click();
+  if(DAILY.on) leaveDaily();
+  closeScreens(); setApp("draw"); baseShow(true);
+}
+function goMulti(){
+  if(DAILY.on) leaveDaily();
+  closeScreens(); setApp("multi");
+  if(NET.status==="in"){ baseShow(true); return; }
+  $("home").hidden=true; $("editor").hidden=true; $("multiScreen").hidden=false; $("muHint").textContent="";
+}
+function goDaily(){
+  if(NET.status==="in") $("btnLeave").click();
+  closeScreens(); setApp("daily"); $("home").hidden=true; $("editor").hidden=true;
+  showDaily(true);
+}
+$("btnHome").addEventListener("click",goHome);
+$("brand").addEventListener("click",goHome);
+$("hmDraw").addEventListener("click",goDraw);
+$("hmMulti").addEventListener("click",goMulti);
+$("hmDaily").addEventListener("click",goDaily);
+$("hmShop").addEventListener("click",()=>{ const b=$("hmShop").querySelector("span"); b.textContent="Coming soon — nothing to buy yet."; setTimeout(()=>{ b.textContent="Coming soon."; },1800); });
+$("hmAccount").addEventListener("click",()=>showAuth(true));
+$("hmAdmin").addEventListener("click",()=>showAdmin(true));
+$("hmAbout").addEventListener("click",()=>showAbout(true));
+$("muBack").addEventListener("click",goHome);
+$("muHost").addEventListener("click",()=>{ $("multiScreen").hidden=true; baseShow(true); $("btnHost").click(); });
+$("muJoin").addEventListener("click",()=>{
+  const code=($("muCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  if(code.length<4){ $("muHint").textContent="A party code is four characters."; return; }
+  $("netCode").value=code; $("multiScreen").hidden=true; baseShow(true); $("btnJoinGo").click();
+});
+$("muCode").addEventListener("keydown",e=>{ if(e.key==="Enter")$("muJoin").click(); });
+$("pHome").addEventListener("click",()=>{ goHome(); });
 function showAbout(on){
-  $("aboutScreen").hidden=!on; $("editor").hidden=on;
+  $("aboutScreen").hidden=!on; baseShow(!on);
   document.body.classList.toggle("abouting",on);
   if(!on)fitPad();
 }
@@ -5970,6 +6106,7 @@ function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
   chip.textContent=on?ACCT.user.name:"Sign in";
   chip.classList.toggle("on",on);
+  $("hmAccount").textContent=chip.textContent; $("hmAccount").classList.toggle("on",on);
   $("authForms").hidden=on;
   $("authWho").hidden=!on;
   $("auSub").textContent=on?"Your account":"Race under your own name";
@@ -6030,7 +6167,7 @@ function authTab(mode){
 }
 function showAuth(on){
   $("auth").hidden=!on;
-  $("editor").hidden=on;
+  baseShow(!on);
   document.body.classList.toggle("authing",on);
   if(on){
     acctUI();
@@ -6385,7 +6522,7 @@ async function tkLoad(force){
 
 function showTracks(on){
   $("tracks").hidden=!on;
-  $("editor").hidden=on;
+  baseShow(!on);
   document.body.classList.toggle("shelving",on);
   if(on){
     tkSay("");
@@ -6446,13 +6583,14 @@ function adSay(m,bad){ const e=$("adMsg"); e.textContent=m||""; e.classList.togg
 function adminUI(){
   const on=isAdminHere();
   $("btnAdmin").hidden=!on;             // the button exists for the named few
+  $("hmAdmin").hidden=!on;
   $("tiWipe").hidden=!on;
   if(!on&&!$("adminScreen").hidden)showAdmin(false);   // the flag went away under you
 }
 function showAdmin(on){
   if(on&&!isAdminHere())return;
   $("adminScreen").hidden=!on;
-  $("editor").hidden=on;
+  baseShow(!on);
   document.body.classList.toggle("admining",on);
   if(on){ AD.list=[]; adLoad(); }       // always fresh: this is a page you act from
   else { clearTimeout(stTimer); fitPad(); }
@@ -7476,6 +7614,7 @@ $("pBack").addEventListener("click",()=>{
   rebuild();
   if(window.ResizeObserver) new ResizeObserver(()=>fitPad()).observe(pad.parentElement);
   else window.addEventListener("resize",fitPad);
+  setApp("home"); baseShow(true);
   window.__adReady=true;
 })();
 
