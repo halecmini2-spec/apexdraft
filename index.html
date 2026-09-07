@@ -3976,7 +3976,11 @@ function bodyYaris(b,M){
 
   return {tailMats,
     wheels:{race:true,r:R,tw:0.215,pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]},
-    bop:{sy:0.22,sx:0.12,freq:8.6}};
+    /* pivot: the squash and stretch happen about the top of the tyre, so
+       the arches never come down over the wheels on the squash. The sideways
+       swell is slight for the same reason: a body twelve percent wider put
+       its flanks in front of the wheels. */
+    bop:{sy:0.22,sx:0.035,freq:8.6,pivot:2*R}};
 }
 
 /* ---- Kart: a competition kart ----
@@ -4984,13 +4988,15 @@ function updateCarMesh(){
   /* The Yaris never settles — but it squashes rather than hops: it snaps
      between narrow-and-tall and short-and-wide without leaving the road.
      tanh flattens the sine towards its extremes, so it holds each shape and
-     flicks between them instead of easing sinusoidally. Scaling is about the
-     body group's origin, which sits at the contact patch, so it grows upward
-     off the ground rather than floating. */
+     flicks between them instead of easing sinusoidally. The scaling pivots
+     at the top of the tyre: scaled from the ground, the squash brought the
+     wheel arches down over the wheels and hid them. From the tyre top the
+     roof still bobs by the same amount, and the arches stay clear. */
   const bp=c.userData.bop, bd=c.userData.body;
   if(bp&&bd){
     const q=Math.tanh(Math.sin(performance.now()/1000*bp.freq)*2.8);
     bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx);
+    bd.position.y=-(bp.pivot||0)*q*bp.sy;       // y = pivot + (y - pivot) * scale
   }
   const braking=(keys.KeyS||keys.ArrowDown||touch.brake)?1:0;
   for(const m of c.userData.tailMats){
@@ -7736,6 +7742,7 @@ function netUpdateCars(){
     if(bp&&bd){
       const q=Math.tanh(Math.sin(performance.now()/1000*bp.freq)*2.8);
       bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx);
+      bd.position.y=-(bp.pivot||0)*q*bp.sy;
     }
   }
 }
