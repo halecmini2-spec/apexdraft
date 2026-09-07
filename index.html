@@ -3749,8 +3749,11 @@ function bodyYaris(b,M){
   for(const sx of [-1,1]){
     const mm=new THREE.MeshStandardMaterial({
       color:SRGB(0x4A0E0A),emissive:SRGB(0x2A0704),emissiveIntensity:1,roughness:0.22,metalness:0.1});
-    const t=new THREE.Mesh(lens(0.30,0.14,0.06),mm);
-    t.position.set(sx*0.715,0.905,-1.695); t.rotation.set(-0.06,sx*-0.62,0);
+    /* the whole lens stands proud of the corner: centred a little outside
+       the surface along its own normal, and thick enough that none of it
+       is inside the shell */
+    const t=new THREE.Mesh(lens(0.32,0.15,0.08),mm);
+    t.position.set(sx*0.745,0.905,-1.735); t.rotation.set(-0.06,sx*-0.62,0);
     b.add(t); tailMats.push(mm);
   }
   const rearLow=new THREE.Mesh(loft([
