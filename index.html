@@ -3629,46 +3629,148 @@ function bodyFormula(b,M){
 
 /* ---- Yaris: tall, upright, and permanently excited ---- */
 function bodyYaris(b,M){
-  /* high n keeps the sections square: a hatchback is a box with the corners
-     taken off, not the rounded tube a sports car is */
+  /* A modern Yaris: a short low bonnet, a windscreen that starts almost
+     over the front axle and rakes back into a tall black roof, a beltline
+     that kicks up over the rear wheel, and a hatch that is nearly upright.
+     Sculpted the way the GT is — a lofted shell waisted at the axles with
+     arch-following fenders over the wheels — because a hatchback is not a
+     box with the corners knocked off; it is small, rounded and a little
+     aggressive at the nose. The physics never look at any of this. */
+  const FZ=1.20, RZ=-1.30;             // axles
+  const FX=0.80, RX=0.80;
+  const R=0.31;                        // tyre radius, both ends
+
   const shell=new THREE.Mesh(loft([
-    {z: 1.94,w:0.76,y0:0.30,y1:0.72,n:4.0},
-    {z: 1.66,w:0.86,y0:0.24,y1:0.86,n:5.0},
-    {z: 0.90,w:0.90,y0:0.21,y1:0.92,n:6.0},
-    {z: 0.00,w:0.92,y0:0.20,y1:0.94,n:6.4},
-    {z:-0.94,w:0.91,y0:0.21,y1:0.94,n:6.0},
-    {z:-1.66,w:0.87,y0:0.24,y1:0.92,n:5.2},
-    {z:-1.98,w:0.80,y0:0.30,y1:0.84,n:4.2}
-  ],20),M.paint);
+    {z: 2.00,w:0.58,y0:0.32,y1:0.70,n:2.9},   // nose, rounded away
+    {z: 1.94,w:0.78,y0:0.20,y1:0.76,n:3.3},
+    {z: 1.82,w:0.855,y0:0.15,y1:0.805,n:3.9},
+    {z: 1.62,w:0.875,y0:0.14,y1:0.825,n:4.3},
+    {z: 1.40,w:0.868,y0:0.14,y1:0.840,n:4.5},  // waisted over the front wheel
+    {z: 1.05,w:0.872,y0:0.14,y1:0.870,n:4.7},
+    {z: 0.75,w:0.880,y0:0.14,y1:0.905,n:4.8}, // the bonnet climbs to the cowl
+    {z: 0.45,w:0.885,y0:0.14,y1:0.945,n:5.0},
+    {z: 0.00,w:0.885,y0:0.14,y1:0.955,n:5.0},
+    {z:-0.60,w:0.885,y0:0.14,y1:0.965,n:5.0},
+    {z:-1.05,w:0.878,y0:0.14,y1:0.995,n:4.8}, // the beltline kicks up
+    {z:-1.45,w:0.868,y0:0.15,y1:1.005,n:4.6}, // over the rear wheel
+    {z:-1.75,w:0.845,y0:0.20,y1:1.010,n:4.2},
+    {z:-1.90,w:0.780,y0:0.27,y1:0.990,n:3.5},
+    {z:-1.97,w:0.600,y0:0.36,y1:0.900,n:2.9}  // tail, rounded away
+  ],30),M.paint);
   shell.castShadow=true; b.add(shell);
 
-  /* upright greenhouse, set in from the shoulders so there is a beltline */
+  /* The glasshouse: one dark loft from the cowl over the roof and down the
+     hatch, narrower than the body so the sides lean in. The pillars read as
+     black because the glass is. */
   const cabin=new THREE.Mesh(loft([
-    {z: 1.06,w:0.54,y0:0.90,y1:1.06,n:3.6},
-    {z: 0.62,w:0.70,y0:0.90,y1:1.40,n:5.0},
-    {z:-0.30,w:0.75,y0:0.90,y1:1.47,n:5.6},
-    {z:-1.16,w:0.71,y0:0.90,y1:1.44,n:5.2},
-    {z:-1.56,w:0.58,y0:0.90,y1:1.18,n:3.8}
-  ],18),M.glass);
+    {z: 0.72,w:0.720,y0:0.90,y1:0.950,n:3.4},
+    {z: 0.38,w:0.775,y0:0.90,y1:1.190,n:4.0},
+    {z: 0.06,w:0.800,y0:0.90,y1:1.395,n:4.6},
+    {z:-0.30,w:0.805,y0:0.90,y1:1.455,n:5.0},
+    {z:-0.85,w:0.795,y0:0.90,y1:1.445,n:5.0},
+    {z:-1.30,w:0.770,y0:0.92,y1:1.395,n:4.8},
+    {z:-1.58,w:0.720,y0:0.95,y1:1.235,n:4.2},
+    {z:-1.74,w:0.660,y0:0.97,y1:1.020,n:3.4}
+  ],24),M.glass);
   cabin.castShadow=true; b.add(cabin);
 
-  const dark=0x15191B, chrome=0x9AA3A6;
+  /* The black roof, a thin cap sitting just proud of the glass. */
+  const roofM=new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0E),metalness:0.55,roughness:0.20,envMapIntensity:1.3});
+  const roof=new THREE.Mesh(loft([
+    {z: 0.02,w:0.760,y0:1.350,y1:1.410,n:6.5},
+    {z:-0.30,w:0.785,y0:1.400,y1:1.475,n:7.5},
+    {z:-0.85,w:0.775,y0:1.390,y1:1.465,n:7.5},
+    {z:-1.30,w:0.745,y0:1.335,y1:1.415,n:6.5},
+    {z:-1.52,w:0.700,y0:1.290,y1:1.330,n:5.5}
+  ],24),roofM);
+  roof.castShadow=true; b.add(roof);
+
+  /* ---- fenders: the underside follows the tyre it clears ---- */
+  const fender=(zw,crest,px,sit)=>{
+    const gap=R*0.16, Ro=R+gap, reach=Ro+0.17, st=[], N=14;
+    for(let i=0;i<=N;i++){
+      const t=-1+2*i/N, z=zw+t*reach, d=Math.abs(z-zw), u=Math.abs(t);
+      const arc = d<Ro ? R+Math.sqrt(Ro*Ro-d*d)*0.995 : R-(d-Ro)*1.5;
+      const y1 = crest-(crest-sit)*u*u;
+      const fade=Math.pow(Math.max(0,1-u*u),0.62);
+      const y0 = Math.max(Math.min(arc, y1-0.03), y1-0.03-0.60*fade);
+      st.push({z, w:Math.max(0.02,(R*0.42)*fade), y0, y1, n:3.0+1.3*fade});
+    }
+    for(const sx of [-px,px]){
+      const f=new THREE.Mesh(loft(st,20),M.paint);
+      f.position.x=sx; f.castShadow=true; b.add(f);
+    }
+  };
+  fender(FZ,0.830,0.855,0.640);
+  fender(RZ,0.870,0.855,0.700);
+
+  const darkC=0x15191B, plasticM=new THREE.MeshStandardMaterial({color:SRGB(0x111517),roughness:0.62,metalness:0.18});
   const k=trimKit();
-  k.box(1.60,0.18,0.26,0,0.25,1.92,dark);              // bumpers
-  k.box(1.60,0.18,0.26,0,0.25,-1.96,dark);
-  k.box(0.86,0.11,0.13,0,0.46,1.97,chrome);            // grille
-  k.box(0.11,0.09,2.00,-0.90,0.32,0.00,dark);          // side mouldings
-  k.box(0.11,0.09,2.00, 0.90,0.32,0.00,dark);
-  k.box(0.84,0.07,0.24,0,1.51,-1.42,dark);             // roof spoiler
-  k.box(0.20,0.09,0.11,-0.96,1.00,0.88,dark);          // mirrors
-  k.box(0.20,0.09,0.11, 0.96,1.00,0.88,dark);
+
+  /* ---- the face: a big dark mouth under a slim slot, a plate in it ---- */
+  const mouth=new THREE.Mesh(loft([
+    {z: 2.03,w:0.58,y0:0.25,y1:0.60,n:3.0},
+    {z: 1.97,w:0.69,y0:0.22,y1:0.65,n:3.4},
+    {z: 1.90,w:0.71,y0:0.20,y1:0.66,n:3.6}
+  ],20),plasticM);
+  b.add(mouth);
+  k.box(0.90,0.045,0.06,0,0.735,1.985,darkC);             // the slot under the bonnet edge
+  k.box(0.46,0.11,0.02,0,0.40,2.035,0xE8ECEA);            // number plate, on the grille
+  k.box(0.24,0.16,0.07,-0.64,0.32,1.935,darkC);           // fog recesses in the bumper corners
+  k.box(0.24,0.16,0.07, 0.64,0.32,1.935,darkC);
+  k.box(1.40,0.05,0.10,0,0.185,1.965,darkC);              // bumper lip
+  const badge=new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,0.02,14),M.metal);
+  badge.rotation.x=Math.PI/2; badge.position.set(0,0.66,2.01); b.add(badge);
+
+  /* ---- headlamps: swept back along the fender, not stuck on the front ---- */
+  const hm=new THREE.MeshStandardMaterial({
+    color:SRGB(0xFFF6E2),emissive:SRGB(0xFFEBC4),emissiveIntensity:0.8,roughness:0.12,metalness:0.1});
+  for(const sx of [-1,1]){
+    /* on the corner surface at lamp height: the shell runs from x 0.65 at
+       the nose to x 0.80 a hand further back, a sweep of about forty degrees */
+    const l=new THREE.Mesh(lens(0.36,0.115,0.05),hm);
+    l.position.set(sx*0.705,0.700,1.885); l.rotation.set(0.10,sx*0.68,sx*-0.06);
+    b.add(l);
+    const brow=new THREE.Mesh(lens(0.46,0.03,0.05),plasticM);  // the dark brow over each lamp
+    brow.position.set(sx*0.71,0.770,1.878); brow.rotation.set(0.10,sx*0.68,sx*-0.06);
+    b.add(brow);
+  }
+
+  /* ---- sides: mirrors on stalks, handles, a dark lip under the sills ---- */
+  k.box(0.05,0.05,0.16,-0.925,0.985,0.56,darkC);          // mirror stalks
+  k.box(0.05,0.05,0.16, 0.925,0.985,0.56,darkC);
+  k.box(0.17,0.10,0.08,-1.00,1.005,0.56,darkC);           // mirror heads
+  k.box(0.17,0.10,0.08, 1.00,1.005,0.56,darkC);
+  for(const z of [0.28,-0.58]){                           // door handles
+    k.box(0.025,0.035,0.15,-0.893,0.795,z,darkC);
+    k.box(0.025,0.035,0.15, 0.893,0.795,z,darkC);
+  }
+  k.box(0.05,0.06,2.30,-0.865,0.155,-0.05,darkC);         // sill lips
+  k.box(0.05,0.06,2.30, 0.865,0.155,-0.05,darkC);
+
+  /* ---- rear: an upright hatch, lamps wrapping the corners, a lip spoiler ---- */
+  const tailMats=[];
+  for(const sx of [-1,1]){
+    const mm=new THREE.MeshStandardMaterial({
+      color:SRGB(0x4A0E0A),emissive:SRGB(0x2A0704),emissiveIntensity:1,roughness:0.22,metalness:0.1});
+    const t=new THREE.Mesh(lens(0.30,0.14,0.06),mm);
+    t.position.set(sx*0.715,0.905,-1.845); t.rotation.set(-0.06,sx*-0.62,0);
+    b.add(t); tailMats.push(mm);
+  }
+  const rearLow=new THREE.Mesh(loft([
+    {z:-1.86,w:0.84,y0:0.18,y1:0.36,n:4.0},
+    {z:-1.97,w:0.76,y0:0.20,y1:0.34,n:3.4}
+  ],20),plasticM);
+  b.add(rearLow);
+  k.box(0.46,0.11,0.02,0,0.64,-1.985,0xE8ECEA);           // rear plate
+  k.box(0.30,0.06,0.03,0,0.90,-1.965,darkC);               // wiper motor cover
+  const spoiler=new THREE.Mesh(lens(1.30,0.24,0.035),roofM);
+  spoiler.rotation.set(Math.PI/2-0.38,0,0); spoiler.position.set(0,1.305,-1.64);
+  b.add(spoiler);
   b.add(k.mesh());
 
-  const tailMats=addLamps(b,
-    {w:0.30,h:0.11,y:0.60,z:1.95,x:[-0.56,0.56]},
-    {w:0.17,h:0.30,y:0.82,z:-2.00,x:[-0.68,0.68]});
   return {tailMats,
-    wheels:{r:0.30,tw:0.24,pos:[[-0.82,1.16],[0.82,1.16],[-0.82,-1.22],[0.82,-1.22]]},
+    wheels:{race:true,r:R,tw:0.215,pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]},
     bop:{sy:0.22,sx:0.12,freq:8.6}};
 }
 
