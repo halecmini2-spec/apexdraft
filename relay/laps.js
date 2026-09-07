@@ -14,6 +14,7 @@
 const { json, readBody, cors, clientIp, overRate } = require("./auth");
 
 const TOP = 25;
+const ALL = 500;   // "show all": as many as anyone will scroll through
 const MIN_MS = 5000;            // nothing real is quicker than five seconds
 const MAX_MS = 30 * 60 * 1000;  // nor slower than half an hour
 const KEY_RE = /^[A-Za-z0-9_]{6,64}$/;
@@ -60,13 +61,15 @@ function makeLaps(store, userFor) {
         const g = await store.ghost(circuit);
         return json(res, 200, g ? { name: g.name, ms: g.ms, car: g.car, samples: JSON.parse(g.data) } : { samples: null }), true;
       }
-      const board = await store.board(circuit, TOP);
+      const all = url.searchParams.get("all") === "1";
+      const board = await store.board(circuit, all ? ALL : TOP);
+      const count = await store.count(circuit);
       /* Signed in, the answer also says where you stand: your time, your
          place, and how many are on the board — which the top of the list
          cannot tell you once you are off it. */
       const user = await userFor(bearer(req));
       const you = user ? await store.rank(circuit, user.id) : null;
-      return json(res, 200, { board: board.map(row), top: TOP, you }), true;
+      return json(res, 200, { board: board.map(row), top: all ? ALL : TOP, count, you }), true;
     }
 
     if (req.method !== "POST") return json(res, 405, { error: "Not allowed." }), true;

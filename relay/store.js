@@ -134,6 +134,9 @@ function fileStore(file) {
                     .sort((a, b) => a.ms - b.ms)
                     .slice(0, limit);
     },
+    async count(circuit) {
+      return db.laps.filter((l) => l.circuit === circuit).length;
+    },
     /* Where one driver stands on a board: their time, their place, and how
        many are on it. */
     async rank(circuit, userId) {
@@ -419,6 +422,9 @@ function pgStore(url) {
         `SELECT name,ms,car,at FROM laps WHERE circuit=$1 ORDER BY ms ASC LIMIT $2`,
         [circuit, limit]
       )).rows;
+    },
+    async count(circuit) {
+      return (await one(`SELECT COUNT(*)::int AS n FROM laps WHERE circuit=$1`, [circuit])).n;
     },
     async rank(circuit, userId) {
       const mine = await one(`SELECT ms FROM laps WHERE circuit=$1 AND user_id=$2`, [circuit, userId]);

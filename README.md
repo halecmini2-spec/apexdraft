@@ -62,7 +62,8 @@ all rolled with the shape — so every machine builds exactly the same lap
 and nothing has to be stored. It changes at midnight UTC. There are no
 start lights: you are dropped in just before the last corner, moving off
 in your own time, and the clock starts as you cross the line. Restarting
-puts you back there, not on the line.
+puts you back there, not on the line. The page lists the top 25 times and
+says how many drivers are on the board; **Show all** lists every one.
 
 The Daily page shows the circuit, the world record so far and who holds
 it, your own best and where it stands ("14th of 213"), and the day's times.

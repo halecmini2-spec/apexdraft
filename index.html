@@ -634,6 +634,9 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dy-side .go{margin:0}
 .dy-side .chip .s{margin-left:6px}
 .dy-times{margin-top:4px}
+.dy-times .ti-list{max-height:320px}
+.dy-times.all .ti-list{max-height:none}
+.dy-times .ti-head>span:last-child{display:inline-flex;align-items:center;gap:8px}
 .dailybox{margin-top:9px;background:rgba(9,14,15,.82);border-left:2px solid var(--amber);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
   padding:5px 10px;font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:2px}
 .dailybox .k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
@@ -1595,7 +1598,7 @@ body.admining #lobbybar{display:none}
         </div>
       </div>
       <div class="times dy-times">
-        <div class="ti-head"><span>World times today</span><span class="ti-n" id="dyCount"></span></div>
+        <div class="ti-head"><span>World times today</span><span><span class="ti-n" id="dyCount"></span><button class="chip ti-wipe" id="dyAll" hidden>Show all</button></span></div>
         <div class="ti-list" id="dyList"></div>
         <p class="ti-note" id="dyListNote"></p>
       </div>
@@ -3361,13 +3364,17 @@ const CAR_MODELS=[
 /* Multipliers on the shared physics constants. Because these change lap
    times, the car is part of the best-lap key — a Formula lap and a Yaris lap
    around the same circuit are not the same record. */
+/* turnin scales how fast the steering takes a set; front scales the grip of
+   the front axle alone, which is what pulls the nose in on turn-in. The
+   three cars are made more direct with them; the kart already turns on a
+   coin and is left as it is. */
 const CAR_PERF={
-  gt:     {power:1.00, top:1.00, grip:1.00},
-  formula:{power:1.26, top:1.20, grip:1.32},
-  yaris:  {power:0.72, top:0.74, grip:0.84},
+  gt:     {power:1.00, top:1.00, grip:1.00, turnin:1.35, front:1.18},
+  formula:{power:1.26, top:1.20, grip:1.32, turnin:1.45, front:1.22},
+  yaris:  {power:0.72, top:0.74, grip:0.84, turnin:1.30, front:1.15},
   /* a kart has almost no top end but corners on rails: slow down the
      straights, quickest thing here through anything tight */
-  kart:   {power:0.94, top:0.58, grip:1.34}
+  kart:   {power:0.94, top:0.58, grip:1.34, turnin:1.00, front:1.00}
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -4674,7 +4681,7 @@ function step(dt){
      whether you're in a hairpin at 30 km/h or a sweeper at 200. Below about
      35 km/h that formula exceeds the physical steering rack, so it clamps and
      you get the full ~35 degrees and a 6 m turning circle. */
-  const srate=steerIn?11.5:14.0;     // quicker to take a set on turn-in
+  const srate=(steerIn?11.5:14.0)*(P.turnin||1);   // quicker to take a set on turn-in
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
   const latCap=DRIVE.latAccel*P.grip*S.mu;            // grip available for cornering
   const vv=Math.max(Math.abs(vLong),4);
@@ -4733,7 +4740,7 @@ function step(dt){
      onto the nose — so the front does not merely keep its grip, it gets a
      little more of it. That is what makes the car pivot about the front
      rather than the pair of them ploughing on together. */
-  const frontG=DRIVE.gripRate*(1+0.14*hb);
+  const frontG=DRIVE.gripRate*(1+0.14*hb)*(P.front||1);
   const gripRate=(frontG*DRIVE.frontBias+rearG*(1-DRIVE.frontBias))
                  *S.grip*P.grip*(brake?1.12:1);         // braking loads the front
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hbE);
@@ -6045,8 +6052,8 @@ async function dyRefresh(){
   $("dyListNote").textContent="";
   try{
     const d=await dailyLoad(true); dyRender();
-    const r=await api("/api/laps?circuit="+encodeURIComponent(d.circuit),acctIn()?{token:ACCT.token}:{});
-    DAILY.board=r.board||[]; DAILY.you=r.you||null;
+    const r=await api("/api/laps?circuit="+encodeURIComponent(d.circuit)+(DAILY.all?"&all=1":""),acctIn()?{token:ACCT.token}:{});
+    DAILY.board=r.board||[]; DAILY.you=r.you||null; DAILY.count=r.count!=null?r.count:DAILY.board.length;
     if(DAILY.on&&LB.key===d.circuit){ LB.board=DAILY.board; LB.at=Date.now(); }
     dyRender(); dailyUI();
   }catch(e){ $("dyListNote").textContent=e.message; }
@@ -6067,7 +6074,13 @@ function dyRender(){
   $("dyWRWho").textContent=b.length?b[0].name:"nobody yet — be the first";
   $("dyYou").textContent=(you&&you.ms)?fmtTime(you.ms):"—:—.———";
   $("dyYouRank").textContent=(you&&you.rank)?ordinal(you.rank)+" of "+you.count+" in the world":(acctIn()?"no time yet today":"sign in to be ranked");
-  $("dyCount").textContent=b.length?b.length+(b.length===1?" driver":" drivers"):"";
+  /* the count says how many are on the board, and when the list is only
+     the top of it, a button opens the rest */
+  const total=Math.max(DAILY.count||0,b.length);
+  $("dyCount").textContent=total?((b.length<total?b.length+" of ":"")+total+(total===1?" driver":" drivers")):"";
+  $("dyAll").hidden=!(total>b.length||DAILY.all);
+  $("dyAll").textContent=DAILY.all?"Top 25":"Show all";
+  document.querySelector(".dy-times").classList.toggle("all",!!DAILY.all);
   const list=$("dyList"); list.innerHTML="";
   const me=acctIn()?ACCT.user.name:null;
   b.forEach((r,i)=>{
@@ -6179,6 +6192,7 @@ function ghostUpdate(){
 }
 $("btnDaily").addEventListener("click",()=>{ if(NET.status==="in"){ netSay("Leave the party first — the daily is driven alone."); return; } showDaily(true); });
 $("dyBack").addEventListener("click",()=>{ if(DAILY.on)showDaily(false); else goHome(); });
+$("dyAll").addEventListener("click",()=>{ DAILY.all=!DAILY.all; dyRefresh(); });
 $("dyRefresh").addEventListener("click",dyRefresh);
 $("dyDrive").addEventListener("click",enterDaily);
 $("dyOpen").addEventListener("click",()=>showDaily(true));
