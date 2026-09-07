@@ -7689,14 +7689,14 @@ function aiClear(){
    centreline at every sample, chosen to make the path as straight as it
    can be. Its own curvature, gentler than the road's, is what sets the
    speed the machine can carry through a bend. */
-function aiLine(T){
+function aiLine(T,width){
   /* Minimum-curvature line: the offset from the centreline at every sample
      that makes the path as straight as the road edges allow. Solved
      coarse-to-fine — a 4th-order smoothness problem crawls at full
      resolution, but at forty-metre spacing the corners are a few samples
      wide and it settles in a few hundred steps; the fine passes then tidy
      the result. */
-  const N=T.N, m=T.halfW*0.74;
+  const N=T.N, m=width||T.halfW*0.74;
   const solve=(X,Z,RX,RZ,d0,iters)=>{
     const n=X.length, d=Float64Array.from(d0), px=new Float64Array(n), pz=new Float64Array(n), Lx=new Float64Array(n), Lz=new Float64Array(n), g=new Float64Array(n);
     for(let it=0;it<iters;it++){
@@ -7746,7 +7746,7 @@ function aiAt(T,s){
 function aiSpawn(){
   if(!AI.on||!G.T||!G.scene)return;
   const T=G.T, n=RACE.grid.filter(id=>id.startsWith("ai")).length;
-  AI.line=aiLine(T);
+  AI.line=aiLine(T,T.halfW*(0.62+0.22*AI.strength/100));
   const names=AI_NAMES.slice().sort(()=>Math.random()-0.5);
   const colours=AI_COLOURS.filter(c=>c.toLowerCase()!==String(ED.opts.color).toLowerCase()).sort(()=>Math.random()-0.5);
   const k=AI.strength/100;
@@ -7780,7 +7780,7 @@ function aiTick(dt){
   const go=CAR.state==="run";
   for(const c of AI.cars){
     const kk=Math.min(1.05,k*c.pace);
-    const aLat=(4.5+11.5*kk)*perf.grip, vmax=(30+34*kk)*perf.top, accel=(4.5+7.5*kk)*perf.power, brake=8+9.5*kk;
+    const aLat=(4+8*kk+8*kk*kk)*perf.grip, vmax=(30+34*kk)*perf.top, accel=(4.5+8*kk)*perf.power, brake=8+11*kk;
     /* mistakes: scheduled, and worse the weaker the driver */
     let vMul=1, dAdd=0;
     if(go&&k<0.97){
@@ -7800,7 +7800,7 @@ function aiTick(dt){
     for(let m=0;m<=Math.round(170/sp);m++){
       const q=(here.i+m)%T.N, kq=L?Math.abs(L.k[q])*(0.55+0.45*c.mix)+Math.abs(T.K[q])*(0.45-0.45*c.mix):Math.abs(T.K[q]);
       const vT=Math.min(vmax,Math.sqrt(aLat/Math.max(kq,1e-4)));
-      const dist=Math.max(0,m*sp-6);
+      const dist=Math.max(0,m*sp-(7-5*kk));
       vAllow=Math.min(vAllow,Math.sqrt(vT*vT+2*brake*dist));
     }
     vAllow*=vMul;
