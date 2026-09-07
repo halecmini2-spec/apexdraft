@@ -31,6 +31,14 @@ lead back.
   don't lap at the same pace. The garage is in the pause menu too.
 - **Drive it** — `WASD`/arrows, `R` recover, `C` camera, `M` sound, `Esc`
   menu. On a phone, on-screen controls appear automatically.
+- **On a phone** the layout is a phone layout, not a shrunk desktop, in
+  either orientation and in Safari, Chrome and Edge alike. Sideways: the
+  doors, the garage, the daily page and the pause menu each fit one screen,
+  with the settings beside the board in one column on a small phone and two
+  on a large one. Upright: the board sits above the settings, full width,
+  with the pedals spaced for the width there is. Nothing to press is under
+  32px, inputs are 16px so Safari does not zoom into them, and the prompt to
+  turn the phone appears only over the board and the track.
 - **Fullscreen** — on Android the browser is asked for it as you go out on
   track, and there is a toggle in the pause menu. iPhone Safari has no
   Fullscreen API at all, so there the route is Add to Home Screen: the page

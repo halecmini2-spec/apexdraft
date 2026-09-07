@@ -278,7 +278,7 @@ button{font-family:inherit;color:inherit}
    cost the board its height and pushed the controls off screen. Narrow the
    rail instead; the padding it claws back is set after .rail-foot below, so
    those overrides land after the base rules they replace. */
-@media (max-width:860px){
+@media (max-width:860px),(pointer:coarse) and (max-height:560px){
   /* Every point given back here is board, but the rail still has to hold
      all its controls without scrolling. Measured: 190px is the floor in a
      tab — at 180 the content wraps past the bottom. */
@@ -505,6 +505,7 @@ body.inparty #netHint{color:#C79289}
 .slider .lab{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;color:var(--dim)}
 .slider .val{font-family:var(--mono);font-size:12px;color:var(--amber);font-variant-numeric:tabular-nums}
 .startrow .hint{font-size:11.5px;margin-top:2px}
+.startrow .lab{flex-wrap:wrap;gap:0 8px}
 #pad.picking{cursor:crosshair}
 input[type=range]{
   -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0;
@@ -544,7 +545,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
   background:radial-gradient(ellipse at 18% 12%,rgba(255,176,32,.10),transparent 48%),radial-gradient(ellipse at 88% 92%,rgba(127,209,196,.08),transparent 46%),var(--ground)}
 .home-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.82}
 .home-wrap{position:relative;max-width:900px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;justify-content:center;gap:22px}
-.home-card{background:rgba(16,24,26,.86);backdrop-filter:blur(3px)}
+.home-card{background:rgba(16,24,26,.86);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .home-head .auth-brand.big{font-size:30px;letter-spacing:.18em}
 .home-head .auth-sub{margin:6px 0 0;font-size:13px}
 .home-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -562,6 +563,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
   .home-acct-btns{flex-direction:row}
   .home-acct .go{padding:9px 14px;font-size:12px}
 }
+#multiScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .mu-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:640px){.home-cards,.mu-cards{grid-template-columns:1fr}}
 .home-card{position:relative;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:4px;
@@ -578,7 +580,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .home-card.static{cursor:default} .home-card.static:hover{transform:none}
 .home-links{justify-content:center}
 .home-acct{position:relative;display:flex;align-items:center;gap:16px;padding:14px 18px 14px 22px;border:1px solid rgba(46,212,122,.45);border-radius:4px;
-  background:linear-gradient(90deg,rgba(46,212,122,.14),rgba(16,24,26,.86) 55%);backdrop-filter:blur(3px)}
+  background:linear-gradient(90deg,rgba(46,212,122,.14),rgba(16,24,26,.86) 55%);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
 .home-acct::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;background:var(--green)}
 .home-acct-txt{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px}
 .home-acct-txt b{font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
@@ -620,7 +622,7 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 /* the daily */
 #dailyScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .dy-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
-@media (max-width:700px){.dy-grid{grid-template-columns:1fr}}
+@media (max-width:700px) and (orientation:portrait){.dy-grid{grid-template-columns:1fr}}
 .dy-map canvas{width:100%;height:auto;aspect-ratio:3/2;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:2px}
 .dy-facts{font-size:11.5px;color:var(--faint);margin-top:6px;letter-spacing:.03em}
 .dy-side{display:flex;flex-direction:column;gap:10px}
@@ -632,7 +634,7 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dy-side .go{margin:0}
 .dy-side .chip .s{margin-left:6px}
 .dy-times{margin-top:4px}
-.dailybox{margin-top:9px;background:rgba(9,14,15,.82);border-left:2px solid var(--amber);backdrop-filter:blur(4px);
+.dailybox{margin-top:9px;background:rgba(9,14,15,.82);border-left:2px solid var(--amber);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
   padding:5px 10px;font-size:11px;color:var(--dim);display:flex;flex-direction:column;gap:2px}
 .dailybox .k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .dailybox b{font-family:var(--mono);font-weight:500;color:var(--ink)}
@@ -667,7 +669,7 @@ body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
 .tool{
   background:rgba(17,26,27,.9);border:1px solid var(--line);color:var(--dim);
   border-radius:2px;padding:8px 11px;font-size:11.5px;letter-spacing:.05em;cursor:pointer;
-  backdrop-filter:blur(6px);transition:color .12s,border-color .12s;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);transition:color .12s,border-color .12s;
 }
 .tool:hover{color:var(--ink);border-color:var(--faint)}
 
@@ -675,7 +677,7 @@ body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
   position:absolute;left:14px;bottom:14px;z-index:2;display:flex;gap:1px;
   background:var(--line);border:1px solid var(--line);border-radius:2px;overflow:hidden;flex-wrap:wrap;max-width:calc(100% - 28px);
 }
-.readout .cell{background:rgba(12,19,20,.94);padding:8px 13px;min-width:86px;backdrop-filter:blur(6px)}
+.readout .cell{background:rgba(12,19,20,.94);padding:8px 13px;min-width:86px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .readout .k{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);display:block}
 .readout .v{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .readout .v em{font-style:normal;font-size:10px;color:var(--faint);margin-left:2px}
@@ -698,7 +700,7 @@ body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
 .tower .row{
   display:flex;justify-content:space-between;align-items:baseline;gap:14px;
   background:rgba(9,14,15,.82);border-left:2px solid var(--line);
-  padding:5px 11px;margin-bottom:1px;backdrop-filter:blur(4px);
+  padding:5px 11px;margin-bottom:1px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
 }
 .tower .row .k{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
 .tower .row .t{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--ink)}
@@ -709,7 +711,7 @@ body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
 .sectors{display:flex;gap:1px;margin-top:5px}
 .sec{
   flex:1;background:rgba(9,14,15,.82);border-top:2px solid var(--line);
-  padding:4px 7px;backdrop-filter:blur(4px);
+  padding:4px 7px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
 }
 .sec .k{font-size:8.5px;letter-spacing:.12em;color:var(--faint);display:block}
 .sec .t{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
@@ -732,7 +734,7 @@ body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
 /* Under the speed, on everything. The same square in the same corner, so
    the glance is the same movement whichever screen it is. */
 .mapbox{position:absolute;right:calc(16px + var(--sar));top:calc(114px + var(--sat));bottom:auto;background:rgba(9,14,15,.78);
-  border:1px solid var(--line);padding:7px;backdrop-filter:blur(4px)}
+  border:1px solid var(--line);padding:7px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #minimap{display:block;width:150px;height:150px}
 
 .flash{
@@ -765,7 +767,7 @@ body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
 .touch button{
   position:absolute;pointer-events:auto;touch-action:none;
   background:rgba(22,33,34,.5);border:1.6px solid rgba(147,168,165,.45);
-  color:var(--ink);backdrop-filter:blur(4px);
+  color:var(--ink);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
   font-family:var(--ui);font-weight:600;letter-spacing:.06em;
   -webkit-tap-highlight-color:transparent;
 }
@@ -814,7 +816,7 @@ body.touchcap .touchonly{display:block}
    top rather than losing its last few buttons off the bottom. margin:auto
    does that where align-items:center would pin the overflow out of reach. */
 .pause{
-  position:absolute;inset:0;background:rgba(6,10,11,.9);backdrop-filter:blur(8px);
+  position:absolute;inset:0;background:rgba(6,10,11,.9);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
   display:flex;pointer-events:auto;z-index:5;overflow-y:auto;-webkit-overflow-scrolling:touch;
   padding:max(10px,var(--sat,0px)) 0 max(10px,var(--sab,0px))}
 .pause .card{width:min(420px,90vw);background:var(--panel);border:1px solid var(--line);padding:26px;margin:auto;flex:none}
@@ -990,7 +992,7 @@ body.admining #lobbybar{display:none}
 /* ============ fastest laps ============
    Two places, one set of numbers: a live order of the room while you drive,
    and the whole board when you stop. */
-.standings{margin-top:9px;background:rgba(9,14,15,.82);border-left:2px solid var(--party-deep);backdrop-filter:blur(4px)}
+.standings{margin-top:9px;background:rgba(9,14,15,.82);border-left:2px solid var(--party-deep);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .standings .sr{display:flex;align-items:baseline;gap:8px;padding:4px 10px;font-size:11px}
 .standings .sr .p{color:var(--faint);font-size:9.5px;width:12px;flex:0 0 12px}
 .standings .sr .n{color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1027,7 +1029,7 @@ body.admining #lobbybar{display:none}
 #garage{overflow-y:auto;padding:calc(16px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal))}
 .gar-wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .gar-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-@media (max-width:760px){.gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px) and (orientation:portrait){.gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .gar-card{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px 11px;text-align:left;cursor:pointer;
   display:flex;flex-direction:column;gap:3px;color:var(--dim);transition:border-color .12s,background .12s}
 .gar-card canvas{width:100%;height:auto;aspect-ratio:360/220;display:block;border-radius:2px;background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);margin-bottom:5px}
@@ -1090,7 +1092,7 @@ body.admining #lobbybar{display:none}
 /* ============ mobile ============
    Deliberately last in the sheet: a media query adds no specificity, so an
    override placed above the rule it targets simply loses. */
-@media (max-width:860px){
+@media (max-width:860px),(pointer:coarse) and (max-height:560px){
   .rail-scroll{padding:4px 13px 10px}
   .rail-foot{padding:11px 13px 13px}
   /* The stats floated over the board, the scarcest space on a phone. */
@@ -1134,7 +1136,7 @@ body.admining #lobbybar{display:none}
 /* A landscape phone leaves the rail barely 330px of height, which one column
    cannot hold. Widen it a little and let the groups flow into two columns —
    there is width to spare in landscape, only height is scarce. */
-@media (max-width:860px) and (max-height:560px){
+@media (max-width:860px) and (max-height:560px),(pointer:coarse) and (max-height:560px){
   .rail{width:min(46vw,404px);flex:0 0 min(46vw,404px)}
   .grp-intro{display:none}
   .rail-scroll{column-count:2;column-gap:14px;padding:6px 12px 8px}
@@ -1163,16 +1165,18 @@ body.admining #lobbybar{display:none}
    the word "code" are the two things it can lose without losing meaning:
    the dots are the count, and a four-character block in red beside them is
    not going to be read as anything else. */
-@media (max-width:600px){
+@media (max-width:600px),(pointer:coarse) and (max-height:560px){
   .lb-count{display:none}
   .lb-code .k{display:none}
+  #lobbybar .chip{white-space:nowrap}
+  .lb-roster{flex:0 1 auto;min-width:0}
   #lobbybar{gap:10px;flex-wrap:wrap}
   /* Wrap rather than truncate. The status line is where a failed join says
      why, and a phone is exactly where you cannot afford to lose that. */
   .lb-party{flex-wrap:wrap;justify-content:flex-end;gap:7px}
   .lb-party .hint{max-width:100%}
 }
-@media (max-width:860px){
+@media (max-width:860px),(pointer:coarse) and (max-height:560px){
   body.inparty #netLive .codeout,
   body.inparty #netLive .roster,
   body.inparty #netWho,
@@ -1182,7 +1186,7 @@ body.admining #lobbybar{display:none}
    bar gives up a line of padding and the wordmark, and the home-screen tip
    stands down — the popup already makes that offer, and 40px of rail is
    worth more than making it twice. */
-@media (max-width:860px) and (max-height:560px){
+@media (max-width:860px) and (max-height:560px),(pointer:coarse) and (max-height:560px){
   #lobbybar{padding-top:4px;padding-bottom:4px;gap:10px}
   .lb-brand,.lb-ver{display:none}
   .lb-code b{font-size:17px}
@@ -1222,6 +1226,145 @@ body.admining #lobbybar{display:none}
   .aback{margin-top:8px;padding:6px 10px}
   .awho{font-size:14px}
   .amail{margin-bottom:12px}
+  .auth-card{padding:10px 16px 10px}
+  .auth-sub{margin:1px 0 6px}
+  .auth-tabs{margin-bottom:6px}
+  .afield{margin-bottom:6px}
+  .afield input{padding:7px 10px}
+  .anote{margin:-3px 0 4px;min-height:0}
+  .amsg{margin-bottom:3px;min-height:0}
+  .ahint{margin-top:6px}
+  .aback{margin-top:6px}
+}
+
+/* ============ phones, properly ============
+   Two shapes of phone screen, handled on their own terms rather than as a
+   narrow desktop. Sideways: short, so nothing may need a scroll to reach its
+   one button. Upright: narrow, so the board goes above the settings instead
+   of beside them, and the pedals are spaced for the width there is. */
+
+/* ---- a thumb is not a mouse: nothing to press is under 36px tall, and no
+   input is small enough to make Safari zoom in on it ---- */
+@media (pointer:coarse){
+  .chip{min-height:36px;padding:8px 12px;font-size:12.5px}
+  .tool{min-height:38px;padding:9px 13px;font-size:12.5px}
+  .atab{padding:10px 1px 9px;font-size:13px}
+  .sw{width:34px;height:34px;flex:0 0 34px}
+  .afield input,.tk-nameIn{font-size:16px}
+  .codein{font-size:19px}
+  .lb-party .codein,.mu-join .codein{font-size:17px}
+  .pbtn{padding:13px 14px}
+  .ti-wipe,.ad-row .chip,.ad-head .chip,.tk-row .chip{min-height:32px}
+}
+
+/* ---- sideways ---- */
+@media (max-width:860px) and (max-height:560px),(pointer:coarse) and (max-height:560px){
+  .chip{min-height:32px;padding:6px 10px;font-size:11.5px}
+  .tool{min-height:34px;padding:7px 11px;font-size:11.5px}
+  #lobbybar .chip{min-height:32px}
+  /* home: the doors two by two on a small phone, four across on a big one,
+     and short enough that the account strip is on the same screen */
+  .home-card{min-height:0;padding:9px 12px 9px 15px;gap:3px}
+  .home-card b{font-size:13.5px}
+  .home-card span{font-size:11px;line-height:1.35}
+  .home-wrap{gap:10px}
+  /* the daily, side by side */
+  .dy-grid{gap:12px;margin-bottom:10px}
+  .dy-tile{padding:7px 10px;gap:2px}
+  .dy-tile b{font-size:19px}
+  .dy-tile .w{font-size:11px}
+  .dy-side{gap:7px}
+  .dy-side .go{padding:11px 12px;font-size:13px}
+  .dy-side .ahint{margin-top:2px;font-size:10.5px;line-height:1.35}
+  .dy-facts{font-size:10.5px;margin-top:4px}
+  .tk-head{margin-bottom:10px}
+  /* the garage: four across, and the colours beside the button on one row */
+  #garage{padding-top:calc(8px + var(--sat));padding-bottom:calc(10px + var(--sab))}
+  .gar-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px;row-gap:8px}
+  .gar-wrap .tk-head,.gar-wrap .gar-cards{grid-column:1/-1}
+  .gar-wrap .tk-head{margin-bottom:0}
+  .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .gar-card{padding:6px 8px 8px;gap:2px}
+  .gar-card canvas{margin-bottom:3px}
+  .gar-card b{font-size:12.5px}
+  .gar-card span{font-size:10.5px;line-height:1.3}
+  .gar-go{max-width:none;width:auto;padding:11px 22px;font-size:13px;align-self:center}
+  /* the pause menu: a wider card with the buttons in two columns, so the
+     whole menu is on the screen at once */
+  .pause .card{width:min(700px,94vw);padding:12px 18px 14px}
+  .pause h3{font-size:13px}
+  .pause p{margin-bottom:8px;font-size:12px}
+  .times{margin-bottom:9px}
+  .ti-list{max-height:76px}
+  .ti-head{padding:5px 11px}
+  .pause .btns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .pause .btns .pgar{grid-column:1/-1}
+  .pbtn{padding:8px 12px;font-size:12.5px;min-height:36px}
+}
+/* a small phone on its side has no room for two columns of settings; one
+   column that scrolls, and a wider board, beats two cramped ones */
+@media (max-width:799px) and (max-height:560px){
+  .rail{width:clamp(200px,34vw,250px);flex:0 0 clamp(200px,34vw,250px)}
+  .rail-scroll{column-count:auto;padding:6px 12px 8px}
+  .home-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .home-acct-txt span{display:none}
+  .home-acct{padding:8px 12px 8px 16px}
+}
+
+/* ---- upright ---- */
+@media (pointer:coarse) and (orientation:portrait) and (max-width:700px){
+  /* the doors, compact enough to sit on one screen with the account strip */
+  .home-head .auth-brand.big{font-size:24px}
+  .home-wrap{gap:14px;justify-content:flex-start}
+  .home-card{min-height:0;padding:11px 14px 11px 18px;gap:3px}
+  .home-card b{font-size:15px}
+  .home-card span{font-size:12px;line-height:1.4}
+  .home-acct{gap:10px;padding:12px 14px}
+  .home-acct-txt span{font-size:11.5px;line-height:1.4}
+  /* the page heads: the buttons drop under the title rather than beside it */
+  .tk-head{flex-wrap:wrap;gap:8px 16px}
+  .tk-head > .chips{flex:0 0 100%}
+  /* the board above the settings, the full width of the phone; the panel
+     below scrolls, with the Drive button pinned under it */
+  #editor{flex-direction:column}
+  .board{flex:1 1 auto;min-height:0}
+  .rail{order:2;width:auto;flex:0 0 auto;max-height:46%;border-right:0;border-top:1px solid var(--line);
+    padding-left:var(--sal);padding-right:var(--sar);padding-bottom:var(--sab)}
+  body.standalone .rail{width:auto;flex:0 0 auto}
+  .rail-scroll{flex:1 1 auto;min-height:0;column-count:auto;display:grid;grid-template-columns:1fr 1fr;gap:0 16px;align-content:start;padding:6px 14px 8px}
+  .grp{padding:5px 0}
+  .grp-track{grid-row:span 2}
+  .grp-lobby,.grp-daily{grid-column:1/-1}
+  .grp > h2{margin:0 0 4px;font-size:9px}
+  .slider{margin-bottom:5px}
+  input[type=range]{height:28px}
+  input[type=range]::-webkit-slider-thumb{width:20px;height:20px;margin-top:-8.5px}
+  .rail-foot{padding:8px 14px 10px}
+  .rail-foot .go{padding:12px}
+  .foot-note{display:none!important}
+  .board-tools{top:calc(10px + var(--sat));right:calc(10px + var(--sar));gap:5px}
+  /* on track: the timing tower and the speed shrink so the menu button has
+     the top centre to itself, and the tip about turning the phone sits
+     over the pedals rather than over the start lights */
+  body.touchmode .tower{transform:scale(.72)}
+  body.touchmode .speedo .n{font-size:36px}
+  body.touchmode .mapbox{top:calc(80px + var(--sat));padding:4px}
+  body.touchmode #minimap{width:96px;height:96px}
+  #tMenu{width:46px;height:32px;font-size:14px}
+  .lights{top:30%}
+  .flash{top:40%}
+  .rotate-tip{top:auto;bottom:calc(140px + var(--sab));font-size:11.5px;padding:6px 10px;max-width:84vw;text-align:center}
+  /* the daily, upright: the button to drive it right under the map, the
+     numbers after */
+  .dy-side .go{order:-1}
+}
+/* the pedals were laid out for a wide screen: on anything under 480px
+   across, the brake sat on top of the right-steer button */
+@media (max-width:480px){
+  #tLeft,#tRight,#tBrake,#tGas{width:76px;height:76px;bottom:calc(18px + var(--sab));font-size:20px}
+  #tBrake,#tGas{font-size:12px}
+  #tLeft{left:calc(12px + var(--sal))} #tRight{left:calc(96px + var(--sal))}
+  #tBrake{right:calc(96px + var(--sar))} #tGas{right:calc(12px + var(--sar))}
 }
 </style>
 </head>
@@ -6062,6 +6205,10 @@ function homeArt(){
 }
 addEventListener("resize",()=>{ if(!$("home").hidden)homeArt(); });
 function baseShow(v){
+  /* the prompt to turn the phone, and the pill that says the settings go
+     on below: both depend on what is on screen, which this just changed */
+  setTimeout(()=>{ try{ rotateUI(); railMoreUI(); }catch(e){} },0);
+  setTimeout(()=>{ try{ railMoreUI(); }catch(e){} },400);
   if(APP.mode==="home"){ $("home").hidden=!v; $("editor").hidden=true; if(v)requestAnimationFrame(homeArt); }
   else { $("home").hidden=true; $("editor").hidden=!v; if(v)fitPad(); }
 }
@@ -7670,7 +7817,8 @@ function portrait(){
   return mq?mq.matches:innerHeight>innerWidth;
 }
 function rotateUI(){
-  const up=isHandheld()&&portrait();
+  const busy=document.body.classList.contains("driving")||!$("editor").hidden;
+  const up=isHandheld()&&portrait()&&busy;
   if(!up)rotateSeen=false;
   $("rotate").hidden=!up||rotateSeen;
 }
@@ -7748,6 +7896,7 @@ function driveNow(){
   $("editor").hidden=true;
   $("drive").hidden=false;
   document.body.classList.add("driving");
+  setTimeout(()=>{ try{ rotateUI(); }catch(e){} },0);   // the prompt to turn the phone, now that it matters
   /* has to ride on this click: fullscreen is only granted from a gesture */
   if(touchUIOn()&&fsCan()&&!fsOn()) fsEnter().then(fsLandscape).catch(()=>{});
   $("loading").hidden=false;
