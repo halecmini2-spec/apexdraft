@@ -1264,9 +1264,12 @@ body.admining #lobbybar{display:none}
   #lobbybar .chip{min-height:32px}
   /* home: the doors two by two on a small phone, four across on a big one,
      and short enough that the account strip is on the same screen */
-  .home-card{min-height:0;padding:9px 12px 9px 15px;gap:3px}
-  .home-card b{font-size:13.5px}
-  .home-card span{font-size:11px;line-height:1.35}
+  /* the doors grow to fill whatever height the phone has, rather than
+     sitting small above a band of nothing */
+  .home-cards{flex:1 1 auto;min-height:0;grid-auto-rows:1fr;gap:10px}
+  .home-card{min-height:0;padding:10px 14px 10px 17px;gap:4px;justify-content:center}
+  .home-card b{font-size:15px}
+  .home-card span{font-size:12px;line-height:1.4}
   .home-wrap{gap:10px}
   /* the daily, side by side */
   .dy-grid{gap:12px;margin-bottom:10px}
@@ -1309,6 +1312,12 @@ body.admining #lobbybar{display:none}
   .home-cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
   .home-acct-txt span{display:none}
   .home-acct{padding:8px 12px 8px 16px}
+  /* on the smallest phones the whole page still fits without a scroll */
+  #home{padding-top:calc(6px + var(--sat));padding-bottom:calc(8px + var(--sab))}
+  .home-wrap{gap:8px}
+  .home-card{padding:8px 12px 8px 15px}
+  .home-acct-btns{gap:5px}
+  .home-acct .go{padding:9px 14px}
 }
 
 /* ---- upright ---- */
@@ -1316,9 +1325,10 @@ body.admining #lobbybar{display:none}
   /* the doors, compact enough to sit on one screen with the account strip */
   .home-head .auth-brand.big{font-size:24px}
   .home-wrap{gap:14px;justify-content:flex-start}
-  .home-card{min-height:0;padding:11px 14px 11px 18px;gap:3px}
-  .home-card b{font-size:15px}
-  .home-card span{font-size:12px;line-height:1.4}
+  .home-cards{flex:1 1 auto;min-height:0;grid-auto-rows:1fr}
+  .home-card{min-height:0;padding:12px 14px 12px 18px;gap:4px;justify-content:center}
+  .home-card b{font-size:16px}
+  .home-card span{font-size:12.5px;line-height:1.4}
   .home-acct{gap:10px;padding:12px 14px}
   .home-acct-txt span{font-size:11.5px;line-height:1.4}
   /* the page heads: the buttons drop under the title rather than beside it */
