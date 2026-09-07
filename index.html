@@ -5982,7 +5982,7 @@ function homeArt(){
      through a handful of random points, in amber or pale grey, thin, some
      with a faint glow. New ones every visit. */
   let seed=(Date.now()%100000)|0; const rnd=()=>{ seed=(seed*1664525+1013904223)>>>0; return seed/4294967296; };
-  const count=Math.round((W*H)/85000)+5;
+  const count=Math.round((W*H)/100000)+4;
   c.lineCap="round"; c.lineJoin="round";
   for(let k=0;k<count;k++){
     /* From one edge of the page to another, never stopping in the middle:
@@ -5994,6 +5994,9 @@ function homeArt(){
     const A=edge(e0), B=edge(e1), m=3+Math.floor(rnd()*3), pts=[A];
     const nx=-(B.y-A.y), ny=(B.x-A.x), nl=Math.hypot(nx,ny)||1, sway=Math.min(W,H)*0.28;
     for(let i=1;i<=m;i++){ const t=i/(m+1), o=(rnd()-0.5)*2*sway; pts.push({x:A.x+(B.x-A.x)*t+nx/nl*o, y:A.y+(B.y-A.y)*t+ny/nl*o}); }
+    /* the first eight are steered through the quarters of the page, two
+       each, so no corner is left empty by chance */
+    if(k<8){ const qx=(k%2)*W/2, qy=(Math.floor(k/2)%2)*H/2; pts[Math.ceil(m/2)]={x:qx+W*0.1+rnd()*W*0.3, y:qy+H*0.1+rnd()*H*0.3}; }
     pts.push(B);
     const amber=rnd()<0.55;
     const alpha=0.16+rnd()*0.26, wl=amber?3.5+rnd()*4.5:3.0+rnd()*3.5;
