@@ -548,7 +548,15 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .home-head .auth-brand.big{font-size:30px;letter-spacing:.18em}
 .home-head .auth-sub{margin:6px 0 0;font-size:13px}
 .home-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-@media (max-height:430px){.home-wrap{gap:12px;justify-content:flex-start}.home-cards{grid-template-columns:repeat(4,minmax(0,1fr))}.home-head .auth-brand.big{font-size:20px}}
+/* A phone held sideways, whatever its height: the page starts at the top
+   rather than floating in the middle with a band above it. */
+@media (max-height:430px),(pointer:coarse) and (max-height:560px){
+  #home{padding-top:calc(10px + var(--sat))}
+  .home-wrap{gap:12px;justify-content:flex-start}
+  .home-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .home-head .auth-brand.big{font-size:20px}
+  .home-head .auth-sub{margin-top:2px}
+}
 .mu-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (max-width:640px){.home-cards,.mu-cards{grid-template-columns:1fr}}
 .home-card{position:relative;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:4px;
