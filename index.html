@@ -578,6 +578,11 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .chip.home:hover{background:var(--amber);color:#140D00;border-color:var(--amber)}
 #brand{cursor:pointer}
 /* what the bar shows depends on where you are */
+/* The home page carries its own wordmark, and its links live in the page,
+   so the bar has nothing to say there — and on a phone it was an empty
+   strip above everything. */
+body[data-app="home"] #lobbybar{display:none}
+body[data-app="home"] #home{padding-top:calc(16px + var(--sat))}
 body[data-app="home"] #btnHome{display:none}
 body[data-app="home"] .lb-acct{display:none}
 body.mudoor .lb-party,body.mudoor #btnTracks{display:none!important}
