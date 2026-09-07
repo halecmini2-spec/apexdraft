@@ -568,7 +568,16 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 #brand{cursor:pointer}
 /* what the bar shows depends on where you are */
 body[data-app="home"] #btnHome{display:none}
-body[data-app="home"] #btnTracks{display:none}
+body[data-app="home"] .lb-acct{display:none}
+body.mudoor .lb-party,body.mudoor #btnTracks{display:none!important}
+/* A phone held sideways puts a camera in one edge or the other. Every
+   screen keeps clear of both edges by at least the cutout, whether or not
+   the browser reports it. */
+@media (pointer:coarse) and (max-height:500px){
+  :root{--cutL:max(var(--sal),34px);--cutR:max(var(--sar),34px)}
+  #lobbybar{padding-left:calc(10px + var(--cutL));padding-right:calc(10px + var(--cutR))}
+  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#auth{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
+}
 body:not([data-app="home"]) #btnAbout,body:not([data-app="home"]) #btnAccount,body:not([data-app="home"]) #btnAdmin{display:none}
 body[data-app="daily"] #btnTracks{display:none}
 #btnDaily{display:none}
@@ -1339,7 +1348,6 @@ body.admining #lobbybar{display:none}
           <h1 class="auth-brand">Multi<span>player</span></h1>
           <p class="auth-sub">Race friends live. The host sets the circuit — drawn on the board, or one from the shelf.</p>
         </div>
-        <div class="chips"><button class="chip" id="muBack">Home</button></div>
       </div>
       <div class="mu-cards">
         <button class="home-card red" id="muHost"><i></i><b>Host a party</b><span>You get a four-letter code. Draw a circuit or load a saved one, then start the race for everyone.</span></button>
@@ -5846,7 +5854,7 @@ function baseShow(v){
 }
 function closeScreens(){
   for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen"]) $(id).hidden=true;
-  for(const c of ["garaging","dailying","abouting","authing","shelving","admining"]) document.body.classList.remove(c);
+  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor"]) document.body.classList.remove(c);
 }
 function goHome(){
   if(document.body.classList.contains("driving")) $("pBack").click();
@@ -5865,6 +5873,7 @@ function goMulti(){
   closeScreens(); setApp("multi");
   if(NET.status==="in"){ baseShow(true); return; }
   $("home").hidden=true; $("editor").hidden=true; $("multiScreen").hidden=false; $("muHint").textContent="";
+  document.body.classList.add("mudoor");
 }
 function goDaily(){
   if(NET.status==="in") $("btnLeave").click();
@@ -5880,12 +5889,11 @@ $("hmShop").addEventListener("click",()=>{ const b=$("hmShop").querySelector("sp
 $("hmAccount").addEventListener("click",()=>showAuth(true));
 $("hmAdmin").addEventListener("click",()=>showAdmin(true));
 $("hmAbout").addEventListener("click",()=>showAbout(true));
-$("muBack").addEventListener("click",goHome);
-$("muHost").addEventListener("click",()=>{ $("multiScreen").hidden=true; baseShow(true); $("btnHost").click(); });
+$("muHost").addEventListener("click",()=>{ $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true); $("btnHost").click(); });
 $("muJoin").addEventListener("click",()=>{
   const code=($("muCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   if(code.length<4){ $("muHint").textContent="A party code is four characters."; return; }
-  $("netCode").value=code; $("multiScreen").hidden=true; baseShow(true); $("btnJoinGo").click();
+  $("netCode").value=code; $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true); $("btnJoinGo").click();
 });
 $("muCode").addEventListener("keydown",e=>{ if(e.key==="Enter")$("muJoin").click(); });
 $("pHome").addEventListener("click",()=>{ goHome(); });
