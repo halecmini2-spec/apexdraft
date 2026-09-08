@@ -4765,6 +4765,7 @@ function step(dt){
     if(brake&&Math.hypot(CAR.vx,CAR.vz)>6) CAR.handArm+=dt; else CAR.handArm=0;
     if(CAR.handArm>DRIVE.handDelay) hand=1;
   }
+  if(AUTO.on&&!locked){ steerIn=AUTO.steer; gas=AUTO.gas; brake=AUTO.brake; hand=0; }
   const fx=Math.sin(CAR.yaw),  fz=Math.cos(CAR.yaw);
   const rx=-Math.cos(CAR.yaw), rz=Math.sin(CAR.yaw);
   let vLong=CAR.vx*fx+CAR.vz*fz;      // speed along the nose
@@ -5588,6 +5589,8 @@ function frame(now){
     }
   }
 
+  AUTO.on=WIN.t>0&&document.body.classList.contains("driving");
+  if(AUTO.on)autoDriveTick();
   G.acc+=dt;
   const h=1/120; let n=0;
   while(G.acc>=h&&n<14){ step(h); G.acc-=h; n++; }
@@ -8040,6 +8043,24 @@ function raceFinish(id,name,ms,me){
    seconds; the confetti falls on a canvas over the view. Then the chase
    camera has the car back. */
 const WIN={t:0,id:null,bits:[]};
+/* While the flag is up the camera is beside the track, so nobody can see
+   to drive: the car drives itself at an easy pace along the centreline
+   until the view comes back. Only the inputs are taken over — the car
+   model is untouched. */
+const AUTO={on:false,steer:0,gas:0,brake:0};
+function autoDriveTick(){
+  const T=G.T; if(!T)return;
+  const np=nearest(T,CAR.x,CAR.z,null,CAR.y), v=Math.hypot(CAR.vx,CAR.vz), spacing=T.len/T.N;
+  const k=Math.max(2,Math.round((7+v*0.55)/spacing)), j=(np.i+k)%T.N;
+  const dx=T.X[j]-CAR.x, dz=T.Z[j]-CAR.z;
+  const ang=Math.atan2(dx,dz)-CAR.yaw, a=Math.atan2(Math.sin(ang),Math.cos(ang));
+  const delta=Math.atan2(2*DRIVE.wheelbase*Math.sin(a),Math.hypot(dx,dz)), vv=Math.max(v,4);
+  const lock=Math.min(DRIVE.maxSteer,Math.atan(DRIVE.overdrive*DRIVE.latAccel*0.75*DRIVE.wheelbase/(vv*vv)));
+  AUTO.steer=-clamp(delta/lock,-1,1);
+  let maxK=0; for(let m=0;m<Math.round(50/spacing);m++){ const q=(np.i+m)%T.N; maxK=Math.max(maxK,Math.abs(T.K[q])); }
+  const vT=Math.min(24,Math.sqrt(7/Math.max(maxK,1e-4)));
+  AUTO.gas=v<vT-0.3?1:0; AUTO.brake=v>vT+2.5?1:0;
+}
 function winMesh(id){
   if(id===myId())return G.car;
   const p=NET.peers.get(id); if(p&&p.mesh)return p.mesh;
