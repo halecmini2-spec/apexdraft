@@ -4991,6 +4991,7 @@ function step(dt){
     if(CAR.lastP>0.6&&p<0.4&&d>0){
       CAR.state="run"; CAR.curMs=0; CAR.lapDist=0; CAR.secIdx=0;
       showFlash("Go","#2ED47A","");
+      lapTicket();
     }
     CAR.lastP=p;
   } else if(CAR.state!=="count"){
@@ -5040,7 +5041,7 @@ function completeLap(ms){
     /* Only improvements travel. Everyone else is keeping your best, not a
        list of every lap you have driven. */
     if(NET.status==="in")netSend({t:"lap",ms,lap:CAR.lapNo});
-    if(DAILY.on){ GH.mine=GH.rec.slice(); GH.mine.push([Math.round(ms),+CAR.x.toFixed(2),+CAR.z.toFixed(2),+CAR.yaw.toFixed(3)]); }
+    GH.mine=GH.rec.slice(); GH.mine.push([Math.round(ms),+CAR.x.toFixed(2),+CAR.z.toFixed(2),+CAR.yaw.toFixed(3)]);
     lbPost(ms);
   } else {
     showFlash("Lap "+CAR.lapNo,"#E6EEEC",fmtTime(ms));
@@ -5048,6 +5049,7 @@ function completeLap(ms){
   standingsUI();
   CAR.lapNo++;
   CAR.curMs=0; CAR.lapDist=0; CAR.secIdx=0;   // sector times stay on screen until overwritten
+  lapTicket();                                 // the next lap has begun
   /* in a race the laps are counted from the lights, and the last one is
      the finish */
   if(RACE.on&&RACE.mine==null&&RACE.t0){
@@ -5563,6 +5565,7 @@ function frame(now){
       lights.classList.remove("on");
       showFlash("Go","#2ED47A","");
       if(RACE.on&&!RACE.t0)RACE.t0=performance.now();
+      lapTicket();
     }
   }
 
@@ -5572,7 +5575,8 @@ function frame(now){
   if(G.acc>0.5)G.acc=0;
 
   updateCarMesh();
-  if(DAILY.on){ if(CAR.state==="run")ghostRecord(); ghostUpdate(); }
+  if(CAR.state==="run")ghostRecord();               // the lap's trace, the evidence it was driven
+  if(DAILY.on)ghostUpdate();
   netTick(); netUpdateCars();
   if(AI.on)aiTick(dt);
   if(G.smoke)updateSmoke(dt);
@@ -6224,7 +6228,13 @@ function dyRender(){
     const p=document.createElement("span"); p.className="p"; p.textContent=(i+1)+".";
     const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
     const t=document.createElement("span"); t.className="t"; t.textContent=i===0?fmtTime(r.ms):"+"+((r.ms-b[0].ms)/1000).toFixed(3);
-    row.appendChild(p); row.appendChild(n); row.appendChild(t); list.appendChild(row);
+    row.appendChild(p); row.appendChild(n); row.appendChild(t);
+    if(typeof isAdminHere==="function"&&isAdminHere()){
+      const x=document.createElement("button"); x.className="ti-x"; x.title="Remove this time"; x.textContent="\u00D7";
+      x.addEventListener("click",async()=>{ x.disabled=true; try{ await api("/api/admin/laps/delete",{method:"POST",token:ACCT.token,body:{circuit:d.circuit,name:r.name}}); dyRefresh(); }catch(e){ $("dyListNote").textContent=e.message; x.disabled=false; } });
+      row.appendChild(x);
+    }
+    list.appendChild(row);
   });
   if(!b.length) $("dyListNote").textContent="No times yet today.";
   $("dyGhostState").textContent=GH.on?"On":"Off"; $("dyGhostState").className="s "+(GH.on?"on":"off");
@@ -6909,10 +6919,20 @@ function circuitKey(){
   return ("0000000"+a.toString(16)).slice(-8)+("0000000"+b.toString(16)).slice(-8);
 }
 
-const LB={key:null,board:[],at:0,busy:false};
+const LB={key:null,board:[],at:0,busy:false,ticket:null};
+/* A lap begins at the line, and the relay is told so: the ticket it gives
+   back travels with the time, and a time cannot arrive sooner than the lap
+   it claims took. */
+function lapTicket(){
+  LB.ticket=null;
+  if(!LB.key||!acctIn())return;
+  const key=LB.key;
+  api("/api/laps/ticket",{method:"POST",token:ACCT.token,body:{circuit:key}})
+    .then(r=>{ if(LB.key===key&&r&&r.ticket)LB.ticket=r.ticket; }).catch(()=>{});
+}
 
-/* Only ever a claim: the physics run here, on your machine, so the server
-   cannot referee a lap and does not pretend to. */
+/* The physics run here, on your machine; the relay checks the trace of the
+   lap against the circuit before it keeps the time. */
 async function lbFetch(force){
   const key=LB.key;
   if(!key)return;
@@ -6938,8 +6958,9 @@ async function lbPost(ms){
   const key=LB.key;
   if(!key||!acctIn())return;
   try{
-    const body={circuit:key,ms:Math.round(ms),car:ED.opts.car||"gt"};
-    if(DAILY.on&&GH.mine) body.ghost=GH.mine;           // the lap itself, for the ghost
+    const body={circuit:key,ms:Math.round(ms),car:ED.opts.car||"gt",ghost:GH.mine,ticket:LB.ticket};
+    if(!DAILY.on) body.track=trackData();               // the relay rebuilds the circuit to check the lap
+    LB.ticket=null;
     const r=await api("/api/laps",{method:"POST",token:ACCT.token,body});
     if(LB.key===key){
       const hadWR=LB.board.length?LB.board[0].ms:null;

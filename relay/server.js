@@ -318,6 +318,7 @@ store.ready = false;
       await store.init();
       store.ready = true;
       console.log("accounts ready (" + store.kind + ")");
+      laps.sweep();                 // times that could not have been driven come off
       return;
     } catch (e) {
       console.error("account store attempt " + attempt + ":", e && e.message);

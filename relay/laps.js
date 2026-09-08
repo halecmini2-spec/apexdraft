@@ -23,6 +23,30 @@ const KEY_RE = /^[A-Za-z0-9_]{6,64}$/;
    ones people race against the world on. */
 const GHOST_MAX = 4000;
 const isDaily = (c) => /^daily_\d{8}$/.test(c);
+const { lapBound, checkTrace, circuitFor } = require("./verify");
+const dailyMod = require("./daily");
+/* A lap has to have begun before it can end: the page asks for a ticket
+   as it crosses the line, and the finish has to come at least the lap's
+   own length later. One ticket, one lap, and only for the driver and the
+   circuit it was issued to. */
+const tickets = new Map();
+const TICKET_TTL = 2 * 3600_000;
+function makeTicket(userId, circuit) {
+  const crypto = require("crypto");
+  const id = crypto.randomBytes(12).toString("base64url");
+  tickets.set(id, { userId, circuit, at: Date.now() });
+  if (tickets.size > 20000) for (const [k, v] of tickets) { if (Date.now() - v.at > TICKET_TTL) tickets.delete(k); if (tickets.size < 15000) break; }
+  return id;
+}
+/* the circuits a lap was judged against, kept for a while */
+const geomCache = new Map();
+function geometry(circuit, track) {
+  const hit = geomCache.get(circuit);
+  if (hit && Date.now() - hit.at < 3600_000) return hit.C;
+  const C = circuitFor(circuit, track, dailyMod);
+  if (C) { geomCache.set(circuit, { C, at: Date.now() }); if (geomCache.size > 200) geomCache.delete(geomCache.keys().next().value); }
+  return C;
+}
 function cleanGhost(g) {
   if (!Array.isArray(g) || g.length < 10 || g.length > GHOST_MAX) return null;
   let last = -1;
@@ -41,6 +65,30 @@ function makeLaps(store, userFor) {
   function bearer(req) {
     const h = req.headers.authorization || "";
     return h.startsWith("Bearer ") ? h.slice(7).trim() : null;
+  }
+  /* Times that could not have been driven are taken off the daily boards
+     when the relay starts, and any named in PURGE_LAPS ("circuit:name,...")
+     go with them. */
+  async function sweep() {
+    try {
+      for (const back of [0, 1, 2]) {
+        const circuit = dailyMod.circuitKey(dailyMod.dayIndex() - back);
+        const C = geometry(circuit, null); if (!C) continue;
+        const floor = lapBound(C, "gt") * 0.92;
+        for (const l of await store.board(circuit, 500)) {
+          if (l.ms < floor) { await store.deleteLap(circuit, l.user_id); console.log("sweep: removed " + l.name + " " + l.ms + " ms on " + circuit + " (floor " + Math.round(floor) + ")"); }
+        }
+      }
+      /* a time that was put on the board by hand rather than driven, taken
+         off by name; joined by anything named in PURGE_LAPS */
+      const purge = [];
+      for (const back of [0, 1, 2]) purge.push(dailyMod.circuitKey(dailyMod.dayIndex() - back) + ":sebvader");
+      for (const item of purge.concat(String(process.env.PURGE_LAPS || "").split(",").map((x) => x.trim()).filter(Boolean))) {
+        const [circuit, name] = item.split(":");
+        const u = name && await store.userByName(name.toLowerCase());
+        if (u && circuit && await store.deleteLap(circuit, u.id)) console.log("purge: removed " + u.name + " on " + circuit);
+      }
+    } catch (e) { console.error("sweep:", e && e.message); }
   }
 
   const row = (r) => ({ name: r.name, ms: Number(r.ms), car: r.car, at: Number(r.at) });
@@ -76,12 +124,21 @@ function makeLaps(store, userFor) {
 
     const user = await userFor(bearer(req));
     if (!user) return json(res, 401, { error: "Sign in to put a time on the board." }), true;
-    if (overRate("l:" + user.id, 120, 10 * 60_000))
-      return json(res, 429, { error: "Slow down a moment." }), true;
 
     let body;
     try { body = await readBody(req, 320 * 1024); }
     catch (e) { return json(res, 400, { error: "That request didn't make sense." }), true; }
+
+    /* the lap begins: a ticket, to be handed back with the time */
+    if (url.pathname === "/api/laps/ticket") {
+      if (overRate("t:" + user.id, 60, 10 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
+      const circuit = String(body.circuit || "");
+      if (!KEY_RE.test(circuit)) return json(res, 400, { error: "That isn't a circuit." }), true;
+      return json(res, 200, { ticket: makeTicket(user.id, circuit) }), true;
+    }
+    if (url.pathname !== "/api/laps") return json(res, 404, { error: "No such endpoint." }), true;
+    if (overRate("l:" + user.id, 20, 10 * 60_000))
+      return json(res, 429, { error: "Slow down a moment." }), true;
 
     const circuit = String(body.circuit || "");
     const ms = Math.round(Number(body.ms));
@@ -89,6 +146,18 @@ function makeLaps(store, userFor) {
     if (!KEY_RE.test(circuit)) return json(res, 400, { error: "That isn't a circuit." }), true;
     if (!Number.isFinite(ms) || ms < MIN_MS || ms > MAX_MS)
       return json(res, 400, { error: "That isn't a lap time." }), true;
+
+    /* ---- could this lap have been driven? ---- */
+    const refuse = (why) => { console.log("lap refused: " + user.name + " " + ms + " ms on " + circuit + " — " + why); return json(res, 422, { error: "That lap couldn't be verified (" + why + "), so it wasn't kept." }), true; };
+    const tk = tickets.get(String(body.ticket || ""));
+    if (!tk || tk.userId !== user.id || tk.circuit !== circuit) return refuse("no ticket for this lap");
+    tickets.delete(String(body.ticket));
+    if (Date.now() - tk.at < ms - 3000) return refuse("finished before it could have");
+    const C = geometry(circuit, body.track);
+    if (!C) return refuse("circuit unknown");
+    if (ms < lapBound(C, car) * 0.92) return refuse("quicker than the car can go");
+    const bad = checkTrace(C, body.ghost, ms);
+    if (bad) return refuse(bad);
 
     /* Only an improvement is worth writing, and the board is what you wanted
        back anyway — so one round trip does both. */
@@ -117,7 +186,7 @@ function makeLaps(store, userFor) {
     }), true;
   }
 
-  return { route };
+  return { route, sweep };
 }
 
 module.exports = { makeLaps };

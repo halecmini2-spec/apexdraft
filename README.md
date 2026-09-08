@@ -226,6 +226,26 @@ keeps a list of **recent sessions** with how long each lasted.
 "People" means different browsers: a phone and a laptop count twice, two
 people on one machine count once.
 
+### Lap times are checked
+
+The physics run in the page, and a page is open: anyone can find the lap
+endpoint in the browser tools and post a number. So the relay no longer
+takes a number. A lap has to arrive with the trace the page records as it
+drives — a point every tenth of a second — plus, for a drawn circuit, the
+circuit itself, which must hash to the board it claims; the daily's the
+relay already has. The relay rebuilds the circuit's plan with the same
+geometry as the page and checks that the trace is on the road, goes once
+round the lap the right way, never exceeds the speeds, accelerations or
+cornering grip the car model can produce, and spans the time claimed. The
+time also has to be slower than the quickest lap the model could possibly
+set on that circuit, and the lap has to have taken that long in real time:
+the page asks for a **ticket** as it crosses the line, and the time cannot
+be handed in sooner than the lap it claims. A refused lap is logged with
+the reason. Times that could not have been driven are removed from the
+recent daily boards when the relay starts, and any named in `PURGE_LAPS`
+(`circuit:name,...`) with them; an admin can also remove a time from the
+daily page.
+
 ### The small print
 
 There is **no email and no password reset**, and the UI says so
