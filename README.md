@@ -69,7 +69,14 @@ the timing tower and the lap counter reads 2/3 · P1; the first driver to
 complete the laps is the winner, and each driver gets the finishing order,
 with gaps, as they cross the line for the last time. A latecomer joins the
 race late. Recover while racing only puts the car back on the road, never
-back at the start.
+back at the start. The winner is shown crossing the line from beside the track,
+under confetti, before the results card.
+
+The account page counts **time trial wins** (the fastest lap on a finished
+day) and **race wins** (a party or AI race won against at least one
+opponent). Winning yesterday's daily brings a congratulations on the next
+sign-in. The relay can also leave a **notice** for one account, shown when
+they sign in, set in NOTICES (name=message;...).
 
 ## AI opponents (being tried out)
 

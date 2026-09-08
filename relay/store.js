@@ -21,7 +21,7 @@ const path = require("path");
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {} };
+  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {}, wins: {} };
   let writing = null, again = false;
 
   try {
@@ -35,6 +35,7 @@ function fileStore(file) {
     db.log = db.log || [];
     db.ghosts = db.ghosts || [];
     db.who = db.who || {};
+    db.wins = db.wins || {};
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -213,6 +214,15 @@ function fileStore(file) {
        or a return — judged by whether the id had been seen on an earlier
        day. */
     async bind(vid, name) { db.who[vid] = name; await save(); },
+    /* ---- what a driver has won ---- */
+    async winsAdd(userId, kind) { const w = db.wins[userId] || (db.wins[userId] = { race: 0 }); w[kind] = (w[kind] | 0) + 1; await save(); return w; },
+    async wins(userId) { return db.wins[userId] || { race: 0 }; },
+    /* the fastest lap on every daily board: that day's winner */
+    async dailyWinners() {
+      const best = {};
+      for (const l of db.laps) { if (!/^daily_\d{8}$/.test(l.circuit)) continue; if (!best[l.circuit] || l.ms < best[l.circuit].ms) best[l.circuit] = l; }
+      return Object.values(best).map((l) => ({ circuit: l.circuit, user_id: l.user_id, name: l.name }));
+    },
     /* ---- how long each page stayed ---- */
     async stay(vid, name, since, until) {
       db.stays = db.stays || [];
@@ -373,6 +383,12 @@ function pgStore(url) {
           name  TEXT
         )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS stays_since ON stays(since)`);
+      /* race wins, as the pages report them */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS wins (
+          user_id TEXT PRIMARY KEY,
+          race    INTEGER NOT NULL DEFAULT 0
+        )`);
       /* Parties started per day, and the most people connected at once. */
       await pool.query(`
         CREATE TABLE IF NOT EXISTS days (
@@ -511,6 +527,17 @@ function pgStore(url) {
     },
     async bind(vid, name) {
       await pool.query(`INSERT INTO visitors (vid,name) VALUES ($1,$2) ON CONFLICT (vid) DO UPDATE SET name=EXCLUDED.name`, [vid, name]);
+    },
+    async winsAdd(userId, kind) {
+      if (kind !== "race") return { race: 0 };
+      const r = await one(`INSERT INTO wins (user_id,race) VALUES ($1,1) ON CONFLICT (user_id) DO UPDATE SET race=wins.race+1 RETURNING race`, [userId]);
+      return { race: r ? Number(r.race) : 1 };
+    },
+    async wins(userId) { const r = await one(`SELECT race FROM wins WHERE user_id=$1`, [userId]); return { race: r ? Number(r.race) : 0 }; },
+    async dailyWinners() {
+      const rows = (await pool.query(`SELECT circuit, user_id, name, ms FROM laps WHERE circuit LIKE 'daily%'`)).rows;
+      const best = {}; for (const r of rows) { if (!/^daily_\d{8}$/.test(r.circuit)) continue; if (!best[r.circuit] || Number(r.ms) < Number(best[r.circuit].ms)) best[r.circuit] = r; }
+      return Object.values(best).map((r) => ({ circuit: r.circuit, user_id: r.user_id, name: r.name }));
     },
     async stay(vid, name, since, until) {
       await pool.query(`INSERT INTO stays (since,until,vid,name) VALUES ($1,$2,$3,$4)`, [since, until, vid, name || null]);

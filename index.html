@@ -998,6 +998,12 @@ body.admining #lobbybar{display:none}
 .awho{margin:0 0 3px;font-size:15px;color:var(--dim)}
 .awho b{color:var(--amber);font-weight:700}
 .amail{margin:0 0 18px;font-size:11.5px;color:var(--faint)}
+.astats{display:flex;gap:10px;margin:-6px 0 16px}
+.ast{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:9px 11px;display:flex;flex-direction:column;gap:2px}
+.ast b{font-family:var(--mono);font-size:20px;color:var(--amber);line-height:1}
+.ast span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+/* the flag: the winner over the line, seen from beside the track */
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 /* ---- the admin desk ---- */
 .ad-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 8px;
@@ -1809,6 +1815,13 @@ body.admining #lobbybar{display:none}
   </section>
 
   <!-- ===================== DRIVE ===================== -->
+  <div class="pause sheet" id="noteSheet" hidden>
+    <div class="card">
+      <h3 id="noteTitle">A word</h3>
+      <p id="noteText"></p>
+      <div class="btns"><button class="pbtn primary" id="noteOk">OK</button></div>
+    </div>
+  </div>
   <div class="pause sheet" id="a2hs" hidden>
     <div class="card">
       <h3>Play fullscreen</h3>
@@ -1881,6 +1894,7 @@ body.admining #lobbybar{display:none}
            over the view composites everywhere, and one canvas beats a dozen
            elements being moved every frame. -->
       <canvas class="tagcv" id="tagcv"></canvas>
+      <canvas id="fx"></canvas>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
         <div>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover · <kbd>R</kbd><kbd>R</kbd> restart</div>
@@ -2007,6 +2021,10 @@ body.admining #lobbybar{display:none}
       <div id="authWho" hidden>
         <p class="awho">Signed in as <b id="auWhoName">—</b></p>
         <p class="amail" id="auWhoMail">—</p>
+        <div class="astats" id="auStats" hidden>
+          <div class="ast"><b id="stDaily">0</b><span>time trial wins</span></div>
+          <div class="ast"><b id="stRace">0</b><span>race wins</span></div>
+        </div>
         <button class="chip" id="auOut">Sign out</button>
       </div>
 
@@ -5070,6 +5088,7 @@ const CAM_FIT={
 };
 function updateCamera(dt){
   const c=G.car, cam=G.camera;
+  if(WIN.t>0&&winCamera(dt))return;
   const fx=Math.sin(CAR.yaw), fz=Math.cos(CAR.yaw);
   const speed=Math.hypot(CAR.vx,CAR.vz);
   if(G.camMode===2){
@@ -5582,6 +5601,7 @@ function frame(now){
   if(G.smoke)updateSmoke(dt);
   updateCamera(dt);
   netTags();                    /* after the camera moves, so the tags do not lag it */
+  fxTick(dt);
   updateHUD(dt);
   updateAudio();
   if(flashT>0){ flashT-=dt; if(flashT<=0)$("flash").classList.remove("on"); }
@@ -6763,6 +6783,7 @@ async function acctVerify(force){
   try{
     const r=await api("/api/me",{token:ACCT.token});
     ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctUI();
+    acctStats();
   }catch(e){
     /* Only a refusal means the session is gone. Asleep, offline or in a
        tunnel must never sign anybody out. */
@@ -6770,6 +6791,30 @@ async function acctVerify(force){
   }
 }
 
+/* What the account has won, from the relay; and a word for the driver
+   if there is one — congratulations on yesterday's daily, said once, or a
+   notice the desk has left for them. */
+async function acctStats(show){
+  if(!acctIn())return;
+  try{
+    const r=await api("/api/me/stats",{token:ACCT.token});
+    $("stDaily").textContent=String(r.dailyWins|0); $("stRace").textContent=String(r.raceWins|0);
+    $("auStats").hidden=false;
+    if(show===false)return;
+    if(r.wonYesterday&&!store.get("ad.congrats."+r.yesterday,false)){
+      store.set("ad.congrats."+r.yesterday,true);
+      noteShow("Congratulations","You won yesterday's daily time trial — the fastest lap of anyone in the world on that circuit. It's on your account now.");
+    }
+    if(r.notice&&store.get("ad.notice",null)!==r.notice+"|"+new Date().toISOString().slice(0,10)){
+      store.set("ad.notice",r.notice+"|"+new Date().toISOString().slice(0,10));
+      noteShow("Notice",r.notice);
+    }
+  }catch(e){}
+}
+function noteShow(title,text){
+  $("noteTitle").textContent=title; $("noteText").textContent=text; $("noteSheet").hidden=false;
+}
+$("noteOk").addEventListener("click",()=>{ $("noteSheet").hidden=true; });
 let AU_MODE="in";
 const AU_WHY={
   in:"An account puts your own name on your car when you race other people, "+
@@ -6800,6 +6845,7 @@ function showAuth(on){
   document.body.classList.toggle("authing",on);
   if(on){
     acctUI();
+    if(acctIn()) acctStats(false);
     if(!acctIn()){ authTab(AU_MODE); setTimeout(()=>{ try{$("auName").focus();}catch(e){} },40); }
     /* Opening this page is a deliberate look at the account, so ask the
        relay afresh rather than trusting the stored copy — otherwise being
@@ -6852,7 +6898,7 @@ $("authForm").addEventListener("submit",async ev=>{
       method:"POST",
       body:{username,password},
     });
-    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind();
+    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind(); acctStats();
     TK.list=[]; TK.loaded=false;         // fetch this account's own
 
     $("auPass").value="";                  // not left sitting in the DOM
@@ -7979,9 +8025,59 @@ function raceFinish(id,name,ms,me){
   RACE.finished.push({id:String(id),name,ms});
   const place=RACE.finished.length;
   if(me)RACE.mine=ms;
-  if(place===1) showFlash(me?"You win!":name+" wins","#FFB020",fmtTime(ms));
+  if(place===1){
+    showFlash(me?"You win!":name+" wins","#FFB020",fmtTime(ms));
+    winShow(id,name);
+    if(me&&raceTotal()>1&&acctIn()) api("/api/wins",{method:"POST",token:ACCT.token,body:{kind:"race"}}).catch(()=>{});
+  }
   else if(me) showFlash("P"+place,"#E6EEEC",fmtTime(ms));
-  standingsUI(); raceEndUI();
+  standingsUI();
+  if(WIN.t>0) setTimeout(raceEndUI,4300); else raceEndUI();
+}
+/* ---- the flag ----
+   The winner over the line, seen from beside the track, under confetti.
+   The camera stands at the finish line looking at their car for a few
+   seconds; the confetti falls on a canvas over the view. Then the chase
+   camera has the car back. */
+const WIN={t:0,id:null,bits:[]};
+function winMesh(id){
+  if(id===myId())return G.car;
+  const p=NET.peers.get(id); if(p&&p.mesh)return p.mesh;
+  const c=AI.cars.find(c=>c.id===id); return c?c.mesh:null;
+}
+function winShow(id,name){
+  if(!G.T||!G.camera)return;
+  WIN.t=4.2; WIN.id=id; WIN.bits=[];
+  const cv=$("fx"), W=cv.clientWidth||800;
+  const cols=["#FFB020","#FF4B3A","#2ED47A","#2E7BE8","#B24FE8","#E8EDEC"];
+  for(let i=0;i<220;i++) WIN.bits.push({x:Math.random()*W,y:-Math.random()*300-10,vx:(Math.random()-0.5)*60,vy:60+Math.random()*120,r:Math.random()*Math.PI,vr:(Math.random()-0.5)*8,w:6+Math.random()*6,h:3+Math.random()*4,c:cols[i%cols.length]});
+}
+function winCamera(dt){
+  const T=G.T, cam=G.camera, m=winMesh(WIN.id);
+  if(!m){ WIN.t=0; return false; }
+  /* beside the line, on the outside of whichever way the start straight bends */
+  const i=0, side=(T.K[Math.min(T.N-1,12)]>0?-1:1);
+  const px=T.X[i]+T.RX[i]*side*(T.halfW+5), pz=T.Z[i]+T.RZ[i]*side*(T.halfW+5);
+  const py=heightAt(T,px,pz,null,T.Y[i])+2.6;
+  cam.position.set(px,py,pz);
+  cam.lookAt(m.position.x,m.position.y+0.8,m.position.z);
+  const fov=clamp(34+Math.hypot(m.position.x-px,m.position.z-pz)*0.05,30,58);
+  if(Math.abs(cam.fov-fov)>0.2){ cam.fov+=(fov-cam.fov)*Math.min(1,dt*3); cam.updateProjectionMatrix(); }
+  return true;
+}
+function fxTick(dt){
+  const cv=$("fx"); if(!cv)return;
+  const W=cv.clientWidth||1, H=cv.clientHeight||1, dpr=Math.min(window.devicePixelRatio||1,2);
+  if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
+  const c=cv.getContext("2d"); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+  if(WIN.t<=0)return;
+  WIN.t-=dt;
+  for(const b of WIN.bits){
+    b.vx+=Math.sin((b.y+b.x)*0.02)*40*dt; b.x+=b.vx*dt; b.y+=b.vy*dt; b.r+=b.vr*dt;
+    if(b.y>H+20&&WIN.t>1.2){ b.y=-20; b.x=Math.random()*W; }
+    c.save(); c.translate(b.x,b.y); c.rotate(b.r); c.fillStyle=b.c; c.globalAlpha=WIN.t<0.8?WIN.t/0.8:1; c.fillRect(-b.w/2,-b.h/2,b.w,b.h); c.restore();
+  }
+  if(WIN.t<=0){ WIN.bits=[]; camInit=false; }
 }
 function raceEndUI(){
   if(!RACE.on||RACE.mine==null)return;
