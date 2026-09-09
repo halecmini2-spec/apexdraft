@@ -4738,11 +4738,20 @@ const DRIVE={
      wheel's travel does real work, which is what "direct" feels like. The
      drift window in section 3 is calibrated to this number: it has to reach
      1.0 at full lock, so the two move together. */
-  overdrive:1.05,     // full lock asks only a little past the grip: less push wide, more turn
-  latAccel:16.8,      // cornering grip ceiling (m/s^2)
+  /* Full lock asks exactly the grip there is, no more: the car turns on
+     the tightest circle the tyres allow and never pushes wide of it.
+     Overdriving a corner is not a thing any more; the handbrake is the way
+     to slide, and the anti-spin clamp still holds. */
+  overdrive:1.00,
+  /* The slower the car, the more grip it has to turn with: at walking pace
+     more than double, at 40 m/s and above the plain figure. Tight corners
+     and hairpins are taken on the throttle; fast sweepers are unchanged. */
+  lowGrip:1.15,       // extra grip at a standstill, as a fraction of latAccel
+  lowUntil:40,        // m/s at which the extra has gone
+  latAccel:17.5,      // cornering grip ceiling (m/s^2), at speed
   gripRate:8.5,       // how fast sideways velocity is killed, 1/s
   handDelay:0.55,     // seconds on the brake before the rear locks up
-  frontBias:0.62,     // share of lateral grip from the front axle, which a
+  frontBias:0.68,     // share of lateral grip from the front axle, which a
                       // drift does not take away — it is what keeps the nose
                       // pointed and stops a slide turning into washing wide
   driftGrip:3.0,      // ...once a slide has started
@@ -4836,8 +4845,9 @@ function step(dt){
      the car goes where it is pointed the moment it is pointed there. */
   const srate=(steerIn?17.0:19.0)*(P.turnin||1);
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
-  const latCap=DRIVE.latAccel*P.grip*S.mu;            // grip available for cornering
   const vv=Math.max(Math.abs(vLong),4);
+  const lowBoost=1+DRIVE.lowGrip*clamp(1-vv/DRIVE.lowUntil,0,1);
+  const latCap=DRIVE.latAccel*P.grip*S.mu*lowBoost;   // grip available for cornering, most of it when slow
   const lock=Math.min(DRIVE.maxSteer,
                       Math.atan(DRIVE.overdrive*latCap*DRIVE.wheelbase/(vv*vv)));
   const wheelAngle=CAR.steer*lock;                    // + = wheels pointed right
@@ -7853,6 +7863,7 @@ function aiSpawn(){
     AI.cars.push(car);
   }
 }
+const aiLowBoost=(v)=>1+DRIVE.lowGrip*clamp(1-Math.max(v,4)/DRIVE.lowUntil,0,1);
 function aiTick(dt){
   if(!AI.on||!G.T)return;
   const T=G.T, perf=carPerf(ED.opts.car), k=AI.strength/100;
@@ -7888,7 +7899,9 @@ function aiTick(dt){
     let vAllow=vmax;
     for(let m=0;m<=Math.round(170/sp);m++){
       const q=(here.i+m)%T.N, kq=L?Math.abs(L.k[q])*(0.55+0.45*c.mix)+Math.abs(T.K[q])*(0.45-0.45*c.mix):Math.abs(T.K[q]);
-      const vT=Math.min(vmax,Math.sqrt(aLat/Math.max(kq,1e-4)));
+      /* grip and speed each depend on the other; a few rounds settle it */
+      let vT=Math.min(vmax,Math.sqrt(aLat/Math.max(kq,1e-4)));
+      for(let r=0;r<4;r++) vT=Math.min(vmax,Math.sqrt(aLat*aiLowBoost(vT)/Math.max(kq,1e-4)));
       const dist=Math.max(0,m*sp-Math.max(0,7-7*kk));
       vAllow=Math.min(vAllow,Math.sqrt(vT*vT+2*brake*dist));
     }

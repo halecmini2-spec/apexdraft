@@ -53,6 +53,12 @@ lead back.
   browser while it is driven; nothing is a file and nothing is anyone's
   record. It stops with the pause menu and on the board, and has its own
   switch in the pause menu, separate from the engine sound.
+- **Tight corners are taken on the throttle.** The slower the car, the more
+  grip it has to turn with — over twice as much at walking pace, fading to
+  the plain figure by 145 km/h — so a hairpin needs the wheel rather than the
+  brake. Full lock asks exactly the grip there is and never more, so the car
+  turns on the tightest circle the tyres allow and never pushes wide of it;
+  the wheel alone will not slide the car, and the handbrake still will.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.

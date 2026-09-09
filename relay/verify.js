@@ -20,7 +20,9 @@ const PERF = {
   kart:    { power: 0.94, top: 0.58, grip: 1.34 },
 };
 const TOP = 64;          // m/s on tarmac, GT
-const GRIP = 16.8;       // m/s^2 of lateral grip, GT
+const GRIP = 17.5;       // m/s^2 of lateral grip, GT, at speed
+/* the page gives more grip the slower the car: the same curve here */
+const latBoost = (v) => 1 + 1.15 * Math.max(0, Math.min(1, 1 - v / 40));
 const BRAKE = 19;        // m/s^2
 const POWER = 14;        // m/s^2 off the line
 
@@ -37,7 +39,13 @@ function lapBound(C, car) {
   const kEff = new Float64Array(N);
   for (let i = 0; i < N; i++) { const k = Math.abs(C.K[i]); const r = k > 1e-6 ? 1 / k : 1e6; kEff[i] = 1 / (r + C.halfW * 1.6); }
   const vT = new Float64Array(N);
-  for (let i = 0; i < N; i++) vT[i] = Math.min(vmax, Math.sqrt(aLat / Math.max(kEff[i], 1e-6)));
+  for (let i = 0; i < N; i++) {
+    /* the grip depends on the speed and the speed on the grip: a few
+       rounds settle it */
+    let v = Math.min(vmax, Math.sqrt(aLat / Math.max(kEff[i], 1e-6)));
+    for (let r = 0; r < 6; r++) v = Math.min(vmax, Math.sqrt(aLat * latBoost(v) / Math.max(kEff[i], 1e-6)));
+    vT[i] = v;
+  }
   /* backward pass: braking limits; forward pass: acceleration limits; two
      laps so the flying lap starts at speed */
   const v = new Float64Array(N);
@@ -102,7 +110,7 @@ function checkTrace(C, trace, ms) {
     const la = Math.hypot(ax, az), lb = Math.hypot(bx, bz), lc = Math.hypot(+c[1] - +a[1], +c[2] - +a[2]);
     if (la < 3 || lb < 3 || !lc) continue;
     const kappa = Math.abs(2 * (ax * bz - az * bx) / (la * lb * lc)), vv = (la / dtA + lb / dtC) / 2;
-    judged++; if (vv * vv * kappa > GRIP * 1.32 * 1.25) hot++;
+    judged++; if (vv * vv * kappa > GRIP * latBoost(vv) * 1.32 * 1.25) hot++;
   }
   if (judged > 20 && hot > judged * 0.06) return "cornering faster than the tyres allow";
   if (gaps > 4) return "trace has holes";
