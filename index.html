@@ -7831,9 +7831,9 @@ function aiSpawn(){
       lane:((a%4)-1.5)/1.5*0.32*T.halfW,
       /* how much of the racing line they use, and where on it: the weaker
          the driver, the more of their own idea of the line they keep */
-      mix:0.55+0.45*Math.min(1,k*(0.9+0.2*Math.random())),
-      shift:Math.round((Math.random()-0.5)*8),
-      wander:(Math.random()-0.5)*1.4,
+      mix:Math.min(1,0.3+0.7*k*(0.92+0.16*Math.random())),
+      shift:Math.round((Math.random()-0.5)*8*(1.1-k)),
+      wander:(Math.random()-0.5)*1.4*(1.2-k),
       gridD:(col?1:-1)*T.halfW*0.44, held:0,
       mistake:null,next:(8+40*k)*(0.5+Math.random()),mistakes:0,
       x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,mesh:null};
@@ -7850,7 +7850,11 @@ function aiTick(dt){
   const go=CAR.state==="run";
   for(const c of AI.cars){
     const kk=Math.min(1.05,k*c.pace);
-    const aLat=(4+8*kk+8*kk*kk)*perf.grip, vmax=(30+34*kk)*perf.top, accel=(4.5+8*kk)*perf.power, brake=8+11*kk;
+    /* Grip, power, top speed and braking climb with strength but never
+       past the car model the player drives: the strongest opponent has
+       exactly the player's car, and only the line and the nerve to use it. */
+    const aLat=Math.min(4+8*kk+8*kk*kk,DRIVE.latAccel)*perf.grip, vmax=Math.min(30+34*kk,DRIVE.topSpeed)*perf.top,
+          accel=Math.min(4.5+8*kk,DRIVE.power)*perf.power, brake=Math.min(8+11*kk,DRIVE.brake);
     /* mistakes: scheduled, and worse the weaker the driver */
     let vMul=1, dAdd=0;
     if(go&&k<0.97){
@@ -7879,7 +7883,7 @@ function aiTick(dt){
        and a little wander that is theirs alone */
     const li=L?((here.i+c.shift)%T.N+T.N)%T.N:here.i;
     const lineD=L?L.d[li]:0;
-    let dT=lineD*c.mix+c.lane*(1-c.mix)+c.wander*Math.sin(c.s/90)+dAdd;
+    let dT=lineD*c.mix+c.lane*(1-c.mix)+c.wander*Math.sin(TAU*Math.max(1,Math.round(T.len/90))*c.s/T.len)+dAdd;
     /* off the line the grid is left as it is, for the first moments */
     if(go){ c.held+=dt; const h=Math.min(1,Math.max(0,(c.held-1.2)/2.5)); dT=lerp(c.gridD,dT,h*h*(3-2*h)); }
     else dT=c.gridD;
@@ -7897,7 +7901,14 @@ function aiTick(dt){
         dT=lerp(dT,want,Math.min(1,(28-gap)/14));
       }
     }
-    if(go) c.v+=clamp(Math.min(vAllow,vCap)-c.v,-brake*dt,accel*dt); else c.v=0;
+    /* the same thrust curve and drag as the player: full shove off the
+       line, tailing off with speed, air and rolling resistance against it */
+    if(go){
+      const want=Math.min(vAllow,vCap), t=Math.min(1,c.v/Math.max(1,vmax));
+      const thrust=accel*(1-t*t*0.90)-c.v*c.v*0.00040-(SURF.road.drag0+c.v*SURF.road.dragV*3);
+      if(c.v<want-0.3) c.v=Math.min(want,c.v+Math.max(0,thrust)*dt);
+      else if(c.v>want+0.3) c.v=Math.max(want,c.v-brake*dt);
+    } else c.v=0;
     c.v=Math.max(0,c.v);
     const dMax=T.halfW*0.86+(Math.abs(dAdd)?4:0);
     const dWant=clamp(dT,-dMax,dMax);
