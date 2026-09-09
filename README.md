@@ -61,7 +61,9 @@ lead back.
   throttle rather than the brake. The Formula turns sharper again. Full lock
   asks exactly the grip there is and never more, so the car never pushes
   wide of its tightest circle; the wheel alone will not slide it, and the
-  handbrake still will.
+  handbrake still will. **Holding** the wheel over keeps tightening the
+  line: half as much grip again after about a second, so a GT at 100 km/h
+  comes from a 16 m circle down to 12 m for as long as you hold it.
 - **Cars are solid, and shaped like themselves.** Each car's hitbox is
   measured from the model that is drawn, so anything you can see of it is
   something you can hit — a Formula's long nose, a kart's stubbiness. The
@@ -72,9 +74,9 @@ lead back.
 - **Walls throw you back.** A brush along the Armco barely rebounds; a real
   hit comes off it, harder the faster you went in, and it is the corners of
   the car that touch the rail rather than a point in the middle.
-- **Cars can be launched.** The Formula and the kart have nothing to stop a
-  tyre climbing another's, so a wheel over a wheel, or any heavy enough
-  blow, puts them in the air — gravity from there, and a landing that costs
+- **Cars can be launched.** A wheel put over another wheel is a ramp, and
+  only the Formula and the kart have one, so only they go up from side to
+  side contact. A heavy enough crash lifts any of them — gravity from there, and a landing that costs
   speed. Nothing about the road can launch a car, only an impact.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a

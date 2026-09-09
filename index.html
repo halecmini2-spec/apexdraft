@@ -4483,7 +4483,7 @@ const G={
 };
 const CAR={
   x:0,z:0,y:0,vx:0,vz:0,vy:0,yaw:0,yawRate:0,steer:0,ax:0,ay:0,drift:0,
-  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,air:false,
+  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,air:false,holdT:0,holdDir:0,
   grounded:true,vyS:0,prevSurf:0,
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
   sectors:[null,null,null], bestSectors:[null,null,null], secStart:0, secIdx:0,
@@ -4636,7 +4636,7 @@ function resetCar(toStart){
   CAR.yaw=Math.atan2(T.TX[i],T.TZ[i]);
   CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;CAR.air=false;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
-  CAR.brakeHold=0; CAR.hbF=0; CAR.handArm=0;
+  CAR.brakeHold=0; CAR.hbF=0; CAR.handArm=0; CAR.holdT=0; CAR.holdDir=0;
   if(G.skid)resetSkids();
   CAR.y=heightAt(T,CAR.x,CAR.z); CAR.prevSurf=CAR.y;
   if(toStart){
@@ -4802,6 +4802,12 @@ const DRIVE={
      and hairpins are taken on the throttle; fast sweepers are unchanged. */
   lowGrip:1.30,       // extra grip at a standstill, as a fraction of latAccel
   lowUntil:40,        // m/s at which the extra has gone
+  /* Hold the wheel over and the car keeps leaning into it: the longer it is
+     held one way, the more grip there is to turn with and the tighter the
+     line becomes, up to half as much again after about a second. Let go, or
+     turn the other way, and it is back to the plain figure at once. */
+  holdGrip:0.50,
+  holdTime:1.10,      // seconds to reach it
   latAccel:23.0,      // cornering grip ceiling (m/s^2), at speed
   gripRate:11.5,      // how fast sideways velocity is killed, 1/s
   handDelay:0.55,     // seconds on the brake before the rear locks up
@@ -4902,7 +4908,11 @@ function step(dt){
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
   const vv=Math.max(Math.abs(vLong),4);
   const lowBoost=1+DRIVE.lowGrip*clamp(1-vv/DRIVE.lowUntil,0,1);
-  const latCap=DRIVE.latAccel*P.grip*S.mu*lowBoost;   // grip available for cornering, most of it when slow
+  /* how long the wheel has been held this way */
+  if(steerIn===0||Math.sign(steerIn)!==CAR.holdDir){ CAR.holdT=0; CAR.holdDir=Math.sign(steerIn); }
+  else CAR.holdT+=dt;
+  const holdBoost=1+DRIVE.holdGrip*clamp(CAR.holdT/DRIVE.holdTime,0,1);
+  const latCap=DRIVE.latAccel*P.grip*S.mu*lowBoost*holdBoost;   // grip to corner with: most when slow, more the longer it is held
   const lock=Math.min(DRIVE.maxSteer,
                       Math.atan(DRIVE.overdrive*latCap*DRIVE.wheelbase/(vv*vv)));
   const wheelAngle=CAR.steer*lock;                    // + = wheels pointed right
@@ -5044,8 +5054,10 @@ function step(dt){
       CAR.vx-=p.rx*sgn*vIn*(1+e); CAR.vz-=p.rz*sgn*vIn*(1+e);
       const scrub=clamp(vIn/16,0,1)*0.18;                     // friction on the rail
       CAR.vx*=1-scrub; CAR.vz*=1-scrub;
-      /* an open-wheeled car climbing the rail at speed gets thrown up by it */
-      if(vIn>13&&openWheel(ED.opts.car)&&!CAR.air){ CAR.air=true; CAR.vy=Math.min(5.5,vIn*0.26); }
+      /* a car climbing the rail at speed gets thrown up by it: an open
+         wheel finds the ramp sooner, but any car hard enough into it goes */
+      const lift=openWheel(ED.opts.car)?(vIn>13?vIn*0.26:0):(vIn>17?vIn*0.19:0);
+      if(lift>0&&!CAR.air){ CAR.air=true; CAR.vy=Math.min(5.5,lift); }
       worst=Math.max(worst,vIn);
     }
     CAR.hitX=ex; CAR.hitZ=ez; CAR.hitY=heightAt(T,ex,ez);
@@ -7909,7 +7921,10 @@ function aiAt(T,s){
 function aiSpawn(){
   if(!AI.on||!G.T||!G.scene)return;
   const T=G.T, n=RACE.grid.filter(id=>id.startsWith("ai")).length;
-  AI.line=aiLine(T,T.halfW*(0.6+0.42*AI.strength/100));
+  /* the line runs to the edge of the road and no further: past it the car
+     is on the kerb and capped for being off the track, which cost the
+     strongest drivers most of their pace */
+  AI.line=aiLine(T,T.halfW*(0.60+0.30*AI.strength/100));
   const names=AI_NAMES.slice().sort(()=>Math.random()-0.5);
   const colours=AI_COLOURS.filter(c=>c.toLowerCase()!==String(ED.opts.color).toLowerCase()).sort(()=>Math.random()-0.5);
   const k=AI.strength/100;
@@ -8064,17 +8079,18 @@ function aiTick(dt){
     aiShove(b,-ov.nx*ov.over*(mA/(mA+mB)),-ov.nz*ov.over*(mA/(mA+mB)));
     const ta=Math.sin(a.yaw), tz=Math.cos(a.yaw);
     const aAhead=(ov.nx*ta+ov.nz*tz)<0;         // b is behind a along a's nose
-    /* the one behind ran into the one in front: the one in front is nudged
-       along, the one behind keeps most of its speed */
-    const vin=Math.abs((a.v-b.v))*0.5+0.5;
-    if(aAhead){ a.v=Math.max(a.v,Math.min(b.v,a.v+vin*0.35)); b.v=Math.min(b.v,Math.max(a.v*0.9,b.v-vin*0.15)); }
-    else { b.v=Math.max(b.v,Math.min(a.v,b.v+vin*0.35)); a.v=Math.min(a.v,Math.max(b.v*0.9,a.v-vin*0.15)); }
-    /* wheel over wheel, if either is open-wheeled and it is a side-on hit */
-    const rax=-Math.cos(a.yaw), raz=Math.sin(a.yaw);
-    const lat=Math.abs(ov.nx*rax+ov.nz*raz), sp=Math.abs(a.v-b.v);
-    if(lat>0.62&&sp>8){
-      if(openWheel(a.kind)&&!a.air){ a.air=true; a.vy=Math.min(6.5,sp*0.30); }
-      if(openWheel(b.kind)&&!b.air){ b.air=true; b.vy=Math.min(6.5,sp*0.30); }
+    /* Nose to tail in a queue they touch for a long time, so a knock is
+       only a knock when one is genuinely catching the other — otherwise
+       running in company would bleed the whole field's speed away. */
+    const front=aAhead?a:b, behind=aAhead?b:a;
+    const closing=behind.v-front.v;
+    if(closing>0.5&&bumpReady(behind)){
+      front.v+=closing*0.45;
+      behind.v=Math.max(front.v*0.92,behind.v-closing*0.20);
+      const rax=-Math.cos(a.yaw), raz=Math.sin(a.yaw);
+      const lat=Math.abs(ov.nx*rax+ov.nz*raz);
+      if(!a.air){ const vy=launchSpeed(a.kind,lat,-closing); if(vy>0){ a.air=true; a.vy=vy; } }
+      if(!b.air){ const vy=launchSpeed(b.kind,lat,-closing); if(vy>0){ b.air=true; b.vy=vy; } }
     }
   }
   for(const c of AI.cars){ const p=aiAt(T,c.s); c.x=p.x+p.rx*c.d; c.z=p.z+p.rz*c.d; aiPose(c); }
@@ -8446,10 +8462,12 @@ function bumpReady(o){ const t=performance.now()/1000; if(o.bumpT&&t-o.bumpT<BUM
    blow of any kind will do it too. Only the open-wheeled cars, which have
    nothing to stop a tyre climbing another. */
 function launchSpeed(kind,lat,vin){
-  if(!openWheel(kind))return 0;
   const close=-vin;
-  if(lat>0.55&&close>6) return Math.min(7,close*0.34);
-  if(close>12) return Math.min(7,close*0.22);
+  /* a wheel put over another wheel is a ramp, and only the open-wheeled
+     cars have one */
+  if(openWheel(kind)&&lat>0.55&&close>6) return Math.min(7,close*0.34);
+  /* a big enough crash lifts anything */
+  if(close>14) return Math.min(6.5,close*0.20);
   return 0;
 }
 function meLaunch(b){

@@ -23,6 +23,8 @@ const TOP = 64;          // m/s on tarmac, GT
 const GRIP = 23.0;       // m/s^2 of lateral grip, GT, at speed
 /* the page gives more grip the slower the car: the same curve here */
 const latBoost = (v) => 1 + 1.30 * Math.max(0, Math.min(1, 1 - v / 40));
+/* holding the wheel over is worth half as much grip again */
+const HOLD = 1.5;
 const BRAKE = 19;        // m/s^2
 const POWER = 14;        // m/s^2 off the line
 
@@ -32,7 +34,7 @@ const POWER = 14;        // m/s^2 off the line
    Anything quicker than this was not driven. */
 function lapBound(C, car) {
   const p = PERF[car] || PERF.gt;
-  const vmax = TOP * p.top * 1.03, aLat = GRIP * p.grip * 1.30, accel = POWER * p.power * 1.15, brake = BRAKE * 1.15;
+  const vmax = TOP * p.top * 1.03, aLat = GRIP * p.grip * 1.30 * HOLD, accel = POWER * p.power * 1.15, brake = BRAKE * 1.15;
   const N = C.N, sp = C.len / N;
   /* the line straightens the road: at best a bend is taken on a radius
      wider by most of the road */
@@ -110,7 +112,7 @@ function checkTrace(C, trace, ms) {
     const la = Math.hypot(ax, az), lb = Math.hypot(bx, bz), lc = Math.hypot(+c[1] - +a[1], +c[2] - +a[2]);
     if (la < 3 || lb < 3 || !lc) continue;
     const kappa = Math.abs(2 * (ax * bz - az * bx) / (la * lb * lc)), vv = (la / dtA + lb / dtC) / 2;
-    judged++; if (vv * vv * kappa > GRIP * latBoost(vv) * 1.32 * 1.25) hot++;
+    judged++; if (vv * vv * kappa > GRIP * latBoost(vv) * HOLD * 1.32 * 1.25) hot++;
   }
   if (judged > 20 && hot > judged * 0.06) return "cornering faster than the tyres allow";
   if (gaps > 4) return "trace has holes";
