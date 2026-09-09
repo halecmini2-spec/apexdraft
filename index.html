@@ -3518,14 +3518,65 @@ const CAR_MODELS=[
    three cars are made more direct with them; the kart already turns on a
    coin and is left as it is. */
 const CAR_PERF={
-  gt:     {power:1.00, top:1.00, grip:1.00, turnin:1.35, front:1.30},
-  formula:{power:1.26, top:1.20, grip:1.32, turnin:1.45, front:1.34},
-  yaris:  {power:0.72, top:0.74, grip:0.84, turnin:1.30, front:1.26},
+  gt:     {power:1.00, top:1.00, grip:1.12, turnin:1.75, front:1.45},
+  formula:{power:1.26, top:1.20, grip:1.46, turnin:1.90, front:1.50},
+  yaris:  {power:0.72, top:0.74, grip:0.90, turnin:1.55, front:1.34},
   /* a kart has almost no top end but corners on rails: slow down the
      straights, quickest thing here through anything tight */
   kart:   {power:0.94, top:0.58, grip:1.34, turnin:1.00, front:1.00}
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
+
+/* ---- hitboxes ----
+   Measured from the car that is actually drawn, so whatever you can see of
+   it is what you can hit: the model is built once per kind, its bounding
+   box taken, and the body covered by a row of circles down the centreline,
+   each as wide as the car. Two cars touch when any two of their circles
+   overlap, which gives a Formula its long nose and a kart its stubbiness
+   without hand-written numbers to fall out of date. */
+const HITBOX={};
+function hitbox(kind){
+  const k=kind||"gt";
+  if(HITBOX[k])return HITBOX[k];
+  let hl=2.0, hw=0.95, hh=1.2;
+  try{
+    const g=buildCar("#888888",k);
+    const b=new THREE.Box3().setFromObject(g), sz=new THREE.Vector3();
+    b.getSize(sz);
+    if(isFinite(sz.x)&&sz.x>0.2){ hl=sz.z/2; hw=sz.x/2; hh=sz.y; }
+    disposeTree(g);
+  }catch(e){}
+  /* enough circles that each overlaps the next, or the middle of the car
+     would be a hole another car could sit in */
+  const span=Math.max(0,hl-hw);
+  const n=clamp(Math.ceil(span/(0.75*hw))+1,2,6);
+  const offs=[];
+  for(let i=0;i<n;i++) offs.push(-span+2*span*(n<2?0.5:i/(n-1)));
+  return HITBOX[k]={hl,hw,hh,r:hw,offs};
+}
+/* How much car there is to shove. A kart gives way to a GT. */
+const CAR_MASS={gt:1.00, formula:0.78, yaris:0.92, kart:0.42};
+const carMass=k=>CAR_MASS[k]||1;
+const openWheel=k=>k==="formula"||k==="kart";
+/* the circles of one car, in the world */
+function carCircles(x,z,yaw,kind){
+  const H=hitbox(kind), fx=Math.sin(yaw), fz=Math.cos(yaw), out=[];
+  for(const o of H.offs) out.push({x:x+fx*o, z:z+fz*o, r:H.r});
+  return out;
+}
+/* the deepest place two cars overlap: a normal pointing from B to A, and
+   how far in they are */
+function carOverlap(ax,az,ayaw,akind,bx,bz,byaw,bkind){
+  const A=carCircles(ax,az,ayaw,akind), B=carCircles(bx,bz,byaw,bkind);
+  let best=null;
+  for(const a of A) for(const b of B){
+    const dx=a.x-b.x, dz=a.z-b.z, d=Math.hypot(dx,dz), rr=a.r+b.r;
+    if(d>=rr||d<1e-6)continue;
+    const over=rr-d;
+    if(!best||over>best.over) best={over,nx:dx/d,nz:dz/d};
+  }
+  return best;
+}
 
 function carMats(bodyColor){
   return {
@@ -4432,7 +4483,7 @@ const G={
 };
 const CAR={
   x:0,z:0,y:0,vx:0,vz:0,vy:0,yaw:0,yawRate:0,steer:0,ax:0,ay:0,drift:0,
-  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,
+  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,air:false,
   grounded:true,vyS:0,prevSurf:0,
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
   sectors:[null,null,null], bestSectors:[null,null,null], secStart:0, secIdx:0,
@@ -4583,7 +4634,7 @@ function resetCar(toStart){
     CAR.x=T.X[i]; CAR.z=T.Z[i];
   }
   CAR.yaw=Math.atan2(T.TX[i],T.TZ[i]);
-  CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
+  CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;CAR.air=false;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
   CAR.brakeHold=0; CAR.hbF=0; CAR.handArm=0;
   if(G.skid)resetSkids();
@@ -4706,7 +4757,10 @@ const SURF={
      now — you can drive on it, and you will lose time for doing so. About
      150km/h flat out, and noticeably less grip to lean on. */
   runoff:{mu:0.71,grip:0.74,power:0.65,brake:0.79,drag0:1.95,dragV:0.036},
-  grass :{mu:0.52,grip:0.55,power:0.60,brake:0.62,drag0:4.00,dragV:0.060}
+  grass :{mu:0.52,grip:0.55,power:0.60,brake:0.62,drag0:4.00,dragV:0.060},
+  /* in the air there is nothing to push against: no drive, no brakes and no
+     grip, so the car keeps whatever it left the ground with */
+  air   :{mu:0.02,grip:0.02,power:0.00,brake:0.00,drag0:0.05,dragV:0.006}
 };
 
 /* =====================================================================
@@ -4731,7 +4785,7 @@ const DRIVE={
   reverse:7.0,
   engineBrake:2.6,    // lift-off deceleration, so coasting actually slows you
   wheelbase:2.85,
-  maxSteer:0.62,      // rad — the physical steering rack limit (~35 deg)
+  maxSteer:0.88,      // rad — the physical steering rack limit (~50 deg)
   /* How much of the available grip full lock asks for. Above 1.0 the surplus
      is understeer — you're asking for more than the tyres can give and the car
      pushes wide. Trimming it (1.25, then 1.13, now this) means more of the
@@ -4746,10 +4800,10 @@ const DRIVE={
   /* The slower the car, the more grip it has to turn with: at walking pace
      more than double, at 40 m/s and above the plain figure. Tight corners
      and hairpins are taken on the throttle; fast sweepers are unchanged. */
-  lowGrip:1.15,       // extra grip at a standstill, as a fraction of latAccel
+  lowGrip:1.30,       // extra grip at a standstill, as a fraction of latAccel
   lowUntil:40,        // m/s at which the extra has gone
-  latAccel:17.5,      // cornering grip ceiling (m/s^2), at speed
-  gripRate:8.5,       // how fast sideways velocity is killed, 1/s
+  latAccel:23.0,      // cornering grip ceiling (m/s^2), at speed
+  gripRate:11.5,      // how fast sideways velocity is killed, 1/s
   handDelay:0.55,     // seconds on the brake before the rear locks up
   frontBias:0.68,     // share of lateral grip from the front axle, which a
                       // drift does not take away — it is what keeps the nose
@@ -4789,7 +4843,8 @@ function step(dt){
 
   const np=nearest(T,CAR.x,CAR.z,null,CAR.y);
   const ad=Math.abs(np.d);
-  const S = ad<T.halfW+0.5 ? SURF.road
+  const S = CAR.air ? SURF.air
+          : ad<T.halfW+0.5 ? SURF.road
           : ad<T.halfW+2.2 ? SURF.kerb
           : ad<T.halfW+7.8 ? SURF.runoff      // paved run-off, out to the barrier
           : SURF.grass;
@@ -4843,7 +4898,7 @@ function step(dt){
   /* Direct: the wheel takes its set almost at once — full lock in well
      under a tenth of a second on the road cars — and lets go as fast, so
      the car goes where it is pointed the moment it is pointed there. */
-  const srate=(steerIn?17.0:19.0)*(P.turnin||1);
+  const srate=(steerIn?24.0:26.0)*(P.turnin||1);
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
   const vv=Math.max(Math.abs(vLong),4);
   const lowBoost=1+DRIVE.lowGrip*clamp(1-vv/DRIVE.lowUntil,0,1);
@@ -4964,10 +5019,11 @@ function step(dt){
      instead of the whole car stopping dead on one contact. Armco is designed
      to deform and redirect, so there is a little restitution but no real
      bounce, plus friction that scrubs speed while you're leaning on it. */
-  const LIM=(T.barrierOff||T.halfW+8.5)-0.95;   // car half-width off the rail
+  const LIM=(T.barrierOff||T.halfW+8.5)-0.05;   // the rail itself; the corners are tested
+  const HBw=hitbox(ED.opts.car);
   let worst=0;
-  for(const endz of [1.35,-1.35]){
-    const ex=CAR.x+nfx*endz, ez=CAR.z+nfz*endz;
+  for(const corner of [[HBw.hl,HBw.hw],[HBw.hl,-HBw.hw],[-HBw.hl,HBw.hw],[-HBw.hl,-HBw.hw]]){
+    const ex=CAR.x+nfx*corner[0]+nrx*corner[1], ez=CAR.z+nfz*corner[0]+nrz*corner[1];
     const p=nearest(T,ex,ez,null,CAR.y);
     const over=Math.abs(p.d)-LIM;
     if(over<=0)continue;
@@ -4982,9 +5038,14 @@ function step(dt){
     CAR.yaw+=dy*clamp(over*3,0,1)*0.22;
     const vIn=CAR.vx*p.rx*sgn+CAR.vz*p.rz*sgn;
     if(vIn>0){
-      CAR.vx-=p.rx*sgn*vIn*1.12; CAR.vz-=p.rz*sgn*vIn*1.12;   // slight redirect
+      /* Armco deforms, so a brush barely rebounds and a real hit throws the
+         car back off the rail: the faster you go in, the more comes back. */
+      const e=clamp(vIn/22,0.05,0.55);
+      CAR.vx-=p.rx*sgn*vIn*(1+e); CAR.vz-=p.rz*sgn*vIn*(1+e);
       const scrub=clamp(vIn/16,0,1)*0.18;                     // friction on the rail
       CAR.vx*=1-scrub; CAR.vz*=1-scrub;
+      /* an open-wheeled car climbing the rail at speed gets thrown up by it */
+      if(vIn>13&&openWheel(ED.opts.car)&&!CAR.air){ CAR.air=true; CAR.vy=Math.min(5.5,vIn*0.26); }
       worst=Math.max(worst,vIn);
     }
     CAR.hitX=ex; CAR.hitZ=ez; CAR.hitY=heightAt(T,ex,ez);
@@ -5002,19 +5063,32 @@ function step(dt){
   const np2=nearest(T,CAR.x,CAR.z,null,CAR.y);
 
   /* ---- vertical ----
-     The car sits on the surface. Full stop. There is no ballistic state and no
-     way to leave the ground, so it cannot hop, cannot hover, and cannot get
-     stuck off the floor. Two earlier attempts at "has it launched?" both turned
-     ordinary road undulation into hopping; these gradients are gentle enough
-     that jumps were never worth the failure modes. */
+     The car sits on the surface unless something threw it off. Nothing about
+     the road can launch it — two earlier attempts at "has it launched?" both
+     turned ordinary undulation into hopping — so the only way into the air
+     is a real impact, and the only way out is landing. In between it is a
+     thrown object: gravity, and whatever speed it left with. */
   /* the height hint matters most here: this is the line that decides which
      road the car is standing on, and without it a flyover put you on the
      deck when you were underneath it and on the road below when you were on
      top of it */
   const surfY=heightAt(T,CAR.x,CAR.z,np2,CAR.y);
-  CAR.y=surfY;
-  CAR.vy=0;
-  CAR.grounded=true;
+  if(CAR.air){
+    CAR.vy-=9.81*dt;
+    CAR.y+=CAR.vy*dt;
+    if(CAR.y<=surfY){
+      const land=Math.max(0,-CAR.vy);
+      CAR.y=surfY; CAR.vy=0; CAR.air=false;
+      /* the landing costs speed, the harder the more */
+      const k=clamp(land/14,0,1);
+      CAR.vx*=1-0.12*k; CAR.vz*=1-0.12*k;
+      if(land>2.5&&CAR.hitCool<=0){ G.shake=Math.min(0.8,land/16); thud(land*1.6); CAR.hitCool=0.16; }
+    }
+  }else{
+    CAR.y=surfY;
+    CAR.vy=0;
+  }
+  CAR.grounded=!CAR.air;
   CAR.prevSurf=surfY;
 
   /* kerb rumble */
@@ -7855,7 +7929,7 @@ function aiSpawn(){
       wander:(Math.random()-0.5)*1.4*(1.2-k),
       gridD:(col?1:-1)*T.halfW*0.44, held:0,
       mistake:null,next:(12+90*k*k)*(0.5+Math.random()),mistakes:0,
-      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,mesh:null};
+      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,vy:0,air:false,mesh:null};
     const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
     car.mesh=buildCar(car.colour,car.kind); car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
     car.mesh.position.set(car.x,car.y,car.z); car.mesh.rotation.order="YXZ"; car.mesh.rotation.y=car.yaw;
@@ -7864,6 +7938,12 @@ function aiSpawn(){
   }
 }
 const aiLowBoost=(v)=>1+DRIVE.lowGrip*clamp(1-Math.max(v,4)/DRIVE.lowUntil,0,1);
+/* an open-wheeled car put over a wheel goes up, and comes down on gravity */
+function aiLaunch(c,b){
+  if(c.air)return;
+  const vy=launchSpeed(c.kind,b.lat,b.vin);
+  if(vy>0){ c.air=true; c.vy=vy; }
+}
 function aiTick(dt){
   if(!AI.on||!G.T)return;
   const T=G.T, perf=carPerf(ED.opts.car), k=AI.strength/100;
@@ -7935,7 +8015,8 @@ function aiTick(dt){
     }
     /* the same thrust curve and drag as the player: full shove off the
        line, tailing off with speed, air and rolling resistance against it */
-    if(go){
+    if(c.air){ /* nothing to push against */ }
+    else if(go){
       const want=Math.min(vAllow,vCap), t=Math.min(1,c.v/Math.max(1,vmax));
       const thrust=accel*(1-t*t*0.90)-c.v*c.v*0.00040-(SURF.road.drag0+c.v*SURF.road.dragV*3);
       if(c.v<want-0.3) c.v=Math.min(want,c.v+Math.max(0,thrust)*dt);
@@ -7944,7 +8025,10 @@ function aiTick(dt){
     c.v=Math.max(0,c.v);
     const dMax=T.halfW*0.86+(Math.abs(dAdd)?4:0);
     const dWant=clamp(dT,-dMax,dMax);
-    const rate=(2.4+c.v*0.07)*dt;
+    /* However fast it wants to change lane, it may only move sideways as
+       fast as a car of that speed could actually steer: any more and the
+       body would be crabbing across the road rather than turning. */
+    const rate=Math.min(2.4+c.v*0.07,Math.max(1.2,c.v*0.20))*dt;
     const dPrev=c.d; c.d+=clamp(dWant-c.d,-rate,rate); c.dMax=Math.max(c.dMax||0,Math.abs(c.d));
     /* along the lap; a lap is a lap */
     const sPrev=c.s; c.s+=c.v*dt;
@@ -7955,26 +8039,43 @@ function aiTick(dt){
     const p=aiAt(T,c.s);
     const nx=p.x+p.rx*c.d, nz=p.z+p.rz*c.d;
     const dx=nx-c.x, dz=nz-c.z;
-    if(c.v>1.5){ let want=Math.atan2(dx,dz); let dy=want-c.yaw; while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU; c.yaw+=dy*Math.min(1,dt*9); }
+    /* the nose follows the path it is actually taking, closely, so the car
+       is always pointing where it is going */
+    if(c.v>1.0){ let want=Math.atan2(dx,dz); let dy=want-c.yaw; while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU; c.yaw+=dy*Math.min(1,dt*16); }
     c.vx=(nx-c.x)/Math.max(1e-3,dt); c.vz=(nz-c.z)/Math.max(1e-3,dt);
     c.x=nx; c.z=nz;
-    const yHint=c.y; c.y=heightAt(T,c.x,c.z,null,yHint);
+    const yHint=c.y, ground=heightAt(T,c.x,c.z,null,yHint);
+    if(c.air){
+      c.vy-=9.81*dt; c.y+=c.vy*dt;
+      if(c.y<=ground){ c.y=ground; c.vy=0; c.air=false; c.v*=0.94; }
+    }else c.y=ground;
     c.steer=clamp((c.d-dPrev)/Math.max(0.01,dt)*0.25+here.k*40,-1,1);
     c.spin+=c.v*dt/0.36;
   }
   /* solid to each other too: overlapping cars are pushed apart, half each,
      and the one behind gives up the speed */
-  const R2=2.3;
   for(let i=0;i<AI.cars.length;i++) for(let j=i+1;j<AI.cars.length;j++){
     const a=AI.cars[i], b=AI.cars[j];
     if(Math.abs(a.y-b.y)>2.5)continue;
-    const dx=a.x-b.x, dz=a.z-b.z, d=Math.hypot(dx,dz);
-    if(d>=R2||d<1e-4)continue;
-    const nx=dx/d, nz=dz/d, half=(R2-d)*0.5;
-    aiShove(a,nx*half,nz*half); aiShove(b,-nx*half,-nz*half);
+    const ov=carOverlap(a.x,a.z,a.yaw,a.kind,b.x,b.z,b.yaw,b.kind);
+    if(!ov)continue;
+    const mA=carMass(a.kind), mB=carMass(b.kind);
+    aiShove(a,ov.nx*ov.over*(mB/(mA+mB)),ov.nz*ov.over*(mB/(mA+mB)));
+    aiShove(b,-ov.nx*ov.over*(mA/(mA+mB)),-ov.nz*ov.over*(mA/(mA+mB)));
     const ta=Math.sin(a.yaw), tz=Math.cos(a.yaw);
-    const aAhead=(dx*ta+dz*tz)>0;               // a is further along than b
-    if(aAhead) b.v=Math.min(b.v,a.v*0.95); else a.v=Math.min(a.v,b.v*0.95);
+    const aAhead=(ov.nx*ta+ov.nz*tz)<0;         // b is behind a along a's nose
+    /* the one behind ran into the one in front: the one in front is nudged
+       along, the one behind keeps most of its speed */
+    const vin=Math.abs((a.v-b.v))*0.5+0.5;
+    if(aAhead){ a.v=Math.max(a.v,Math.min(b.v,a.v+vin*0.35)); b.v=Math.min(b.v,Math.max(a.v*0.9,b.v-vin*0.15)); }
+    else { b.v=Math.max(b.v,Math.min(a.v,b.v+vin*0.35)); a.v=Math.min(a.v,Math.max(b.v*0.9,a.v-vin*0.15)); }
+    /* wheel over wheel, if either is open-wheeled and it is a side-on hit */
+    const rax=-Math.cos(a.yaw), raz=Math.sin(a.yaw);
+    const lat=Math.abs(ov.nx*rax+ov.nz*raz), sp=Math.abs(a.v-b.v);
+    if(lat>0.62&&sp>8){
+      if(openWheel(a.kind)&&!a.air){ a.air=true; a.vy=Math.min(6.5,sp*0.30); }
+      if(openWheel(b.kind)&&!b.air){ b.air=true; b.vy=Math.min(6.5,sp*0.30); }
+    }
   }
   for(const c of AI.cars){ const p=aiAt(T,c.s); c.x=p.x+p.rx*c.d; c.z=p.z+p.rz*c.d; aiPose(c); }
 }
@@ -8324,22 +8425,79 @@ function solidUI(){}   /* contact is always on; the rows that set it are gone */
    rather than one being told where to go, so there is no authority to argue
    over — each of you feels the same shunt from your own side of it. The
    machine's cars are shoved the same way, and shove back. */
+/* The car doing the hitting keeps most of what it had; the one hit is what
+   moves. Running into the back of somebody used to stop you dead, which is
+   neither how it looks nor how it feels — the momentum has to go somewhere,
+   and it goes into them. */
+/* The one driving into the other behaves as the heavier car: it is moved
+   less and the car in front is moved more. Doing it through the mass rather
+   than by scaling the two responses separately keeps the arithmetic honest —
+   after the impulse the pair is always separating, so a shunt cannot repeat
+   every frame and pump a car up to impossible speed. */
+const AGGRESSOR_MASS=1.9;
+const BODY_BOUNCE=0.06;         // cars barely rebound off each other
+/* A knock is one event. The physics run several times per drawn frame and
+   two cars stay touching for a while after it, so without this a single
+   shunt would be charged over and over and throw the other car down the
+   road. Pushing them apart carries on regardless; only the blow is once. */
+const BUMP_GAP=0.18;            // seconds before the same pair can knock again
+function bumpReady(o){ const t=performance.now()/1000; if(o.bumpT&&t-o.bumpT<BUMP_GAP)return false; o.bumpT=t; return true; }
+/* Off the ground: a wheel put over another wheel is a ramp, and a heavy
+   blow of any kind will do it too. Only the open-wheeled cars, which have
+   nothing to stop a tyre climbing another. */
+function launchSpeed(kind,lat,vin){
+  if(!openWheel(kind))return 0;
+  const close=-vin;
+  if(lat>0.55&&close>6) return Math.min(7,close*0.34);
+  if(close>12) return Math.min(7,close*0.22);
+  return 0;
+}
+function meLaunch(b){
+  if(CAR.air)return;
+  const vy=launchSpeed(ED.opts.car||"gt",b.lat,b.vin);
+  if(vy>0){ CAR.air=true; CAR.vy=vy; }
+}
 function netCollide(){
-  const R=2.3;                                  // two cars, roughly
+  const myKind=ED.opts.car||"gt", myM=carMass(myKind);
+  const rx=-Math.cos(CAR.yaw), rz=Math.sin(CAR.yaw);
+  const bump=(ov,otherKind,otherVx,otherVz,other)=>{
+    /* which of the two drove into the other: the one moving along the
+       normal toward the other */
+    const mine=CAR.vx*ov.nx+CAR.vz*ov.nz;
+    const mineAggressor=mine<0;
+    const vin=(CAR.vx-otherVx)*ov.nx+(CAR.vz-otherVz)*ov.nz;
+    const oM=carMass(otherKind);
+    const mA=myM*(mineAggressor?AGGRESSOR_MASS:1), mB=oM*(mineAggressor?1:AGGRESSOR_MASS);
+    const j=(vin<0&&bumpReady(other)) ? -(1+BODY_BOUNCE)*vin/(1/mA+1/mB) : 0;
+    /* side by side rather than nose to tail: a wheel over a wheel is what
+       launches an open-wheeled car */
+    const lat=Math.abs(ov.nx*rx+ov.nz*rz);
+    return {j,vin,mineAggressor,lat,oM,mA,mB};
+  };
   if(AI.on) for(const c of AI.cars){
     if(Math.abs(CAR.y-c.y)>2.5)continue;
-    const dx=CAR.x-c.x, dz=CAR.z-c.z, d=Math.hypot(dx,dz);
-    if(d>=R||d<1e-4)continue;
-    const nx=dx/d, nz=dz/d, half=(R-d)*0.5;
-    CAR.x+=nx*half; CAR.z+=nz*half;
-    aiShove(c,-nx*half,-nz*half);
-    const vin=(CAR.vx-c.vx)*nx+(CAR.vz-c.vz)*nz;
-    if(vin<0){
-      CAR.vx-=nx*vin*0.9; CAR.vz-=nz*vin*0.9;
-      /* what we lose along the line of the hit, they gain */
+    const ov=carOverlap(CAR.x,CAR.z,CAR.yaw,myKind,c.x,c.z,c.yaw,c.kind);
+    if(!ov)continue;
+    const b=bump(ov,c.kind,Math.sin(c.yaw)*c.v,Math.cos(c.yaw)*c.v,c);
+    /* out of each other, the lighter giving way more */
+    const shareMe=b.oM/(myM+b.oM), shareThem=myM/(myM+b.oM);
+    CAR.x+=ov.nx*ov.over*shareMe; CAR.z+=ov.nz*ov.over*shareMe;
+    aiShove(c,-ov.nx*ov.over*shareThem,-ov.nz*ov.over*shareThem);
+    if(b.j>0){
+      CAR.vx+=ov.nx*b.j/b.mA; CAR.vz+=ov.nz*b.j/b.mA;
+      /* they take it along their own line of travel */
       const tx=Math.sin(c.yaw), tz=Math.cos(c.yaw);
-      c.v=Math.max(0,c.v-(nx*tx+nz*tz)*vin*0.5);
-      if(-vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-vin/30); thud(-vin); CAR.hitCool=0.16; }
+      const along=-(ov.nx*tx+ov.nz*tz)*b.j/b.mB;
+      c.v=Math.max(0,c.v+along);
+      /* The physics run several times per drawn frame while the machines
+         move once, so their world velocity has to be brought up to date
+         here — left stale, the next substep sees a car still standing
+         still, hits it again, and a single shunt pumps it to an
+         impossible speed. */
+      c.vx=Math.sin(c.yaw)*c.v; c.vz=Math.cos(c.yaw)*c.v;
+      aiLaunch(c,b);
+      meLaunch(b);
+      if(-b.vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-b.vin/30); thud(-b.vin); CAR.hitCool=0.16; }
     }
   }
   if(NET.status!=="in")return;
@@ -8347,25 +8505,25 @@ function netCollide(){
     if(!p.mesh)continue;
     const m=p.mesh.position;
     if(Math.abs(CAR.y-m.y)>2.5)continue;         // one of you is on the flyover
-    const dx=CAR.x-m.x, dz=CAR.z-m.z;
-    const d=Math.hypot(dx,dz);
-    if(d>=R||d<1e-4)continue;
-    const nx=dx/d, nz=dz/d;
-    /* Half the separation each, because the other machine is running this
-       same code from its own side and taking the other half. Taking all of
-       it here made the other car feel like a wall — you got moved the whole
-       way and they appeared not to give at all. */
-    const half=(R-d)*0.5;
-    CAR.x+=nx*half; CAR.z+=nz*half;
-    /* And shove their car on screen straight away. Their own reaction is
-       real but it has to travel to us, so for the fifth of a second that
-       takes we show what we know is coming; the offset fades out as their
-       packets arrive already carrying it. */
-    p.px=(p.px||0)-nx*half; p.pz=(p.pz||0)-nz*half; p.pt=performance.now();
-    const vin=CAR.vx*nx+CAR.vz*nz;
-    if(vin<0){                                   // closing: bounce off
-      CAR.vx-=nx*vin*1.25; CAR.vz-=nz*vin*1.25;
-      if(-vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-vin/30); thud(-vin); CAR.hitCool=0.16; }
+    const ov=carOverlap(CAR.x,CAR.z,CAR.yaw,myKind,m.x,m.z,p.mesh.rotation.y,p.car||"gt");
+    if(!ov)continue;
+    let ovx=0, ovz=0;
+    if(p.buf&&p.buf.length>1){
+      const q=p.buf[p.buf.length-2], r=p.buf[p.buf.length-1], dtp=(r.t-q.t)/1000;
+      if(dtp>0.01){ ovx=(r.p[0]-q.p[0])/dtp; ovz=(r.p[2]-q.p[2])/dtp; }
+    }
+    const b=bump(ov,p.car||"gt",ovx,ovz,p);
+    /* Their machine is running this same code from its own side, so each of
+       us takes the share our own mass says. Their car is shoved on screen
+       straight away as well: their own reaction is real but it has to reach
+       us, and the offset fades as their packets arrive carrying it. */
+    const shareMe=b.oM/(myM+b.oM), shareThem=myM/(myM+b.oM);
+    CAR.x+=ov.nx*ov.over*shareMe; CAR.z+=ov.nz*ov.over*shareMe;
+    p.px=(p.px||0)-ov.nx*ov.over*shareThem; p.pz=(p.pz||0)-ov.nz*ov.over*shareThem; p.pt=performance.now();
+    if(b.j>0){
+      CAR.vx+=ov.nx*b.j/b.mA; CAR.vz+=ov.nz*b.j/b.mA;
+      meLaunch(b);
+      if(-b.vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-b.vin/30); thud(-b.vin); CAR.hitCool=0.16; }
     }
   }
 }

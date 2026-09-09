@@ -14,15 +14,15 @@ const { centreline, nearest } = require("./geom");
 
 /* the car model's ceilings, with a little on top */
 const PERF = {
-  gt:      { power: 1.00, top: 1.00, grip: 1.00 },
-  formula: { power: 1.26, top: 1.20, grip: 1.32 },
-  yaris:   { power: 0.72, top: 0.74, grip: 0.84 },
+  gt:      { power: 1.00, top: 1.00, grip: 1.12 },
+  formula: { power: 1.26, top: 1.20, grip: 1.46 },
+  yaris:   { power: 0.72, top: 0.74, grip: 0.90 },
   kart:    { power: 0.94, top: 0.58, grip: 1.34 },
 };
 const TOP = 64;          // m/s on tarmac, GT
-const GRIP = 17.5;       // m/s^2 of lateral grip, GT, at speed
+const GRIP = 23.0;       // m/s^2 of lateral grip, GT, at speed
 /* the page gives more grip the slower the car: the same curve here */
-const latBoost = (v) => 1 + 1.15 * Math.max(0, Math.min(1, 1 - v / 40));
+const latBoost = (v) => 1 + 1.30 * Math.max(0, Math.min(1, 1 - v / 40));
 const BRAKE = 19;        // m/s^2
 const POWER = 14;        // m/s^2 off the line
 
@@ -84,7 +84,7 @@ function checkTrace(C, trace, ms) {
         /* Losing speed suddenly is what a wall does; gaining it suddenly is
            what nothing here does. A recover teleports for one sample. A few
            such moments are allowed, a lap made of them is not. */
-        if (v > vLimit || (prevV != null && (v - prevV) / dt > 20)) { if (++jumps > 3) return v > vLimit ? "faster than any car here" : "impossible gains of speed"; prevV = null; }
+        if (v > vLimit || (prevV != null && (v - prevV) / dt > 20)) { if (++jumps > 6) return v > vLimit ? "faster than any car here" : "impossible gains of speed"; prevV = null; }
         else prevV = v;
       }
     }

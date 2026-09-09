@@ -53,12 +53,29 @@ lead back.
   browser while it is driven; nothing is a file and nothing is anyone's
   record. It stops with the pause menu and on the board, and has its own
   switch in the pause menu, separate from the engine sound.
-- **Tight corners are taken on the throttle.** The slower the car, the more
-  grip it has to turn with — over twice as much at walking pace, fading to
-  the plain figure by 145 km/h — so a hairpin needs the wheel rather than the
-  brake. Full lock asks exactly the grip there is and never more, so the car
-  turns on the tightest circle the tyres allow and never pushes wide of it;
-  the wheel alone will not slide the car, and the handbrake still will.
+- **It turns.** The rack goes to fifty degrees, the wheel takes its set in
+  a couple of hundredths of a second, and there is far more grip the slower
+  the car is — more than double at walking pace, fading to the plain figure
+  by 145 km/h. A GT at 40 km/h turns inside four and a half metres and at
+  80 km/h inside seventeen, so hairpins are a matter of the wheel and the
+  throttle rather than the brake. The Formula turns sharper again. Full lock
+  asks exactly the grip there is and never more, so the car never pushes
+  wide of its tightest circle; the wheel alone will not slide it, and the
+  handbrake still will.
+- **Cars are solid, and shaped like themselves.** Each car's hitbox is
+  measured from the model that is drawn, so anything you can see of it is
+  something you can hit — a Formula's long nose, a kart's stubbiness. The
+  car doing the hitting behaves as the heavier one: run into the back of
+  somebody at 110 km/h and you keep most of your speed while they are fired
+  forward, rather than both of you stopping dead. One shunt is charged once,
+  however long the cars stay touching.
+- **Walls throw you back.** A brush along the Armco barely rebounds; a real
+  hit comes off it, harder the faster you went in, and it is the corners of
+  the car that touch the rail rather than a point in the middle.
+- **Cars can be launched.** The Formula and the kart have nothing to stop a
+  tyre climbing another's, so a wheel over a wheel, or any heavy enough
+  blow, puts them in the air — gravity from there, and a landing that costs
+  speed. Nothing about the road can launch a car, only an impact.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
