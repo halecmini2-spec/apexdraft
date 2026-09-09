@@ -71,12 +71,19 @@ lead back.
   somebody at 110 km/h and you keep most of your speed while they are fired
   forward, rather than both of you stopping dead. One shunt is charged once,
   however long the cars stay touching.
-- **Walls throw you back.** A brush along the Armco barely rebounds; a real
-  hit comes off it, harder the faster you went in, and it is the corners of
-  the car that touch the rail rather than a point in the middle.
+- **Walls reflect you.** Go into the Armco at forty-five degrees and you
+  come off it at about forty the other way; a shallow scrape lays the car
+  along the rail instead. It is the corners of the car that touch, so a nose
+  into the barrier throws the tail round.
+- **Crashes turn the car.** A blow that lands away from the middle of the
+  car spins it, the further out and the harder the more — up to about
+  seventy degrees a second off a barrier. The spin bleeds away against the
+  tyres and cannot be steered out of while it lasts.
 - **Cars can be launched.** A wheel put over another wheel is a ramp, and
   only the Formula and the kart have one, so only they go up from side to
-  side contact. A heavy enough crash lifts any of them — gravity from there, and a landing that costs
+  side contact, and the struck side is the one that rises, by fifteen or
+  twenty degrees, so the car goes over rather than hopping flat. A heavy
+  enough crash lifts any of them — gravity from there, and a landing that costs
   speed. Nothing about the road can launch a car, only an impact.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a
