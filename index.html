@@ -3518,9 +3518,9 @@ const CAR_MODELS=[
    three cars are made more direct with them; the kart already turns on a
    coin and is left as it is. */
 const CAR_PERF={
-  gt:     {power:1.00, top:1.00, grip:1.00, turnin:1.35, front:1.18},
-  formula:{power:1.26, top:1.20, grip:1.32, turnin:1.45, front:1.22},
-  yaris:  {power:0.72, top:0.74, grip:0.84, turnin:1.30, front:1.15},
+  gt:     {power:1.00, top:1.00, grip:1.00, turnin:1.35, front:1.30},
+  formula:{power:1.26, top:1.20, grip:1.32, turnin:1.45, front:1.34},
+  yaris:  {power:0.72, top:0.74, grip:0.84, turnin:1.30, front:1.26},
   /* a kart has almost no top end but corners on rails: slow down the
      straights, quickest thing here through anything tight */
   kart:   {power:0.94, top:0.58, grip:1.34, turnin:1.00, front:1.00}
@@ -4738,7 +4738,7 @@ const DRIVE={
      wheel's travel does real work, which is what "direct" feels like. The
      drift window in section 3 is calibrated to this number: it has to reach
      1.0 at full lock, so the two move together. */
-  overdrive:1.08,
+  overdrive:1.05,     // full lock asks only a little past the grip: less push wide, more turn
   latAccel:16.8,      // cornering grip ceiling (m/s^2)
   gripRate:8.5,       // how fast sideways velocity is killed, 1/s
   handDelay:0.55,     // seconds on the brake before the rear locks up
@@ -4831,7 +4831,10 @@ function step(dt){
      whether you're in a hairpin at 30 km/h or a sweeper at 200. Below about
      35 km/h that formula exceeds the physical steering rack, so it clamps and
      you get the full ~35 degrees and a 6 m turning circle. */
-  const srate=(steerIn?11.5:14.0)*(P.turnin||1);   // quicker to take a set on turn-in
+  /* Direct: the wheel takes its set almost at once — full lock in well
+     under a tenth of a second on the road cars — and lets go as fast, so
+     the car goes where it is pointed the moment it is pointed there. */
+  const srate=(steerIn?17.0:19.0)*(P.turnin||1);
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
   const latCap=DRIVE.latAccel*P.grip*S.mu;            // grip available for cornering
   const vv=Math.max(Math.abs(vLong),4);
@@ -8377,12 +8380,12 @@ function tagPill(c,x,y,name,dist,colour,edge,ang){
   /* No box. A tag sits over the road ahead, and a panel there is a patch
      of circuit you cannot see; the lettering carries a dark outline instead,
      which reads over sky, tarmac and grass alike and hides nothing. */
-  c.font='600 12px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
+  c.font='600 9.5px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
   const nw=c.measureText(name).width;
-  c.font='10px ui-monospace, "Cascadia Mono", Consolas, monospace';
+  c.font='8px ui-monospace, "Cascadia Mono", Consolas, monospace';
   const dw=c.measureText(dist).width;
-  const dot=7, gap=6;
-  const w=dot+gap+nw+gap+dw, h=16;
+  const dot=5, gap=4;
+  const w=dot+gap+nw+gap+dw, h=12;
   let X=Math.round(x-w/2), Y=Math.round(y-h/2);
   /* Never off its own edge: a label you have to guess at is no label. */
   X=Math.max(4,Math.min(tagW-w-4,X));
@@ -8393,13 +8396,13 @@ function tagPill(c,x,y,name,dist,colour,edge,ang){
   c.lineWidth=1.5; c.strokeStyle="rgba(9,14,15,.85)"; c.stroke();
 
   c.textBaseline="middle";
-  c.lineJoin="round"; c.lineWidth=3;
+  c.lineJoin="round"; c.lineWidth=2.5;
   c.strokeStyle=edge?"rgba(9,14,15,.95)":"rgba(9,14,15,.8)";
-  c.font='600 12px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
+  c.font='600 9.5px "Chakra Petch", "Segoe UI", system-ui, sans-serif';
   c.strokeText(name,X+dot+gap,Y+h/2+0.5);
   c.fillStyle="#F2F7F5";
   c.fillText(name,X+dot+gap,Y+h/2+0.5);
-  c.font='10px ui-monospace, "Cascadia Mono", Consolas, monospace';
+  c.font='8px ui-monospace, "Cascadia Mono", Consolas, monospace';
   c.strokeText(dist,X+dot+gap+nw+gap,Y+h/2+0.5);
   c.fillStyle="#B9C9C6";
   c.fillText(dist,X+dot+gap+nw+gap,Y+h/2+0.5);
@@ -8447,6 +8450,10 @@ function netTags(){
     /* Above the roof, not at the wheels. */
     TAGV.copy(p.mesh.position); TAGV.y+=1.9;
     const dist=TAGR.subVectors(TAGV,G.camera.position).length();
+    /* Only when they are right there. A field of tags over the road ahead
+       was a wall of lettering with ten cars out; a name is worth reading
+       when the car is alongside or just ahead, and not otherwise. */
+    if(dist>28)continue;
 
     /* Camera space, not the projection. Projecting a point behind you gives
        a mirrored answer that is off the screen in the wrong direction — a
@@ -8474,8 +8481,8 @@ function netTags(){
       x=cx+dx*s; y=cy+dy*s;
       ang=Math.atan2(dy,dx)-Math.PI/2;
     }
-    /* Far away it steps back rather than disappearing. */
-    c.globalAlpha = dist>600 ? 0.55 : (dist>260 ? 0.78 : 1);
+    /* fades over the last few metres rather than popping */
+    c.globalAlpha = dist>20 ? Math.max(0,(28-dist)/8) : 1;
     tagPill(c,x,y,p.name||"Driver",
             dist<1000?Math.round(dist)+" m":(dist/1000).toFixed(1)+" km",
             p.colour,off,ang);
