@@ -7816,7 +7816,7 @@ function aiAt(T,s){
 function aiSpawn(){
   if(!AI.on||!G.T||!G.scene)return;
   const T=G.T, n=RACE.grid.filter(id=>id.startsWith("ai")).length;
-  AI.line=aiLine(T,T.halfW*(0.62+0.22*AI.strength/100));
+  AI.line=aiLine(T,T.halfW*(0.6+0.42*AI.strength/100));
   const names=AI_NAMES.slice().sort(()=>Math.random()-0.5);
   const colours=AI_COLOURS.filter(c=>c.toLowerCase()!==String(ED.opts.color).toLowerCase()).sort(()=>Math.random()-0.5);
   const k=AI.strength/100;
@@ -7831,11 +7831,11 @@ function aiSpawn(){
       lane:((a%4)-1.5)/1.5*0.32*T.halfW,
       /* how much of the racing line they use, and where on it: the weaker
          the driver, the more of their own idea of the line they keep */
-      mix:Math.min(1,0.3+0.7*k*(0.92+0.16*Math.random())),
+      mix:k>=0.9?1:Math.min(1,0.3+0.7*k*(0.92+0.16*Math.random())),
       shift:Math.round((Math.random()-0.5)*8*(1.1-k)),
       wander:(Math.random()-0.5)*1.4*(1.2-k),
       gridD:(col?1:-1)*T.halfW*0.44, held:0,
-      mistake:null,next:(8+40*k)*(0.5+Math.random()),mistakes:0,
+      mistake:null,next:(12+90*k*k)*(0.5+Math.random()),mistakes:0,
       x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,mesh:null};
     const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
     car.mesh=buildCar(car.colour,car.kind); car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
@@ -7853,15 +7853,21 @@ function aiTick(dt){
     /* Grip, power, top speed and braking climb with strength but never
        past the car model the player drives: the strongest opponent has
        exactly the player's car, and only the line and the nerve to use it. */
-    const aLat=Math.min(4+8*kk+8*kk*kk,DRIVE.latAccel)*perf.grip, vmax=Math.min(30+34*kk,DRIVE.topSpeed)*perf.top,
-          accel=Math.min(4.5+8*kk,DRIVE.power)*perf.power, brake=Math.min(8+11*kk,DRIVE.brake);
+    /* cornering climbs to the margin a driver at the limit has over the
+       nominal grip — the same margin the relay allows a lap; top speed,
+       thrust and braking stay the player's exactly */
+    const top=clamp((kk-0.7)/0.25,0,1);
+    const aLat=lerp(Math.min(4+7*kk+11*kk*kk,DRIVE.latAccel*1.3),DRIVE.latAccel*1.3,top)*perf.grip,
+          vmax=lerp(Math.min(30+34*kk,DRIVE.topSpeed),DRIVE.topSpeed,top)*perf.top,
+          accel=lerp(Math.min(4.5+9*kk,DRIVE.power),DRIVE.power,top)*perf.power,
+          brake=lerp(Math.min(8+11*kk,DRIVE.brake),DRIVE.brake,top);
     /* mistakes: scheduled, and worse the weaker the driver */
     let vMul=1, dAdd=0;
-    if(go&&k<0.97){
+    if(go&&k<0.8){
       if(c.mistake){ c.mistake.t-=dt; if(c.mistake.t<=0)c.mistake=null; }
       else { c.next-=dt; if(c.next<=0){ const r=Math.random(); const sev=(1-k)*(0.6+0.8*Math.random());
         c.mistake=r<0.4?{type:"lift",t:1.2+sev*1.5,sev}:r<0.7?{type:"wobble",t:1.0+sev,sev}:{type:"wide",t:1.4+sev*2,sev,side:0};
-        c.mistakes++; c.next=(10+55*k)*(0.5+Math.random()); } }
+        c.mistakes++; c.next=(12+90*k*k)*(0.5+Math.random()); } }
       const m=c.mistake;
       if(m){ if(m.type==="lift") vMul=1-0.28*Math.min(1,m.sev+0.3);
              else if(m.type==="wobble") dAdd=Math.sin(performance.now()/1000*11)*(0.8+m.sev*1.6);
@@ -7874,7 +7880,7 @@ function aiTick(dt){
     for(let m=0;m<=Math.round(170/sp);m++){
       const q=(here.i+m)%T.N, kq=L?Math.abs(L.k[q])*(0.55+0.45*c.mix)+Math.abs(T.K[q])*(0.45-0.45*c.mix):Math.abs(T.K[q]);
       const vT=Math.min(vmax,Math.sqrt(aLat/Math.max(kq,1e-4)));
-      const dist=Math.max(0,m*sp-(7-5*kk));
+      const dist=Math.max(0,m*sp-Math.max(0,7-7*kk));
       vAllow=Math.min(vAllow,Math.sqrt(vT*vT+2*brake*dist));
     }
     vAllow*=vMul;
@@ -7885,21 +7891,25 @@ function aiTick(dt){
     const lineD=L?L.d[li]:0;
     let dT=lineD*c.mix+c.lane*(1-c.mix)+c.wander*Math.sin(TAU*Math.max(1,Math.round(T.len/90))*c.s/T.len)+dAdd;
     /* off the line the grid is left as it is, for the first moments */
-    if(go){ c.held+=dt; const h=Math.min(1,Math.max(0,(c.held-1.2)/2.5)); dT=lerp(c.gridD,dT,h*h*(3-2*h)); }
+    if(go){ c.held+=dt; const h=Math.min(1,Math.max(0,(c.held-2.0)/3.0)); dT=lerp(c.gridD,dT,h*h*(3-2*h)); }
     else dT=c.gridD;
     /* traffic: a car ahead in their path is followed, not driven through,
-       and gone round where there is room */
+       and gone round where there is room — once the field is moving; on
+       the grid the car ahead is meant to be there */
     let vCap=Infinity;
-    const ahead=aiTraffic(c);
+    const ahead=c.held>2.0?aiTraffic(c):null;
     if(ahead){
-      const gap=ahead.gap;
-      if(gap<16){ vCap=Math.max(0,ahead.v-(gap<8?2.5:0.6)); }
+      const gap=ahead.gap, close=8+8*(1-kk);
+      if(gap<close*2){ vCap=Math.max(0,ahead.v-(gap<close?2.5:0.4)); }
       if(gap<28&&c.v>ahead.v-1){
         /* move to whichever side has more road, away from the car ahead */
         const room=T.halfW*0.86, side=(ahead.d>0?-1:1);
         const want=clamp(ahead.d+side*2.6,-room,room);
         dT=lerp(dT,want,Math.min(1,(28-gap)/14));
       }
+    } else if(go&&c.held<=2.0){
+      /* still, the one in front is not to be driven into */
+      const near=aiTraffic(c); if(near&&near.gap<5) vCap=near.v;
     }
     /* the same thrust curve and drag as the player: full shove off the
        line, tailing off with speed, air and rolling resistance against it */
