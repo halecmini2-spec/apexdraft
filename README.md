@@ -82,7 +82,7 @@ they sign in, set in NOTICES (name=message;...).
 
 Racing alone can be a race too. An **AI opponents** group on the board, shown
 for one account only while it is being tested, sets how many machine-driven
-cars line up (up to four), their **strength**, the laps, and whether you
+cars line up (up to ten), their **strength**, the laps, and whether you
 start at the front, the back or wherever the draw puts you. **Drive it**
 then starts a race against them, with the grid, the lights, the running
 order and the finishing order of a party race. They are not driven through
