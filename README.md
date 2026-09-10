@@ -29,7 +29,8 @@ lead back.
   asked for, the checkered line where it is. Corners are numbered from the
   line, and a banked corner keeps its angle when the numbers change.
 - **Pick a car** in the garage, which is where **Drive it** takes you: a GT
-  racer, a Formula single-seater, a kart with no top end and enormous grip,
+  racer, a Formula single-seater, a kart with no top end and enormous grip
+  that has to be driven into a corner rather than pointed at one,
   or a Yaris that never quite settles on its springs, each drawn from its own
   model in the colour you choose. Each keeps its own best lap, since they
   don't lap at the same pace. The garage is in the pause menu too.
@@ -282,8 +283,30 @@ bike or a trike.
 
 ## The daily time trial
 
-**Daily** in the bar is one circuit a day, the same for everyone, always
-in the GT. The relay draws it from the date — harmonics on an oval, with
+**Daily** in the bar is one circuit a day, the same for everyone. The car
+changes with the day and every one of the seven comes up once a week, in an
+order the week itself decides, so nobody gets the kart twice running and
+nobody waits a month for it. Whatever the day's car is, that is what
+everybody drives: the garage shows it and closes every other card.
+
+**The circuit is sized to the car.** A lap should take about the same time
+whatever is being driven, so the loop is stretched for a quick car and shrunk
+for a slow one — around 1.5 km for the kart and 3.5 km for the V12 — and the
+sizing is done by the same model the relay uses to refuse impossible laps,
+so the two can never drift apart. A machine at full strength comes in at
+1.15 times that bound, near enough the same multiple for all seven cars,
+which is what makes the bound usable as a stopwatch and not only as a limit.
+Bisection rather than a formula, because a smaller loop is a tighter loop
+and halving the length takes rather more than half the time out of a lap.
+Every day of the next fortnight lands within a tenth of a second of the
+same target.
+
+On the daily the car is not the driver's to claim either: the relay works
+out which one the day was from the circuit key and judges the lap against
+that, so a time sent as something quicker is judged against the right
+ceiling anyway. And on the day the rotation reaches one of the three still
+being tried out, everybody gets it — on the daily, for that day, and
+nowhere else. The relay draws it from the date — harmonics on an oval, with
 the width, the hills, the smoothing, the scenery and a few banked corners
 all rolled with the shape — so every machine builds exactly the same lap
 and nothing has to be stored. It changes at midnight UTC. There are no

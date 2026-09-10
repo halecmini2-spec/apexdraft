@@ -2,8 +2,11 @@
  *
  * One circuit a day, the same for everyone, drawn here from the date so
  * that every machine builds exactly the same lap without anything being
- * stored: the day is the seed. Always the GT, every setting rolled with the
- * shape — width, hills, smoothing, scenery, and a few banked corners.
+ * stored: the day is the seed. The car changes with the day too, and the
+ * circuit is sized to suit it — a kart gets a short one and a V12 a long
+ * one, so a good lap is about the same length of time whatever is being
+ * driven. Every other setting is rolled with the shape: width, hills,
+ * smoothing, scenery, and a few banked corners.
  *
  * The shape is a set of harmonics on an oval, which is how the board's own
  * opening shape is made. The amplitudes are kept modest so the loop stays
@@ -56,6 +59,33 @@ function design(day) {
   };
 }
 
+/* ---- which car, and how big a lap of it ----
+   Every car comes up once a week, in an order the week itself decides, so
+   nobody gets the kart twice running and nobody waits a month for it.
+   Whichever it is, the loop is then scaled until a good lap of it takes
+   about the same time as a good lap of any other. */
+const DAILY_CARS = ["gt", "formula", "yaris", "kart", "bike", "trike", "v12"];
+function carFor(day) {
+  const week = Math.floor(day / DAILY_CARS.length);
+  const r = rng(week + 4241);
+  const bag = DAILY_CARS.slice();
+  /* a shuffle the week decides, dealt one a day */
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [bag[i], bag[j]] = [bag[j], bag[i]];
+  }
+  return bag[((day % bag.length) + bag.length) % bag.length];
+}
+
+/* What a strong lap actually takes, against what the verifier says is the
+   quickest one possible. Measured across all seven cars on this very
+   generator: a machine at full strength comes in at 1.15 times the bound,
+   near enough the same multiple for every one of them, which is what makes
+   the bound usable as a stopwatch here rather than only as a limit. */
+const PACE = 1.15;
+const TARGET = 45;                 // seconds for that strong lap
+const SIZE_LO = 0.45, SIZE_HI = 2.10;
+
 function loop(cfg, n) {
   const pts = [];
   for (let i = 0; i < n; i++) {
@@ -67,19 +97,70 @@ function loop(cfg, n) {
   return pts;
 }
 
+/* the loop drawn about its own middle at a given size */
+function loopAt(cfg, n, size) {
+  return loop(cfg, n).map((p) => [
+    +(PAD_W / 2 + (p[0] - PAD_W / 2) * size).toFixed(2),
+    +(PAD_H / 2 + (p[1] - PAD_H / 2) * size).toFixed(2),
+  ]);
+}
+
+/* How long a strong lap of a given size would take, in seconds. Built the
+   way the client will build it and judged by the same model the relay uses
+   to refuse impossible laps, so the two can never drift apart. */
+function paceOf(cfg, size, car) {
+  const { centreline } = require("./geom");
+  const { lapBound } = require("./verify");
+  const opts = { width: cfg.width, hills: cfg.hills, smooth: cfg.smooth, theme: cfg.theme,
+                 seed: cfg.seed, banks: cfg.banks, start: null, solid: false, car };
+  const C = centreline(loopAt(cfg, 120, size), opts, 1);
+  if (!C || !C.len) return null;
+  return (lapBound(C, car) / 1000) * PACE;
+}
+
+/* Shrink it for a slow car and stretch it for a quick one. Bisection rather
+   than a formula, because the two do not scale together: a smaller loop is
+   a tighter loop, so halving the length takes rather more than half the
+   time out of the lap. Sixteen steps settles it to well under a second. */
+function sizeFor(cfg, car) {
+  let lo = SIZE_LO, hi = SIZE_HI;
+  const at = (x) => paceOf(cfg, x, car);
+  if (at(lo) > TARGET) return lo;                 // already as small as it goes
+  if (at(hi) < TARGET) return hi;
+  for (let i = 0; i < 16; i++) {
+    const mid = (lo + hi) / 2;
+    const t = at(mid);
+    if (t == null) break;
+    if (t < TARGET) lo = mid; else hi = mid;
+  }
+  return +((lo + hi) / 2).toFixed(4);
+}
+
+/* One day's work is the same every time it is asked for, and it is asked
+   for on every visit, so it is worked out once and kept. */
+const made = new Map();
 function trackFor(day) {
+  if (made.has(day)) return made.get(day);
   const cfg = design(day);
-  return {
+  const car = carFor(day);
+  let size = 1;
+  try { size = sizeFor(cfg, car); } catch (e) { size = 1; }
+  const t = {
     v: NET_VER,
-    raw: loop(cfg, 120),
+    raw: loopAt(cfg, 120, size),
     opts: { width: cfg.width, hills: cfg.hills, smooth: cfg.smooth, theme: cfg.theme,
-            seed: cfg.seed, banks: cfg.banks, start: null, solid: false, car: "gt" },
+            seed: cfg.seed, banks: cfg.banks, start: null, solid: false, car },
   };
+  made.set(day, t);
+  /* yesterday and today are all that is ever wanted */
+  for (const k of made.keys()) if (k < day - 1) made.delete(k);
+  return t;
 }
 
 function today() {
   const d = dayIndex();
-  return { day: dayId(d), circuit: circuitKey(d), car: "gt", endsAt: (d + 1) * 86_400_000, track: trackFor(d) };
+  const t = trackFor(d);
+  return { day: dayId(d), circuit: circuitKey(d), car: t.opts.car, endsAt: (d + 1) * 86_400_000, track: t };
 }
 
 function makeDaily() {
@@ -93,4 +174,4 @@ function makeDaily() {
   return { route, today, trackFor, circuitKey, dayIndex };
 }
 
-module.exports = { makeDaily, trackFor, circuitKey, dayIndex, design };
+module.exports = { makeDaily, trackFor, circuitKey, dayIndex, design, carFor };

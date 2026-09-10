@@ -17,7 +17,7 @@ const PERF = {
   gt:      { power: 1.00, top: 1.00, grip: 1.08 },
   formula: { power: 1.26, top: 1.20, grip: 1.42 },
   yaris:   { power: 0.72, top: 0.74, grip: 0.88 },
-  kart:    { power: 0.94, top: 0.58, grip: 1.34 },
+  kart:    { power: 0.94, top: 0.58, grip: 1.20 },
   /* the three being tried out; a lap in one of them is checked like any
      other, so the server has to know what they can do */
   bike:    { power: 1.30, top: 1.22, grip: 1.26 },

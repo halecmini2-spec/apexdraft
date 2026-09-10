@@ -142,7 +142,15 @@ function makeLaps(store, userFor) {
 
     const circuit = String(body.circuit || "");
     const ms = Math.round(Number(body.ms));
-    const car = String(body.car || "gt").slice(0, 16);
+    let car = String(body.car || "gt").slice(0, 16);
+    /* On the daily the car is not the driver's to claim: the day decides it,
+       and a lap sent as something quicker than the day's car would be judged
+       against the wrong ceiling. Everywhere else the claim is all there is,
+       and a wrong one only sorts the board oddly. */
+    if (/^daily_\d{8}$/.test(circuit)) {
+      const y = +circuit.slice(6, 10), mo = +circuit.slice(10, 12), da = +circuit.slice(12, 14);
+      car = dailyMod.carFor(Math.floor(Date.UTC(y, mo - 1, da) / 86_400_000));
+    }
     if (!KEY_RE.test(circuit)) return json(res, 400, { error: "That isn't a circuit." }), true;
     if (!Number.isFinite(ms) || ms < MIN_MS || ms > MAX_MS)
       return json(res, 400, { error: "That isn't a lap time." }), true;

@@ -667,13 +667,15 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dailybox .wr b{color:var(--purple)}
 .dailybox .g{color:var(--faint);font-size:10px}
 body.daily .rail-scroll .grp:not(.grp-daily){opacity:.45;pointer-events:none}
-body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
+.gar-card.locked{opacity:.32;pointer-events:none}
 /* Being tried out: shown to one account and to nobody else, the same way
    the AI opponents are. Hidden outright rather than greyed, so there is
    nothing on the page for anyone else to wonder about. */
 .gar-card.test,.chips .chip.test{display:none}
 body.aiok .gar-card.test{display:flex}
 body.aiok .chips .chip.test{display:inline-flex}
+.gar-card.test.today{display:flex}
+.chips .chip.test.today{display:inline-flex}
 .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
 body.aiok .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
 @media (min-width:1100px){body.aiok .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
@@ -3583,7 +3585,12 @@ const CAR_MODELS=[
 const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
 /* the one account that sees things still being tried out */
 const TEST_ACCOUNT="cosmo38";
-function carAllowed(k){ return !carTest(k)||(acctIn()&&ACCT.user.name===TEST_ACCOUNT); }
+function carAllowed(k){
+  if(!carTest(k)) return true;
+  /* the daily hands one out for the day, and only for the day */
+  if(DAILY.on&&k===dailyCar()) return true;
+  return acctIn()&&ACCT.user.name===TEST_ACCOUNT;
+}
 /* Multipliers on the shared physics constants. Because these change lap
    times, the car is part of the best-lap key — a Formula lap and a Yaris lap
    around the same circuit are not the same record. */
@@ -3597,7 +3604,11 @@ const CAR_PERF={
   yaris:  {power:0.72, top:0.74, grip:0.88, turnin:1.48, front:1.32},
   /* a kart has almost no top end but corners on rails: slow down the
      straights, quickest thing here through anything tight */
-  kart:   {power:0.94, top:0.58, grip:1.34, turnin:1.00, front:1.00},
+  /* Less direct than the rest on purpose now: it still has more grip than
+     anything here, but the nose takes its time and the front end does less
+     of the work, so it has to be driven into a corner rather than pointed
+     at one. */
+  kart:   {power:0.94, top:0.58, grip:1.20, turnin:0.30, front:0.66},
   /* The three being tried out, from the figures on their card. Top speed is
      against the GT's 230 km/h, so 280 is 1.22 and 350 is 1.52; power is set
      by the standing hundred, and the handling words decide the rest. */
@@ -7003,7 +7014,7 @@ $("colors").addEventListener("click",e=>{
 });
 $("garCards").addEventListener("click",e=>{
   const b=e.target.closest("[data-car]"); if(!b)return;
-  if(DAILY.on&&b.dataset.car!=="gt")return;              // the daily is the GT for everyone
+  if(DAILY.on&&b.dataset.car!==dailyCar())return;        // the daily's car is the day's, not yours
   if(!carAllowed(b.dataset.car))return;                  // not yours to pick
   ED.opts.car=b.dataset.car; pressGroup($("garCards"),"car",ED.opts.car);
   store.set("ad.opts",ED.opts); rebuild(); netMeta(); garLabel();
@@ -7063,6 +7074,18 @@ function garPictures(){
    — that is the garage's job and the garage is a step of its own — so this
    is left as the one place that would have to change if it ever came back. */
 function garLabel(){}
+/* On the daily every card but the day's is closed. Done here rather than in
+   a stylesheet because which one it is changes with the date. */
+function dailyLock(){
+  const on=DAILY.on, k=dailyCar();
+  for(const c of document.querySelectorAll("#garCards .gar-card")){
+    c.classList.toggle("locked",on&&c.dataset.car!==k);
+    /* and if today's is one still being tried out, it is on the page today */
+    c.classList.toggle("today",on&&c.dataset.car===k);
+  }
+  for(const c of document.querySelectorAll("#pGar .chip"))
+    c.classList.toggle("today",on&&c.dataset.car===k);
+}
 /* The race step. It carries whatever applies: opponents when the mode has
    room for them, and the party's laps and grid when there is a party. If
    neither applies — the daily, which is one timed lap and nothing else —
@@ -7104,7 +7127,11 @@ function showGarage(on){
     $("garDrive").textContent=m==="host"?"Start the race":m==="guest"?"Join the race"
       :(aiAllowed()&&AI.count>0)?("Race "+AI.count+(AI.count===1?" opponent":" opponents")):"Drive it";
     $("garBack").textContent=RS_FROM?"Back to the race":"Back to the board";
-    $("garSub").textContent=DAILY.on?"The daily is the GT for everyone — pick a colour and go.":NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
+    const dm=CAR_MODELS.find(x=>x.id===dailyCar());
+    $("garSub").textContent=DAILY.on
+      ? ("Today's daily is the "+(dm?dm.label:"GT")+", for everyone — pick a colour and go.")
+      : NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
+    dailyLock();
     requestAnimationFrame(garPictures);
   } else fitPad();
 }
@@ -7114,7 +7141,10 @@ function showGarage(on){
    the garage offers only the GT, and the lap board is the day's. Every
    improvement carries the lap itself, as a run of positions, so the fastest
    one can be driven against as a ghost. */
-const DAILY={on:false,data:null,at:0,day:null,saved:null,board:[],you:null};
+const DAILY={on:false,data:null,at:0,day:null,saved:null,board:[],you:null,car:"gt"};
+/* Which car today is driven in. The day decides it, the relay says so, and
+   it is the one thing on the daily that is not the driver's to choose. */
+const dailyCar=()=>DAILY.car||"gt";
 const GH={on:store.get("ad.ghost",true),rec:[],recT:-1,mine:null,wr:null,mesh:null,i:0,y:0};
 function ordinal(n){ const s=["th","st","nd","rd"], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
 async function dailyLoad(force){
@@ -7143,7 +7173,11 @@ function dyRender(){
   if(!d){ $("dySub").textContent="Fetching today's circuit…"; return; }
   const date=new Date(d.day+"T00:00:00Z").toLocaleDateString([],{weekday:"long",day:"numeric",month:"long",timeZone:"UTC"});
   const left=Math.max(0,d.endsAt-Date.now()), hh=Math.floor(left/3600000), mm=Math.floor(left%3600000/60000);
-  $("dySub").textContent=date+" · GT · a new circuit in "+hh+"h "+String(mm).padStart(2,"0")+"m";
+  /* the car is the day's now, so the line that says what today is has to
+     say which one it is */
+  const dcar=(d.track&&d.track.opts&&d.track.opts.car)||d.car||"gt";
+  const dm=CAR_MODELS.find(x=>x.id===dcar);
+  $("dySub").textContent=date+" · "+(dm?dm.label:"GT")+" · a new circuit in "+hh+"h "+String(mm).padStart(2,"0")+"m";
   try{ drawMini($("dyMap"),d.track.raw); }catch(e){}
   try{
     const T=buildCircuit(d.track.raw.map(a=>({x:a[0],y:a[1]})),Object.assign({},OPTS0,d.track.opts),1);
@@ -7185,9 +7219,10 @@ function enterDaily(){
   if(NET.status==="in"){ $("dyListNote").textContent="Leave the party first — the daily is driven alone."; return; }
   if(!DAILY.on) DAILY.saved={raw:ED.raw?ED.raw.map(p=>({x:p.x,y:p.y})):null,opts:Object.assign({},ED.opts),fit:ED.fit};
   DAILY.on=true; DAILY.day=d.day;
+  DAILY.car=(d.track&&d.track.opts&&d.track.opts.car)||d.car||"gt";
   takeTrack(d.track);
-  ED.opts.car="gt"; rebuild();
-  pressGroup($("garCards"),"car","gt"); garLabel();
+  ED.opts.car=dailyCar(); rebuild();
+  pressGroup($("garCards"),"car",dailyCar()); garLabel(); dailyLock();
   LB.key=d.circuit; LB.board=DAILY.board||[]; LB.at=0;
   document.body.classList.add("daily");
   dailyRailUI(); dailyUI();
@@ -7680,8 +7715,8 @@ function acctUI(){
   /* Signing out of the account that has them puts you back in the GT
      rather than leaving you sitting in something you can no longer see. */
   if(!carAllowed(ED.opts.car)){
-    ED.opts.car="gt"; store.set("ad.opts",ED.opts);
-    pressGroup($("garCards"),"car","gt");
+    ED.opts.car=DAILY.on?dailyCar():"gt"; store.set("ad.opts",ED.opts);
+    pressGroup($("garCards"),"car",ED.opts.car);
     if(G.T)rebuild();
     garLabel();
   }
@@ -9369,7 +9404,11 @@ function garageUI(){
 }
 function garage(kind){
   $("pGar").hidden=true;
-  if(DAILY.on&&kind!=="gt"){ flashPause("The daily is driven in the GT, for everyone."); return; }
+  if(DAILY.on&&kind!==dailyCar()){
+    const m=CAR_MODELS.find(x=>x.id===dailyCar());
+    flashPause("Today's daily is driven in the "+(m?m.label:"GT")+", for everyone.");
+    return;
+  }
   if(!G.T||!G.scene||!G.car||!CAR_MODELS.some(m=>m.id===kind))return;
   if(!carAllowed(kind))return;                    // not yours to drive
   if(kind===ED.opts.car){ togglePause(false); return; }
