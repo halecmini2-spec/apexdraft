@@ -1111,8 +1111,7 @@ body.admining #lobbybar{display:none}
 #garage{overflow-y:auto;padding:calc(16px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal))}
 .gar-wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .gar-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-@media (max-width:760px) and (orientation:portrait){.gar-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}}
-@media (max-width:430px) and (orientation:portrait){.gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px) and (orientation:portrait){.gar-cards{gap:8px}}
 .gar-card{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px 11px;text-align:left;cursor:pointer;
   display:flex;flex-direction:column;gap:3px;color:var(--dim);min-width:0;overflow:hidden;
   transition:border-color .12s,background .12s}
@@ -1121,6 +1120,59 @@ body.admining #lobbybar{display:none}
   min-width:0;overflow-wrap:anywhere;hyphens:auto}
 .gar-card span{font-size:11px;line-height:1.4;min-width:0;overflow-wrap:anywhere}
 .gar-card span .big{display:block;font-size:15px;letter-spacing:.02em;color:var(--amber);font-weight:700;margin-bottom:1px}
+.gar-card span i{font-style:normal;display:block}
+
+/* ---- a phone shows the lot, without being scrolled ----
+   Seven cars and a colour row do not fit a phone at desk sizes, and a page
+   you have to scroll to find the button on is a page you can miss the
+   button on. So on a phone the cards lose their blurb and keep their
+   picture and their name — which is what anybody is choosing by — and
+   everything closes up until the whole step is on the screen at once. The
+   V12's number stays, because it is the point of that car. */
+@media (max-width:900px) and (max-height:950px),(pointer:coarse) and (max-width:900px){
+  #garage{padding-top:calc(8px + var(--sat));padding-bottom:calc(8px + var(--sab))}
+  .gar-wrap{gap:8px}
+  .gar-wrap .tk-head{margin-bottom:0}
+  .gar-wrap .auth-brand{font-size:19px}
+  .gar-wrap .auth-sub{font-size:11px;margin-top:1px}
+  .gar-cards{gap:6px}
+  .gar-card{padding:5px 6px 6px;gap:1px}
+  .gar-card canvas{margin-bottom:2px;aspect-ratio:360/190}
+  .gar-card b{font-size:11px;letter-spacing:.03em}
+  .gar-card span{display:none}
+  .gar-card span .big{display:block;font-size:12px;margin:0}
+  .gar-card span:has(.big){display:block}
+  /* the number, but not the sentence after it: one card twice the height of
+     the rest is worse than one card with less on it */
+  .gar-card span i{display:none}
+  .gar-colours{gap:8px}
+  .gar-colours .k{font-size:10px}
+  .swatches .sw{width:26px;height:26px}
+  #garage .gar-go{margin-top:2px;padding:10px 18px;font-size:12.5px}
+}
+/* The very shortest screens there are — an old phone on its side, with
+   three hundred and twenty pixels to work with. A few points off everything
+   rather than anything taken away. */
+@media (max-height:400px){
+  .rs-wrap .auth-brand,.gar-wrap .auth-brand{font-size:15px}
+  .rs-body .grp .chip{min-height:24px;padding:2px 7px;font-size:10.5px}
+  .rs-body .grp .lab{font-size:10px}
+  .rs-body .grp .slider input[type=range]{height:14px;margin:0}
+  .rs-wrap,.gar-wrap{gap:4px}
+  .rs-body{gap:4px}
+  .rs-body .grp{padding:5px 8px 6px;row-gap:4px}
+  #raceSet .gar-go,#garage .gar-go{margin-top:4px;padding:7px 14px;font-size:11.5px}
+  .gar-card canvas{aspect-ratio:360/118}
+  .swatches .sw{width:19px;height:19px}
+  #raceSet,#garage{padding-top:calc(5px + var(--sat));padding-bottom:calc(5px + var(--sab))}
+}
+/* portrait: three across is what makes seven fit in three rows */
+@media (max-width:760px) and (orientation:portrait){
+  .gar-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:340px) and (orientation:portrait){
+  .gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 .gar-card:hover{border-color:var(--faint)}
 .gar-card[aria-pressed="true"]{border-color:var(--amber);background:var(--amber-glow)}
 .gar-card[aria-pressed="true"] b{color:var(--amber)}
@@ -1399,8 +1451,35 @@ body.admining #lobbybar{display:none}
   .rs-body .grp>h2,.rs-body .grp>.chips,.rs-body .grp>.hint,.rs-body .race-k{grid-column:1/-1}
   .rs-body .grp>.slider{margin-top:0}
   .rs-body .grp>.slider .chips{margin-bottom:0}
-  .rs-body .grp .chip{min-height:30px;padding:5px 9px;font-size:11.5px}
-  .rs-body .grp .lab{font-size:11px}
+  /* Lying down there is barely three hundred and fifty pixels of height for
+     all of it, so the subtitle goes — the heading already says which page
+     this is — and the pictures are cropped to a letterbox. */
+  #garage .auth-sub,#raceSet .auth-sub{display:none}
+  .gar-wrap .auth-brand,.rs-wrap .auth-brand{font-size:16px}
+  .gar-card canvas{aspect-ratio:360/128}
+  .gar-card{padding:3px 6px 4px;gap:0}
+  .gar-card b{font-size:10px}
+  .gar-wrap{gap:5px}
+  .gar-colours{gap:6px}
+  .swatches .sw{width:21px;height:21px}
+  #garage .gar-go{padding:8px 14px;font-size:12px}
+  .rs-wrap{gap:5px;max-width:640px}
+  .rs-body{gap:5px;margin-top:0}
+  .rs-body .grp{padding:6px 9px 7px}
+  #raceSet .gar-go{margin-top:5px;padding:8px 14px;font-size:12px}
+  .rs-body .grp .chip{min-height:26px;padding:3px 8px;font-size:11px}
+  /* On the shortest screens of all the sentence at the bottom goes too: it
+     only says back what the chips above it are already showing, and the
+     alternative is a page you have to scroll to reach the way out of. */
+  .rs-body .grp>.hint{display:none}
+  .rs-body .grp{row-gap:5px}
+  .rs-body .grp>h2{margin-bottom:4px;font-size:10px}
+  .rs-body .grp .lab{font-size:10.5px}
+  .rs-wrap .auth-brand{font-size:18px}
+  .rs-wrap .auth-sub{font-size:10.5px;margin-top:1px}
+  .rs-body .grp{padding:8px 10px 9px}
+  .rs-body .grp>h2{margin-bottom:5px}
+  .rs-body .grp .slider input[type=range]{margin:2px 0}
   /* the pause menu: a wider card with the buttons in two columns, so the
      whole menu is on the screen at once */
   .pause .card{width:min(700px,94vw);padding:12px 18px 14px}
@@ -1944,7 +2023,7 @@ body.admining #lobbybar{display:none}
         <button class="gar-card" data-car="kart"><canvas width="360" height="220"></canvas><b>Kart</b><span>No top end, enormous grip.</span></button>
         <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Superbike X</b><span>280+ km/h, 165 kg. Leans. Challenging.</span></button>
         <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 210 kg. Three wheels, very twitchy.</span></button>
-        <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span><b class="big">360 km/h</b> — far and away the fastest thing here. 1,450 kg, heavy and stable.</span></button>
+        <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span><b class="big">360 km/h</b><i>Far and away the fastest thing here. 1,450 kg, heavy and stable.</i></span></button>
       </div>
       <div class="gar-colours">
         <span class="k">Colour</span>
@@ -6331,12 +6410,12 @@ function drawMinimap(){
      cut    how far the filter opens, which is how bright it gets     */
 const ENGINE={
   gt:     {pitch:1.00, sub:0.35, hi:0.00, cut:1.00, gears:6},
-  formula:{pitch:1.42, sub:0.10, hi:0.30, cut:1.45, gears:7},
+  formula:{pitch:1.26, sub:0.10, hi:0.38, cut:1.28, gears:7},
   yaris:  {pitch:0.92, sub:0.40, hi:0.00, cut:0.86, gears:5},
-  kart:   {pitch:1.70, sub:0.14, hi:0.16, cut:1.30, gears:1}, // one gear, like a kart
-  bike:   {pitch:1.60, sub:0.08, hi:0.34, cut:1.55, gears:6}, // an inline four, screaming
-  trike:  {pitch:0.70, sub:0.62, hi:0.10, cut:1.15, gears:4}, // a blown V8, all lump
-  v12:    {pitch:1.92, sub:0.03, hi:0.46, cut:1.85, gears:7}, // even, high and smooth
+  kart:   {pitch:1.38, sub:0.14, hi:0.22, cut:1.16, gears:1}, // one gear, like a kart
+  bike:   {pitch:1.38, sub:0.08, hi:0.42, cut:1.34, gears:6}, // an inline four, screaming
+  trike:  {pitch:0.70, sub:0.62, hi:0.14, cut:1.10, gears:4}, // a blown V8, all lump
+  v12:    {pitch:1.52, sub:0.03, hi:0.55, cut:1.50, gears:7}, // even, high and smooth
 };
 const engineVoice=k=>ENGINE[k]||ENGINE.gt;
 
@@ -6356,13 +6435,14 @@ function gearsFor(kind,vmax){
   const key=kind+"|"+vmax.toFixed(2);
   if(GEARS[key])return GEARS[key];
   if(n<=1) return GEARS[key]=[vmax];
-  /* A real ladder: each gear reaches a fixed fraction further than the one
-     below, so they crowd together at the top. The step is chosen so the
-     last change lands at about six sevenths of the top speed — top gear is
-     for the last stretch of the straight, not most of it. */
-  const step=0.84;
+  /* Gears of much the same size, with a whisker more in first. A proper
+     geometric ladder crowds them at the top, which left first covering
+     forty per cent of the speed the car can do — a very long first and five
+     short ones after it. Spacing them almost evenly gives each about a
+     sixth of the range, first a little longer than the rest, and still puts
+     the last change at about eighty-five per cent of the top speed. */
   const tops=[];
-  for(let i=0;i<n;i++) tops.push(vmax*Math.pow(step,n-1-i));
+  for(let i=0;i<n;i++) tops.push(vmax*Math.pow((i+1)/n,0.90));
   return GEARS[key]=tops;
 }
 const AU={ctx:null,master:null,eng:null,engGain:null,eng2:null,eng3:null,g2:null,g3:null,skid:null,skidGain:null,wind:null,windGain:null};
@@ -6380,7 +6460,12 @@ function initAudio(){
     const g2=ctx.createGain(); g2.gain.value=0.35; o2.connect(g2); g2.connect(eg);
     /* the harmonic above, which is what a high-revving engine has and a
        lazy one does not */
-    const o3=ctx.createOscillator(); o3.type="sawtooth"; o3.frequency.value=180; o3.detune.value=-6;
+    /* A triangle, not another sawtooth. A sawtooth already carries every
+       harmonic, so putting a second one an octave and a half up piled edge
+       on edge and turned the top of the rev range into a screech. A
+       triangle has almost nothing above its own third, so it adds the ring
+       of a high-revving engine without the glare. */
+    const o3=ctx.createOscillator(); o3.type="triangle"; o3.frequency.value=180; o3.detune.value=-6;
     const g3=ctx.createGain(); g3.gain.value=0.0; o3.connect(g3); g3.connect(eg);
     o1.start(); o2.start(); o3.start();
     /* noise */
@@ -6418,9 +6503,17 @@ function updateAudio(){
   AU.eng2.frequency.setTargetAtTime(f*0.5,t,0.05);
   AU.eng3.frequency.setTargetAtTime(f*3,t,0.05);
   AU.g2.gain.setTargetAtTime(V.sub,t,0.12);
-  AU.g3.gain.setTargetAtTime(V.hi*(0.45+0.55*rpm),t,0.12);   // the edge comes in with the revs
+  /* The ring is loudest in the middle of a gear and eases off as the revs
+     run out, rather than being loudest exactly where the note is already
+     highest — which is what made the top of every gear the harshest part
+     of the sound instead of the best part of it. */
+  AU.g3.gain.setTargetAtTime(V.hi*(0.30+0.70*(4*rpm*(1-rpm))),t,0.12);
   AU.engGain.gain.setTargetAtTime(0.10+gas*0.13+rpm*0.05,t,0.08);
-  AU.lp.frequency.setTargetAtTime((700+rpm*2200+gas*900)*V.cut,t,0.1);
+  /* However far the filter is told to open, it is never allowed far above
+     the note it is opening for, and never past the point where a sawtooth
+     starts to sound like tearing paper. */
+  const open=(700+rpm*2200+gas*900)*V.cut;
+  AU.lp.frequency.setTargetAtTime(Math.min(open,2200+f*5.5,5200),t,0.1);
   AU.skidGain.gain.setTargetAtTime(clamp(CAR.slip*0.5,0,1)*0.16+CAR.rumble*0.10,t,0.06);
   AU.windGain.gain.setTargetAtTime(clamp(sp/70,0,1)*0.07,t,0.15);
 }

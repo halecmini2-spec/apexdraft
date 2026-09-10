@@ -53,8 +53,12 @@ lead back.
   everything, topping out at 250 km/h — so a kart spent its life in second
   and the V12 sat against the limiter for a third of every straight. Each
   car has its own number of ratios now, spread over the speed it can
-  actually reach, and the last change lands at 84 per cent of it: top gear
-  is for the last stretch before the top speed rather than most of the road.
+  actually reach, and they are much of a size — a GT's six cover 20, 17, 16,
+  16, 15 and 15 per cent of its range, first a whisker longer than the rest.
+  A geometric ladder was tried first and crowded them at the top, which left
+  first covering forty per cent of the speed the car could do. The last
+  change still lands at about 85 per cent: top gear is for the last stretch
+  before the top speed rather than most of the road.
   A kart has no gearbox, so it has none here either — one gear, and the note
   simply rises with the road speed all the way to the end of it.
 - **Every car sounds like what it is.** What tells one engine from another
@@ -63,10 +67,20 @@ lead back.
   road car at the same road speed and does it evenly, with none of the lump
   underneath that a lazy engine has. Each car has a note, an amount of that
   lump, a harmonic above it that comes in with the revs, and a filter that
-  opens as far as it deserves. The V12 sits nearly an octave over the GT
-  with a twelfth of the lump and twice the brightness — a wail rather than
-  a grumble — and the Rocket Trike is the opposite of it in every one of
+  opens as far as it deserves. The V12 sits well above the GT with a
+  twelfth of the lump and twice the brightness — a wail rather than a
+  grumble — and the Rocket Trike is the opposite of it in every one of
   those four.
+
+  The harmonic is a triangle rather than a second sawtooth, and it is
+  loudest in the middle of a gear rather than at the top of one. A sawtooth
+  already carries every harmonic there is, so putting another an octave and
+  a half above it piled edge on edge, and having it peak exactly where the
+  note was already highest made the top of every gear the harshest part of
+  the sound instead of the best part of it. However far the filter is told
+  to open it is now held near the note it is opening for, so flat out in top
+  the V12 rings at eighteen per cent through a filter at 4.1 kHz where it
+  used to scream at forty-six through one at 7.
 - **The Yaris has a beat.** An original drill track — sliding 808s, a
   clapped snare, rolling hats, a dark piano line — synthesised in the
   browser while it is driven; nothing is a file and nothing is anyone's
@@ -196,6 +210,15 @@ race screen asks: how many machine-driven
 cars line up (up to ten), their **strength**, the laps, and whether you
 start at the front, the back or wherever the draw puts you — and, if you
 are in a party, that party's laps and starting grid in the same place.
+**On a phone the whole step is on the screen** — both of these steps are,
+in either orientation, without scrolling for the button at the bottom. Seven
+cars and a colour row do not fit a phone at desk sizes, so the cards drop
+their blurb and keep the picture and the name, which is what anybody is
+choosing by; the V12 keeps its number because that is the point of that car.
+Lying down the subtitle goes as well and the pictures are cropped to a
+letterbox. The button also rides the bottom of the scroll, so on anything
+smaller still it is on the screen anyway.
+
 **Next** takes you to the garage for the car, and that takes you to the
 track. Three steps, each asking one thing: the race, the car, the circuit.
 
