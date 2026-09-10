@@ -5035,49 +5035,60 @@ function step(dt){
      bounce, plus friction that scrubs speed while you're leaning on it. */
   const LIM=(T.barrierOff||T.halfW+8.5)-0.05;   // the rail itself; the corners are tested
   const HBw=hitbox(ED.opts.car);
-  let worst=0;
+  let worst=0, hits=[];
   for(const corner of [[HBw.hl,HBw.hw],[HBw.hl,-HBw.hw],[-HBw.hl,HBw.hw],[-HBw.hl,-HBw.hw]]){
     const ex=CAR.x+nfx*corner[0]+nrx*corner[1], ez=CAR.z+nfz*corner[0]+nrz*corner[1];
     const p=nearest(T,ex,ez,null,CAR.y);
     const over=Math.abs(p.d)-LIM;
     if(over<=0)continue;
     const sgn=p.d>0?1:-1;
-    /* how hard the car is going into the rail, needed before the heading is
-       touched as well as after */
-    const vIn=CAR.vx*p.rx*sgn+CAR.vz*p.rz*sgn;
     CAR.x-=p.rx*sgn*over; CAR.z-=p.rz*sgn*over;
-    /* swing the car parallel to the rail — this is what makes a scrape feel
-       like a scrape instead of a wall you stick to */
-    let dy=Math.atan2(p.tx,p.tz)-CAR.yaw;
-    dy=Math.atan2(Math.sin(dy),Math.cos(dy));
-    if(dy> Math.PI/2)dy-=Math.PI;                // travelling either way along it
-    if(dy<-Math.PI/2)dy+=Math.PI;
-    /* A glancing blow lays the car along the rail. A steep one sends it
-       back out the way it came, so the heading swings past parallel — the
-       reflection you would expect rather than a car gliding along a wall. */
-    CAR.yaw+=dy*clamp(over*3,0,1)*(0.22+1.5*clamp((vIn-6)/14,0,1));
-    if(vIn>0){
-      /* A brush deforms the rail and dies; a real hit comes back off it at
-         the angle it went in, which is what a barrier looks like from the
-         car. The faster the approach the closer to a mirror it gets. */
-      const e=clamp(0.30+vIn/26,0.30,0.85);
-      CAR.vx-=p.rx*sgn*vIn*(1+e); CAR.vz-=p.rz*sgn*vIn*(1+e);
-      /* less friction along the rail than before, or the rebound would come
-         off far shallower than it went in */
-      const scrub=clamp(vIn/16,0,1)*0.09;
-      CAR.vx*=1-scrub; CAR.vz*=1-scrub;
-      /* struck away from the middle, the car is turned: a nose into the
-         rail throws the tail round */
-      CAR.spinV=clamp(CAR.spinV-SPIN_PER*corner[0]*(-sgn*(p.rx*nrx+p.rz*nrz))*vIn*1.4,-SPIN_MAX,SPIN_MAX);
-      /* and it leans away from the rail */
-      CAR.aRollV+=clamp(-sgn*(p.rx*nrx+p.rz*nrz)*vIn*0.05,-1.8,1.8);
-      /* a car climbing the rail at speed gets thrown up by it: an open
-         wheel finds the ramp sooner, but any car hard enough into it goes */
-      const lift=openWheel(ED.opts.car)?(vIn>13?vIn*0.26:0):(vIn>17?vIn*0.19:0);
-      if(lift>0&&!CAR.air){ CAR.air=true; CAR.vy=Math.min(5.5,lift); }
-      worst=Math.max(worst,vIn);
-    }
+    hits.push({over,ex,ez,p,sgn});
     CAR.hitX=ex; CAR.hitZ=ez; CAR.hitY=heightAt(T,ex,ez);
+  }
+  if(hits.length){
+    /* One blow, at the middle of whatever is touching. Squarely on, both
+       front corners are in it and the middle of them is the middle of the
+       nose, so the car is stopped and not turned; on one corner alone, the
+       blow is off to the side and brings the car round. */
+    let ax=0, az=0, deep=hits[0];
+    for(const h of hits){ ax+=h.ex; az+=h.ez; if(h.over>deep.over)deep=h; }
+    ax/=hits.length; az/=hits.length;
+    const p=deep.p, sgn=deep.sgn;
+    const nx=p.rx*sgn, nz=p.rz*sgn;             // out of the road, into the rail
+    const vN=CAR.vx*nx+CAR.vz*nz;               // how hard it is going in
+    if(vN>0){
+      /* A barrier is built to absorb, so the harder it is hit the less
+         comes back: a nudge rebounds off it, a heavy one is mostly stopped
+         and pushed away rather than fired off like a pinball. */
+      const e=clamp(0.40-vN/60,0.06,0.40);
+      const jN=(1+e)*vN;
+      CAR.vx-=nx*jN; CAR.vz-=nz*jN;
+      /* Friction along the rail, limited by how hard the car is pressed
+         into it. A square hit scrubs almost nothing sideways; a glancing
+         one drags along the barrier and loses speed to it. */
+      const vT=CAR.vx*p.tx+CAR.vz*p.tz;
+      const jT=Math.sign(vT)*Math.min(Math.abs(vT),0.5*jN);
+      CAR.vx-=p.tx*jT; CAR.vz-=p.tz*jT;
+      /* Both parts of the blow act at that corner, so they turn the car:
+         the further from the middle and the more sideways the push, the
+         more it comes round. */
+      const ix=-nx*jN-p.tx*jT, iz=-nz*jN-p.tz*jT;
+      const scale=crashScale(vN);
+      crashTurn(ax,az,CAR.x,CAR.z,ix,iz,scale);
+      crashLean((-nx*jN)*nrx+(-nz*jN)*nrz,scale*0.6);
+      worst=vN;
+    }
+    /* Sitting against the rail at walking pace, the car is eased parallel
+       so it can drive off rather than staying square against it. Only
+       there: at speed the turning above is what moves it. */
+    if(vN<2.5){
+      let dy=Math.atan2(p.tx,p.tz)-CAR.yaw;
+      dy=Math.atan2(Math.sin(dy),Math.cos(dy));
+      if(dy> Math.PI/2)dy-=Math.PI;
+      if(dy<-Math.PI/2)dy+=Math.PI;
+      CAR.yaw+=dy*clamp(deep.over*3,0,1)*0.10;
+    }
     CAR.scrape=Math.max(CAR.scrape,Math.hypot(CAR.vx,CAR.vz));
   }
   netCollide();
@@ -5111,6 +5122,10 @@ function step(dt){
       /* the landing costs speed, the harder the more */
       const k=clamp(land/14,0,1);
       CAR.vx*=1-0.12*k; CAR.vz*=1-0.12*k;
+      /* A car that went over lands having finished the roll rather than
+         unwinding it; one that only leaned settles back level. */
+      CAR.aRoll-=TAU*Math.round(CAR.aRoll/TAU);
+      CAR.aRollV*=0.35; CAR.aPitchV*=0.35;
       if(land>2.5&&CAR.hitCool<=0){ G.shake=Math.min(0.8,land/16); thud(land*1.6); CAR.hitCool=0.16; }
     }
   }else{
@@ -5119,6 +5134,17 @@ function step(dt){
   }
   CAR.grounded=!CAR.air;
   CAR.prevSurf=surfY;
+  /* The floor, whatever the collisions did. A car below the surface is put
+     back on it, an impossible number puts the car back on the track, and
+     nothing may be left hanging absurdly high. None of this fires in
+     ordinary driving; it is here so that no crash can lose a car. */
+  if(!isFinite(CAR.x)||!isFinite(CAR.z)||!isFinite(CAR.y)||!isFinite(CAR.vx)||!isFinite(CAR.vz)){
+    resetCar(false);
+  }else if(CAR.y<surfY-0.02){
+    CAR.y=surfY; if(CAR.vy<0)CAR.vy=0; CAR.air=false;
+  }else if(CAR.y>surfY+40){
+    CAR.y=surfY; CAR.vy=0; CAR.air=false;
+  }
 
   /* A crash turns the car and throws it out of level. The spin bleeds away
      against the tyres; the lean only exists while the car is off the
@@ -5129,12 +5155,15 @@ function step(dt){
     if(Math.abs(CAR.spinV)<0.01)CAR.spinV=0;
   }
   if(CAR.air){
+    /* nothing holding it level up here: thrown hard enough, it goes over */
     CAR.aRoll+=CAR.aRollV*dt; CAR.aPitch+=CAR.aPitchV*dt;
-    CAR.aRoll=clamp(CAR.aRoll,-1.1,1.1); CAR.aPitch=clamp(CAR.aPitch,-0.7,0.7);
+    CAR.aPitch=clamp(CAR.aPitch,-0.8,0.8);
   }else{
-    const k=Math.min(1,dt*7);
-    CAR.aRollV-=CAR.aRollV*k; CAR.aPitchV-=CAR.aPitchV*k;
-    CAR.aRoll-=CAR.aRoll*k;  CAR.aPitch-=CAR.aPitch*k;
+    /* on the ground the springs take the lean and give it back */
+    CAR.aRollV+=(-64*CAR.aRoll-12*CAR.aRollV)*dt;
+    CAR.aPitchV+=(-64*CAR.aPitch-12*CAR.aPitchV)*dt;
+    CAR.aRoll+=CAR.aRollV*dt; CAR.aPitch+=CAR.aPitchV*dt;
+    CAR.aRoll=clamp(CAR.aRoll,-0.5,0.5); CAR.aPitch=clamp(CAR.aPitch,-0.35,0.35);
   }
 
   /* kerb rumble */
@@ -7988,10 +8017,15 @@ function aiSpawn(){
 }
 const aiLowBoost=(v)=>1+DRIVE.lowGrip*clamp(1-Math.max(v,4)/DRIVE.lowUntil,0,1);
 /* an open-wheeled car put over a wheel goes up, and comes down on gravity */
-function aiLaunch(c,b){
-  if(c.air)return;
-  const vy=launchSpeed(c.kind,b.lat,b.vin);
-  if(vy>0){ c.air=true; c.vy=vy; c.aRollV=clamp(-b.latSigned*(-b.vin)*0.09,-2.2,2.2); }
+/* The other side of the same rule: their wheel climbs ours. */
+function aiClimb(c,ov,m,myKind,myFx,myFz){
+  if(c.air||!openWheel(myKind)||m.lat<0.55||m.close<5)return;
+  const cfx=Math.sin(c.yaw), cfz=Math.cos(c.yaw);
+  const armThem=(ov.cx-c.x)*cfx+(ov.cz-c.z)*cfz;
+  const armMe=(ov.cx-CAR.x)*myFx+(ov.cz-CAR.z)*myFz;
+  if(armThem-armMe<CLIMB_LEAD)return;
+  c.air=true; c.vy=Math.min(4.0,m.close*0.20);
+  c.aRollV=clamp(-m.latSigned*m.close*TIP_PER,-ROLL_MAX,ROLL_MAX);
 }
 function aiTick(dt){
   if(!AI.on||!G.T)return;
@@ -8096,12 +8130,18 @@ function aiTick(dt){
     const yHint=c.y, ground=heightAt(T,c.x,c.z,null,yHint);
     if(c.air){
       c.vy-=9.81*dt; c.y+=c.vy*dt;
-      c.aRoll=clamp(c.aRoll+c.aRollV*dt,-1.1,1.1);
-      if(c.y<=ground){ c.y=ground; c.vy=0; c.air=false; c.v*=0.94; }
+      c.aRoll+=c.aRollV*dt;
+      if(c.y<=ground){ c.y=ground; c.vy=0; c.air=false; c.v*=0.94;
+        c.aRoll-=TAU*Math.round(c.aRoll/TAU); c.aRollV*=0.35; }
     }else{
       c.y=ground;
-      const k=Math.min(1,dt*7); c.aRollV-=c.aRollV*k; c.aRoll-=c.aRoll*k;
+      c.aRollV+=(-64*c.aRoll-12*c.aRollV)*dt; c.aRoll+=c.aRollV*dt;
+      c.aRoll=clamp(c.aRoll,-0.5,0.5);
     }
+    /* the same floor as the player's: no crash may lose a car under the map */
+    if(!isFinite(c.x)||!isFinite(c.z)||!isFinite(c.y)){
+      const q=aiAt(T,c.s); c.x=q.x; c.z=q.z; c.y=heightAt(T,c.x,c.z); c.vy=0; c.air=false; c.aRoll=0;
+    }else if(c.y<ground){ c.y=ground; if(c.vy<0)c.vy=0; c.air=false; }
     c.steer=clamp((c.d-dPrev)/Math.max(0.01,dt)*0.25+here.k*40,-1,1);
     c.spin+=c.v*dt/0.36;
   }
@@ -8127,9 +8167,16 @@ function aiTick(dt){
       behind.v=Math.max(front.v*0.92,behind.v-closing*0.20);
       const rax=-Math.cos(a.yaw), raz=Math.sin(a.yaw);
       const lat=Math.abs(ov.nx*rax+ov.nz*raz);
+      /* wheel over wheel: whichever met the other further forward on itself
+         is the one climbing, and only if the other has a wheel to climb */
       const rSide=ov.nx*rax+ov.nz*raz;
-      if(!a.air){ const vy=launchSpeed(a.kind,lat,-closing); if(vy>0){ a.air=true; a.vy=vy; a.aRollV=clamp(rSide*closing*0.09,-2.2,2.2); } }
-      if(!b.air){ const vy=launchSpeed(b.kind,lat,-closing); if(vy>0){ b.air=true; b.vy=vy; b.aRollV=clamp(-rSide*closing*0.09,-2.2,2.2); } }
+      const armA=(ov.cx-a.x)*Math.sin(a.yaw)+(ov.cz-a.z)*Math.cos(a.yaw);
+      const armB=(ov.cx-b.x)*Math.sin(b.yaw)+(ov.cz-b.z)*Math.cos(b.yaw);
+      const up=armA>armB?a:b, under=armA>armB?b:a;
+      if(lat>0.55&&closing>5&&Math.abs(armA-armB)>=CLIMB_LEAD&&openWheel(under.kind)&&!up.air){
+        up.air=true; up.vy=Math.min(4.0,closing*0.20);
+        up.aRollV=clamp((up===a?rSide:-rSide)*closing*TIP_PER,-ROLL_MAX,ROLL_MAX);
+      }
     }
   }
   for(const c of AI.cars){ const p=aiAt(T,c.s); c.x=p.x+p.rx*c.d; c.z=p.z+p.rz*c.d; aiPose(c); }
@@ -8480,17 +8527,6 @@ function solidUI(){}   /* contact is always on; the rows that set it are gone */
    rather than one being told where to go, so there is no authority to argue
    over — each of you feels the same shunt from your own side of it. The
    machine's cars are shoved the same way, and shove back. */
-/* The car doing the hitting keeps most of what it had; the one hit is what
-   moves. Running into the back of somebody used to stop you dead, which is
-   neither how it looks nor how it feels — the momentum has to go somewhere,
-   and it goes into them. */
-/* The one driving into the other behaves as the heavier car: it is moved
-   less and the car in front is moved more. Doing it through the mass rather
-   than by scaling the two responses separately keeps the arithmetic honest —
-   after the impulse the pair is always separating, so a shunt cannot repeat
-   every frame and pump a car up to impossible speed. */
-const AGGRESSOR_MASS=1.9;
-const BODY_BOUNCE=0.06;         // cars barely rebound off each other
 /* A knock is one event. The physics run several times per drawn frame and
    two cars stay touching for a while after it, so without this a single
    shunt would be charged over and over and throw the other car down the
@@ -8501,109 +8537,141 @@ function bumpReady(o){ const t=performance.now()/1000; if(o.bumpT&&t-o.bumpT<BUM
    away from the middle, and if it puts the car in the air it tips it, the
    struck side rising. Both fade; neither can be steered out of, which is
    what makes a crash feel like a crash. */
-const SPIN_PER=0.020;           // rad/s per metre of leverage per m/s of blow
-const SPIN_MAX=2.6;
-function knockTurn(ov,vin,fx,fz,rx,rz){
-  /* how far along the car the blow landed, and how much of it is sideways */
-  const arm=(ov.cx-CAR.x)*fx+(ov.cz-CAR.z)*fz;
-  const side=(-ov.nx)*rx+(-ov.nz)*rz;          // the push, in the car's own frame
-  CAR.spinV=clamp(CAR.spinV-SPIN_PER*arm*side*(-vin),-SPIN_MAX,SPIN_MAX);
+/* ---- crashes ----
+   A blow is a impulse at a point on the car. What it does beyond slowing
+   the car down follows from where it landed: away from the middle it turns
+   the car, sideways it leans it on its springs, and — only where one wheel
+   can really climb another — it puts that car in the air. Everything is
+   scaled by how hard the contact was, so a nudge in traffic stays a nudge.
+
+   The car model above is untouched by any of this: only the velocity, the
+   heading and the body's lean are changed, the same three things a knock
+   changed before. */
+const SPIN_PER=0.060;           // rad/s per unit of turning impulse
+const SPIN_MAX=3.0;
+const ROLL_MAX=6.0;             // rad/s of body roll: enough to go over, not to windmill
+/* How hard a car is tipped as its wheel rides over another. A glancing one
+   leans and settles; a heavy one puts the car past the point of no return
+   and it goes over. Nothing else in the game can do this. */
+const TIP_PER=0.18;
+/* how much further forward the climbing car has to have met the other */
+const CLIMB_LEAD=0.35;
+/* nothing much below walking pace, all of it by 8 m/s into the contact */
+const crashScale=(close)=>clamp((close-1.5)/6.5,0,1);
+/* The turning a blow gives: the moment of the impulse about the middle of
+   the car. A square hit through the centre turns it not at all; the same
+   blow on a corner brings it round. */
+function crashTurn(cx,cz,px,pz,ix,iz,scale){
+  const cross=(cx-px)*iz-(cz-pz)*ix;
+  CAR.spinV=clamp(CAR.spinV-SPIN_PER*cross*scale,-SPIN_MAX,SPIN_MAX);
 }
-function knockTip(latSigned,close){
-  /* the side that was hit goes up, the harder the more; a nose-on blow
-     lifts the front instead */
-  CAR.aRollV+=clamp(latSigned*close*0.09,-2.2,2.2);
-  CAR.aPitchV+=clamp(-close*0.012,-0.5,0);
+/* The lean: pushed to its right, the car rolls onto that side and the
+   struck side comes up. */
+function crashLean(sideImp,scale){
+  CAR.aRollV=clamp(CAR.aRollV+sideImp*0.13*scale,-ROLL_MAX,ROLL_MAX);
 }
-/* Off the ground: a wheel put over another wheel is a ramp, and a heavy
-   blow of any kind will do it too. Only the open-wheeled cars, which have
-   nothing to stop a tyre climbing another. */
-function launchSpeed(kind,lat,vin){
-  const close=-vin;
-  /* a wheel put over another wheel is a ramp, and only the open-wheeled
-     cars have one */
-  if(openWheel(kind)&&lat>0.55&&close>6) return Math.min(7,close*0.34);
-  /* a big enough crash lifts anything */
-  if(close>14) return Math.min(6.5,close*0.20);
-  return 0;
-}
-function meLaunch(b){
-  if(CAR.air)return;
-  const vy=launchSpeed(ED.opts.car||"gt",b.lat,b.vin);
-  if(vy>0){ CAR.air=true; CAR.vy=vy; knockTip(b.latSigned,-b.vin); }
+/* ---- getting a wheel off the ground ----
+   One wheel climbing another is the only thing here that lifts a car, so
+   the other car must have an exposed wheel to climb and the contact must
+   be side to side and mean something. Of the two, the one that goes up is
+   whichever met the other further forward on itself — its front tyre is
+   the one riding over the other's rear. The car being climbed stays down.
+   A crash into a flank, a nose into a gearbox or a car into a barrier does
+   not lift anything. */
+function climbLift(ov,close,lat,myFx,myFz,oX,oZ,oFx,oFz,oKind){
+  if(!openWheel(oKind))return 0;
+  if(lat<0.55||close<5)return 0;
+  const armMe=(ov.cx-CAR.x)*myFx+(ov.cz-CAR.z)*myFz;
+  const armThem=(ov.cx-oX)*oFx+(ov.cz-oZ)*oFz;
+  /* Level with each other it is a wheel rub and neither goes anywhere. One
+     car has to have met the other well forward of where it was met itself
+     — its front tyre against the other car's rear — before anything climbs. */
+  if(armMe-armThem<CLIMB_LEAD)return 0;
+  return Math.min(4.0,close*0.20);
 }
 function netCollide(){
   const myKind=ED.opts.car||"gt", myM=carMass(myKind);
+  const fx=Math.sin(CAR.yaw), fz=Math.cos(CAR.yaw);
   const rx=-Math.cos(CAR.yaw), rz=Math.sin(CAR.yaw);
-  const bump=(ov,otherKind,otherVx,otherVz,other)=>{
-    /* which of the two drove into the other: the one moving along the
-       normal toward the other */
-    const mine=CAR.vx*ov.nx+CAR.vz*ov.nz;
-    const mineAggressor=mine<0;
-    const vin=(CAR.vx-otherVx)*ov.nx+(CAR.vz-otherVz)*ov.nz;
-    const oM=carMass(otherKind);
-    const mA=myM*(mineAggressor?AGGRESSOR_MASS:1), mB=oM*(mineAggressor?1:AGGRESSOR_MASS);
-    const j=(vin<0&&bumpReady(other)) ? -(1+BODY_BOUNCE)*vin/(1/mA+1/mB) : 0;
-    /* side by side rather than nose to tail: a wheel over a wheel is what
-       launches an open-wheeled car */
+  /* Two cars meeting: the momentum goes where the masses say it goes, the
+     bodies barely rebound, and what is left rubs off as friction between
+     the two flanks. */
+  const meet=(ov,oKind,oVx,oVz,other)=>{
+    const oM=carMass(oKind);
+    const vN=(CAR.vx-oVx)*ov.nx+(CAR.vz-oVz)*ov.nz;      // closing when negative
+    if(vN>=0||!bumpReady(other)) return null;
+    const close=-vN;
+    /* Panels crush. A tap comes back a little, a heavy one hardly at all. */
+    const e=clamp(0.26-close/110,0.04,0.26);
+    const jN=-(1+e)*vN/(1/myM+1/oM);
+    /* what is sliding across the contact, and the friction that opposes it */
+    const tx=-ov.nz, tz=ov.nx;
+    const vT=(CAR.vx-oVx)*tx+(CAR.vz-oVz)*tz;
+    const jT=-Math.sign(vT)*Math.min(Math.abs(vT)/(1/myM+1/oM),0.35*jN);
     const latSigned=ov.nx*rx+ov.nz*rz;
-    const lat=Math.abs(latSigned);
-    return {j,vin,mineAggressor,lat,latSigned,oM,mA,mB};
+    return {jN,jT,tx,tz,close,latSigned,lat:Math.abs(latSigned),oM,e};
+  };
+  const takeIt=(ov,m)=>{
+    /* my share of it */
+    const ix=(ov.nx*m.jN+m.tx*m.jT)/myM, iz=(ov.nz*m.jN+m.tz*m.jT)/myM;
+    CAR.vx+=ix; CAR.vz+=iz;
+    const scale=crashScale(m.close);
+    crashTurn(ov.cx,ov.cz,CAR.x,CAR.z,ix,iz,scale);
+    crashLean(ix*rx+iz*rz,scale);
+    if(m.close>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,m.close/30); thud(m.close); CAR.hitCool=0.16; }
   };
   if(AI.on) for(const c of AI.cars){
     if(Math.abs(CAR.y-c.y)>2.5)continue;
     const ov=carOverlap(CAR.x,CAR.z,CAR.yaw,myKind,c.x,c.z,c.yaw,c.kind);
     if(!ov)continue;
-    const b=bump(ov,c.kind,Math.sin(c.yaw)*c.v,Math.cos(c.yaw)*c.v,c);
+    const oM=carMass(c.kind);
     /* out of each other, the lighter giving way more */
-    const shareMe=b.oM/(myM+b.oM), shareThem=myM/(myM+b.oM);
+    const shareMe=oM/(myM+oM), shareThem=myM/(myM+oM);
     CAR.x+=ov.nx*ov.over*shareMe; CAR.z+=ov.nz*ov.over*shareMe;
     aiShove(c,-ov.nx*ov.over*shareThem,-ov.nz*ov.over*shareThem);
-    if(b.j>0){
-      CAR.vx+=ov.nx*b.j/b.mA; CAR.vz+=ov.nz*b.j/b.mA;
-      /* they take it along their own line of travel */
-      const tx=Math.sin(c.yaw), tz=Math.cos(c.yaw);
-      const along=-(ov.nx*tx+ov.nz*tz)*b.j/b.mB;
-      c.v=Math.max(0,c.v+along);
-      /* The physics run several times per drawn frame while the machines
-         move once, so their world velocity has to be brought up to date
-         here — left stale, the next substep sees a car still standing
-         still, hits it again, and a single shunt pumps it to an
-         impossible speed. */
-      c.vx=Math.sin(c.yaw)*c.v; c.vz=Math.cos(c.yaw)*c.v;
-      aiLaunch(c,b);
-      meLaunch(b);
-      knockTurn(ov,b.vin,Math.sin(CAR.yaw),Math.cos(CAR.yaw),rx,rz);
-      if(-b.vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-b.vin/30); thud(-b.vin); CAR.hitCool=0.16; }
-    }
+    const m=meet(ov,c.kind,Math.sin(c.yaw)*c.v,Math.cos(c.yaw)*c.v,c);
+    if(!m)continue;
+    takeIt(ov,m);
+    /* they take their share along their own line of travel */
+    const cfx=Math.sin(c.yaw), cfz=Math.cos(c.yaw);
+    c.v=Math.max(0,c.v-((ov.nx*m.jN+m.tx*m.jT)*cfx+(ov.nz*m.jN+m.tz*m.jT)*cfz)/m.oM);
+    /* The physics run several times per drawn frame while the machines move
+       once, so their world velocity has to be brought up to date here. */
+    c.vx=cfx*c.v; c.vz=cfz*c.v;
+    /* one of the two may get a wheel up, never both */
+    const mine=climbLift(ov,m.close,m.lat,fx,fz,c.x,c.z,cfx,cfz,c.kind);
+    if(mine>0&&!CAR.air){ CAR.air=true; CAR.vy=mine; CAR.aRollV=clamp(m.latSigned*m.close*TIP_PER,-ROLL_MAX,ROLL_MAX); }
+    else aiClimb(c,ov,m,myKind,fx,fz);
   }
   if(NET.status!=="in")return;
   for(const p of NET.peers.values()){
     if(!p.mesh)continue;
-    const m=p.mesh.position;
-    if(Math.abs(CAR.y-m.y)>2.5)continue;         // one of you is on the flyover
-    const ov=carOverlap(CAR.x,CAR.z,CAR.yaw,myKind,m.x,m.z,p.mesh.rotation.y,p.car||"gt");
+    const mesh=p.mesh.position;
+    if(Math.abs(CAR.y-mesh.y)>2.5)continue;      // one of you is on the flyover
+    const oKind=p.car||"gt";
+    const ov=carOverlap(CAR.x,CAR.z,CAR.yaw,myKind,mesh.x,mesh.z,p.mesh.rotation.y,oKind);
     if(!ov)continue;
+    /* how fast their car was going, from the last two packets it sent */
     let ovx=0, ovz=0;
     if(p.buf&&p.buf.length>1){
       const q=p.buf[p.buf.length-2], r=p.buf[p.buf.length-1], dtp=(r.t-q.t)/1000;
       if(dtp>0.01){ ovx=(r.p[0]-q.p[0])/dtp; ovz=(r.p[2]-q.p[2])/dtp; }
     }
-    const b=bump(ov,p.car||"gt",ovx,ovz,p);
-    /* Their machine is running this same code from its own side, so each of
-       us takes the share our own mass says. Their car is shoved on screen
-       straight away as well: their own reaction is real but it has to reach
-       us, and the offset fades as their packets arrive carrying it. */
-    const shareMe=b.oM/(myM+b.oM), shareThem=myM/(myM+b.oM);
+    const oM=carMass(oKind);
+    const shareMe=oM/(myM+oM), shareThem=myM/(myM+oM);
     CAR.x+=ov.nx*ov.over*shareMe; CAR.z+=ov.nz*ov.over*shareMe;
+    /* Their machine runs this same code from its own side; their car is
+       shoved on screen straight away too, and the offset fades as their own
+       packets arrive already carrying it. */
     p.px=(p.px||0)-ov.nx*ov.over*shareThem; p.pz=(p.pz||0)-ov.nz*ov.over*shareThem; p.pt=performance.now();
-    if(b.j>0){
-      CAR.vx+=ov.nx*b.j/b.mA; CAR.vz+=ov.nz*b.j/b.mA;
-      meLaunch(b);
-      knockTurn(ov,b.vin,Math.sin(CAR.yaw),Math.cos(CAR.yaw),rx,rz);
-      if(-b.vin>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,-b.vin/30); thud(-b.vin); CAR.hitCool=0.16; }
-    }
+    const m=meet(ov,oKind,ovx,ovz,p);
+    if(!m)continue;
+    takeIt(ov,m);
+    const ofx=Math.sin(p.mesh.rotation.y), ofz=Math.cos(p.mesh.rotation.y);
+    const mine=climbLift(ov,m.close,m.lat,fx,fz,mesh.x,mesh.z,ofx,ofz,oKind);
+    if(mine>0&&!CAR.air){ CAR.air=true; CAR.vy=mine; CAR.aRollV=clamp(m.latSigned*m.close*TIP_PER,-ROLL_MAX,ROLL_MAX); }
   }
+
 }
 
 /* ---- other people's cars ----

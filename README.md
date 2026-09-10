@@ -66,25 +66,39 @@ lead back.
   comes from a 16 m circle down to 12 m for as long as you hold it.
 - **Cars are solid, and shaped like themselves.** Each car's hitbox is
   measured from the model that is drawn, so anything you can see of it is
-  something you can hit — a Formula's long nose, a kart's stubbiness. The
-  car doing the hitting behaves as the heavier one: run into the back of
-  somebody at 110 km/h and you keep most of your speed while they are fired
-  forward, rather than both of you stopping dead. One shunt is charged once,
-  however long the cars stay touching.
-- **Walls reflect you.** Go into the Armco at forty-five degrees and you
-  come off it at about forty the other way; a shallow scrape lays the car
-  along the rail instead. It is the corners of the car that touch, so a nose
-  into the barrier throws the tail round.
-- **Crashes turn the car.** A blow that lands away from the middle of the
-  car spins it, the further out and the harder the more — up to about
-  seventy degrees a second off a barrier. The spin bleeds away against the
-  tyres and cannot be steered out of while it lasts.
-- **Cars can be launched.** A wheel put over another wheel is a ramp, and
-  only the Formula and the kart have one, so only they go up from side to
-  side contact, and the struck side is the one that rises, by fifteen or
-  twenty degrees, so the car goes over rather than hopping flat. A heavy
-  enough crash lifts any of them — gravity from there, and a landing that costs
-  speed. Nothing about the road can launch a car, only an impact.
+  something you can hit — a Formula's long nose, a kart's stubbiness.
+- **A crash is an impulse at a point.** What it does follows from how fast
+  the two things met, at what angle, how heavy each is, and whereabouts on
+  the car it landed. Momentum goes where the masses say it goes; what is
+  left over rubs off as friction between the two flanks. Panels crush, so
+  the harder the hit the less of it comes back. There is no generic bounce:
+  a nose into a gearbox, a door rubbed down a flank and a corner into a
+  barrier are three different sums.
+- **Walls take the speed out of you.** Straight into the Armco at 150 km/h
+  costs about ninety-five per cent of your speed and leaves the car facing
+  where it was; the same barrier at forty-five degrees costs about two
+  thirds and throws the car round at ninety degrees a second. A brush at
+  25 km/h costs a quarter of it and little else. The steeper the angle the
+  more it stops you, the shallower the more it turns and drags you along.
+- **Blows off the middle turn the car.** The reaction is the moment of the
+  impulse about the middle of the car, so a square hit through the nose
+  does not rotate it at all, while the same blow on one corner brings the
+  tail round. A tap in traffic does neither.
+- **Getting a wheel off the ground is hard, and one-sided.** One tyre
+  climbing another is the only thing here that lifts a car, so the other
+  car must be an open-wheeler and the contact must be side to side and
+  mean it. Of the two, only the one that met the other further forward on
+  itself goes up — its front tyre is the one riding over the other's rear;
+  the car being climbed stays down, and two cars level with each other just
+  rub. Nothing else lifts anything: not a barrier, not a nose into a flank.
+- **A car can be put over, but it takes a real one.** The tipped car leans
+  on its springs and settles; a heavy enough blow puts it past that and it
+  goes over, landing the roll rather than unwinding it. An extreme side
+  impact between two Formulas gets a car to about sixty degrees and back
+  down on its wheels.
+- **Nothing is ever lost under the map.** Whatever a crash does, a car
+  below the surface is put back on it and an impossible number puts the car
+  back on the track. It is a floor under the physics, not part of them.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
