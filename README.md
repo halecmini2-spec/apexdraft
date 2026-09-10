@@ -42,14 +42,6 @@ lead back.
   about, usually with a smaller one leaning on them, and the ground carries
   patches of bare earth at a tighter frequency than its green-on-green, so
   it is not one flat colour for a kilometre.
-- **And a horizon.** Both outdoor settings used to be a flat rim of ground
-  under an empty sky, which is what made them read as a lawn and a beach
-  however much stood on them — nothing said how far away anything was. Now
-  a ring of snow-capped ridges stands behind the alpine and flat-topped
-  mesas behind the desert, sunk into the ground so there is no seam. How far
-  out the ring stands follows the fog rather than a fixed number: the 1.9 km
-  that gave the alpine a range of peaks put the desert mesas so deep in the
-  haze they were the colour of the sand behind them.
 - **The city is a night race through a downtown.** There is no sun to speak
   of: the key light is turned right down, and what you see by is the lit
   windows, the street lamps and your own headlights. Blocks of ten different
@@ -65,6 +57,14 @@ lead back.
   because twenty metres of hill through the middle of a city reads as a
   mistake. **Dusk**, which the city replaced, is gone from the settings, but
   a circuit saved as Dusk still opens — at night, in the city.
+- **Every car has a rarity**, and wears it: **Rare** in green (the Kart and
+  the Yaris), **Epic** in purple (the GT, and the Superbike and Trike),
+  **Legendary** in gold (the Formula) and **Mythic** in red (the V12). The
+  colour is the card's edge and the word sits above the name, so the row
+  reads as a set of things of different worth before any of it is read.
+  Which car is *chosen* therefore cannot be the border as well — it is the
+  ring inside it, the tinted ground and the name in the same colour. The
+  colour is stated once, on the car, and the cards read it off there.
 - **Pick a car** in the garage, which is where **Drive it** takes you: a GT
   racer, a Formula single-seater, a kart with no top end and enormous grip
   that has to be driven into a corner rather than pointed at one,
@@ -214,6 +214,23 @@ lead back.
 - **Lock the rear** by holding the brake. A stab slows you down; keep it
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
+
+### The shop
+
+Being built, and open to one account while it is. For everybody else the
+door on the home page still says **Coming soon** and still does nothing,
+which is exactly what it did before — the same gate the AI opponents and
+the three test cars sit behind.
+
+Inside are the three cars still being tried out, priced: the **Superbike X**
+and the **Rocket Trike** at 50p each, both Epic, and the **V12 Monster** at
+£1.50, Mythic. Each tile wears its rarity the way the garage cards do, and
+the picture is the same one the garage draws, from the same renderer — a
+second way of drawing a car would be a second way of being wrong about one.
+Below them are **packs** and **coins**, listed but not yet shaped or priced.
+
+Nothing takes payment. Pressing **Buy** says so and names the price it
+would have been.
 
 ## Racing a party
 

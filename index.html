@@ -636,7 +636,7 @@ body.mudoor .lb-party,body.mudoor #btnTracks{display:none!important}
 @media (pointer:coarse) and (max-height:500px){
   :root{--cutL:max(var(--sal),34px);--cutR:max(var(--sar),34px)}
   #lobbybar{padding-left:calc(10px + var(--cutL));padding-right:calc(10px + var(--cutR))}
-  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#raceSet,#auth{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
+  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#raceSet,#auth,#shop{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
 }
 body:not([data-app="home"]) #btnAbout,body:not([data-app="home"]) #btnAccount,body:not([data-app="home"]) #btnAdmin{display:none}
 body[data-app="daily"] #btnTracks{display:none}
@@ -649,6 +649,42 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dy-map canvas{width:100%;height:auto;aspect-ratio:3/2;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:2px}
 .dy-facts{font-size:11.5px;color:var(--faint);margin-top:6px;letter-spacing:.03em}
 .dy-side{display:flex;flex-direction:column;gap:10px}
+/* ---- the shop ---- */
+#shop{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
+.sh-note{margin:10px 0 0;font-size:12px;line-height:1.55;color:var(--faint);max-width:70ch}
+.sh-h{margin:20px 0 8px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);font-weight:700;display:flex;align-items:baseline;gap:10px;
+  border-bottom:1px solid var(--line-soft);padding-bottom:6px}
+.sh-h span{font-size:11px;letter-spacing:.04em;text-transform:none;color:var(--faint);font-weight:400}
+.sh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.sh-grid.sh-coins{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
+/* the same edge the garage cards wear, for the same reason */
+.sh-card{background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:3px;
+  padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px}
+.sh-card canvas{width:100%;height:auto;aspect-ratio:360/220;display:block;border-radius:2px;
+  background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);margin-bottom:4px}
+.sh-card .rar{font-style:normal;font-size:9.5px;line-height:1;letter-spacing:.16em;
+  text-transform:uppercase;font-weight:700;color:var(--rar,var(--faint))}
+.sh-card b{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.sh-card span{font-size:11.5px;line-height:1.45;color:var(--dim)}
+.sh-card.soon{opacity:.62;border-style:dashed}
+.sh-card.coin b{font-family:var(--mono);font-size:20px;letter-spacing:.02em}
+.sh-buy{margin-top:auto;padding-top:8px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sh-buy i{font-style:normal;font-family:var(--mono);font-size:15px;color:var(--ink)}
+.sh-card.soon .sh-buy i{font-family:var(--ui);font-size:11.5px;color:var(--faint)}
+.sh-buy .go{width:auto;flex:0 0 auto;padding:8px 18px;font-size:12px;letter-spacing:.12em;
+  border:1px solid var(--rar,var(--amber));background:var(--rarGlow,var(--amber-glow));
+  color:var(--rar,var(--amber));font-weight:700}
+.sh-buy .go:hover{filter:brightness(1.25)}
+@media (max-width:760px){
+  .sh-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .sh-grid.sh-coins{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}
+  .sh-card{padding:8px 9px 9px}
+  .sh-card b{font-size:12.5px}
+  .sh-card span{font-size:10.5px}
+}
+.home-card.gold i{background:var(--amber)}
+.home-card.gold:hover{border-color:var(--amber);background:var(--amber-glow)}
 .dy-tile{background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
 .dy-tile .k{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
 .dy-tile b{font-family:var(--mono);font-size:24px;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
@@ -1143,7 +1179,14 @@ body.daily .gar-arrow{display:none}
   .rs-body .grp>.hint{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
   #raceSet .gar-go{margin-top:10px}
 }
-.gar-card{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px 11px;text-align:left;cursor:pointer;
+/* The rarity owns the card's edge, so the row reads as a set of things of
+   different worth before any of it is read. Which one is chosen cannot then
+   be the border as well — it is the ring inside it, the tinted ground and
+   the name in the same colour. */
+.gar-card .rar{display:block;font-style:normal;font-size:9.5px;line-height:1;
+  letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  color:var(--rar,var(--faint));margin:0 0 3px}
+.gar-card{background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:3px;padding:8px 10px 11px;text-align:left;cursor:pointer;
   display:flex;flex-direction:column;gap:3px;color:var(--dim);min-width:0;overflow:hidden;
   transition:border-color .12s,background .12s}
 .gar-card canvas{width:100%;height:auto;aspect-ratio:360/220;display:block;border-radius:2px;background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);margin-bottom:5px}
@@ -1197,9 +1240,11 @@ body.daily .gar-arrow{display:none}
   #raceSet,#garage{padding-top:calc(5px + var(--sat));padding-bottom:calc(5px + var(--sab))}
 }
 
-.gar-card:hover{border-color:var(--faint)}
-.gar-card[aria-pressed="true"]{border-color:var(--amber);background:var(--amber-glow)}
-.gar-card[aria-pressed="true"] b{color:var(--amber)}
+.gar-card:hover{border-color:var(--rar,var(--faint))}
+.gar-card[aria-pressed="true"]{border-color:var(--rar,var(--amber));
+  background:var(--rarGlow,var(--amber-glow));
+  box-shadow:inset 0 0 0 1px var(--rar,var(--amber))}
+.gar-card[aria-pressed="true"] b{color:var(--rar,var(--amber))}
 .gar-colours{display:flex;align-items:center;gap:14px}
 .gar-colours .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 .gar-go{max-width:360px;align-self:flex-start}
@@ -1482,6 +1527,7 @@ body.daily .gar-arrow{display:none}
   .gar-wrap .auth-brand,.rs-wrap .auth-brand{font-size:16px}
   .gar-card{padding:3px 6px 4px;gap:0}
   .gar-card b{font-size:10px}
+  .gar-card .rar{font-size:8px;letter-spacing:.1em;margin-bottom:1px}
   .gar-wrap{gap:5px}
   .gar-colours{gap:6px}
   .swatches .sw{width:21px;height:21px}
@@ -1762,6 +1808,29 @@ body.daily .gar-arrow{display:none}
     </div>
   </section>
 
+  <!-- The shop. Shown to the one account that is trying it out; for
+       everybody else the door on the home page still says coming soon and
+       still does nothing, which is exactly what it did before. -->
+  <section id="shop" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head">
+        <div>
+          <h1 class="auth-brand">The <span>shop</span></h1>
+          <p class="auth-sub">Cars, packs and coins.</p>
+        </div>
+        <div class="chips"><button class="chip" id="shBack">Back</button></div>
+      </div>
+      <p class="sh-note">Nothing here takes payment yet — this is the shop being
+        built. The prices shown are what these will cost.</p>
+      <h2 class="sh-h">Cars <span>Yours for good, once bought</span></h2>
+      <div class="sh-grid" id="shCars"></div>
+      <h2 class="sh-h">Packs <span>Still being put together</span></h2>
+      <div class="sh-grid" id="shPacks"></div>
+      <h2 class="sh-h">Coins <span>Still being priced</span></h2>
+      <div class="sh-grid sh-coins" id="shCoins"></div>
+      <p class="sh-note" id="shSaid"></p>
+    </div>
+  </section>
   <section id="multiScreen" class="screen" hidden>
     <div class="tk-wrap">
       <div class="tk-head">
@@ -2864,7 +2933,7 @@ const THEMES={
     grassA:0x506E36, grassB:0x62804A, rock:0x767B78, dirt:0x6E6448,
     verge:0x4C5052, kerbA:0xD8402A, kerbB:0xEDEDE6,
     asphalt:0x3A3D40, line:0xD6DBD8, foliage:0x2E4A2B, trunk:0x3D2F22,
-    flora:"pine", floraN:640, rockN:150, ambientCar:1, horizon:"peak"
+    flora:"pine", floraN:640, rockN:150, ambientCar:1
   },
   desert:{
     label:"Desert", skyTop:0x3E7FA8, skyBot:0xE6CFA8, fog:0xD9C39B, fogD:0.0011,
@@ -2874,7 +2943,7 @@ const THEMES={
     verge:0x55565A, kerbA:0xD8402A, kerbB:0xEDEDE6,
     asphalt:0x3E4042, line:0xE2E2DA, foliage:0x4E6B3A, trunk:0x5A4A32,
     relief:16,
-    flora:"cactus", floraN:300, rockN:420, ambientCar:1, horizon:"mesa"
+    flora:"cactus", floraN:300, rockN:420, ambientCar:1
   },
   /* Night, in a city, between the buildings. There is no sun to light it —
      the key light is turned right down and tinted the colour of sodium, and
@@ -3812,93 +3881,9 @@ function buildScatter(T,TH){
       if(rocks)grp.add(rocks);
     }
   }
-  if(TH.horizon)grp.add(buildHorizon(T,TH,rnd));
   return grp;
 }
 
-/* What is behind everything else. Both of these had an empty sky sitting on a
-   flat rim of ground, which is what made them read as a lawn and a beach
-   however much was scattered on them — there was nothing to say how far away
-   anything was. These stand in a ring well beyond the terrain, sunk into it
-   so there is no seam, and the fog does the rest. */
-function buildHorizon(T,TH,rnd){
-  const grp=new THREE.Group();
-  const b=T.bounds;
-  const cx=(b.minX+b.maxX)/2, cz=(b.minZ+b.maxZ)/2;
-  const half=Math.hypot(b.maxX-b.minX,b.maxZ-b.minZ)/2;
-  const haze=1/Math.max(0.0004,TH.fogD);
-  const R0=half+Math.min(560,haze*0.42), R1=half+Math.min(1900,haze*1.30);
-  const kinds=5, per=11;
-  for(let k=0;k<kinds;k++){
-    const g=TH.horizon==="mesa"?mesaGeometry(TH,rnd):peakGeometry(TH,rnd);
-    const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95,
-      metalness:0.0,envMapIntensity:0.2});
-    const inst=new THREE.InstancedMesh(g,mat,per);
-    const m=new THREE.Matrix4(), tint=new THREE.Color();
-    for(let i=0;i<per;i++){
-      const a=((k*per+i)+rnd()*0.8)/(kinds*per)*TAU;
-      const d=lerp(R0,R1,rnd());
-      const x=cx+Math.cos(a)*d, z=cz+Math.sin(a)*d;
-      const sc=lerp(0.7,1.35,rnd());
-      m.makeRotationY(rnd()*TAU);
-      m.scale(new THREE.Vector3(sc,sc*lerp(0.7,1.3,rnd()),sc));
-      /* sunk, so the base is never a shape standing on nothing */
-      m.setPosition(x,terrainBase(T,x,z)-26,z);
-      inst.setMatrixAt(i,m);
-      const t=0.86+rnd()*0.24;
-      tint.setRGB(t,t*(0.98+rnd()*0.04),t*(0.98+rnd()*0.05));
-      inst.setColorAt(i,tint);
-    }
-    inst.instanceMatrix.needsUpdate=true;
-    if(inst.instanceColor)inst.instanceColor.needsUpdate=true;
-    fitInstancedBounds(inst);
-    inst.frustumCulled=true;
-    grp.add(inst);
-  }
-  return grp;
-}
-/* a mountain: a ridge of two or three summits, with snow on the tops */
-function peakGeometry(TH,rnd){
-  const parts=[];
-  const n=2+Math.floor(rnd()*2);
-  const stone=shade(TH.rock,-0.12,0.01);
-  for(let i=0;i<n;i++){
-    const h=lerp(150,330,rnd()), r=h*lerp(0.55,0.95,rnd());
-    const a=rnd()*TAU, d=i===0?0:r*lerp(0.5,1.0,rnd());
-    const x=Math.cos(a)*d, z=Math.sin(a)*d;
-    const g=jitter(new THREE.ConeGeometry(r,h,8,4),0.30,rnd);
-    parts.push(at(g,shade(stone,(rnd()-0.5)*0.06),x,26+h/2,z,(rnd()-0.5)*0.10,rnd()*TAU));
-    /* the snow line, as a smaller cone sitting in the top of the big one */
-    const sh=h*lerp(0.30,0.48,rnd());
-    parts.push(at(jitter(new THREE.ConeGeometry(r*sh/h*1.06,sh,8,2),0.18,rnd),
-      0xF2F7FA, x, 26+h-sh/2, z));
-  }
-  return mergeGeos(parts);
-}
-/* a mesa: flat on top, with the scree it has shed piled round the bottom */
-function mesaGeometry(TH,rnd){
-  const parts=[];
-  const h=lerp(60,165,rnd()), r=h*lerp(0.75,1.5,rnd());
-  const stone=shade(TH.rock,0.10,-0.01);
-  parts.push(at(jitter(new THREE.CylinderGeometry(r*0.92,r,h,9,2),0.10,rnd),
-    stone,0,26+h/2,0));
-  /* a band or two of different rock, which is what a mesa is */
-  const bands=1+Math.floor(rnd()*2);
-  for(let i=0;i<bands;i++){
-    const y=lerp(h*0.25,h*0.8,rnd()), bh=h*lerp(0.06,0.13,rnd());
-    parts.push(at(new THREE.CylinderGeometry(r*0.99,r*1.0,bh,9),
-      shade(stone,(rnd()<0.5?-1:1)*lerp(0.05,0.11,rnd())),0,26+y,0));
-  }
-  parts.push(at(new THREE.ConeGeometry(r*1.5,h*0.42,9),shade(TH.dirt,-0.12),0,26+h*0.21,0));
-  /* and a smaller one alongside more often than not */
-  if(rnd()<0.6){
-    const h2=h*lerp(0.35,0.7,rnd()), r2=r*lerp(0.4,0.7,rnd()), a=rnd()*TAU;
-    const d=r*lerp(1.3,2.0,rnd());
-    parts.push(at(jitter(new THREE.CylinderGeometry(r2*0.92,r2,h2,8,1),0.10,rnd),
-      shade(stone,(rnd()-0.5)*0.08),Math.cos(a)*d,26+h2/2,Math.sin(a)*d));
-  }
-  return mergeGeos(parts);
-}
 /* Lamps down the side of the road, on alternate sides, with a head that
    ignores the lighting so it reads as the thing doing the lighting. They
    follow the centreline rather than being scattered, because a street light
@@ -4201,29 +4186,42 @@ function loft(stations,seg){
    Three bodies over one chassis. The wheels hang off the car group itself and
    everything else lives in a child group, so a body can move on its springs
    without lifting the tyres off the road — which is what the Yaris needs. */
+/* How rare a car is, and the colour that says so. The colour lives here and
+   nowhere else: the cards read it off the car rather than carrying it in
+   their own markup, so a car's rarity is stated once. */
+const RARITY={
+  rare:     {label:"Rare",      colour:"#3FC46F", dim:"#255C3B", glow:"rgba(63,196,111,.10)"},
+  epic:     {label:"Epic",      colour:"#A868FF", dim:"#4A3070", glow:"rgba(168,104,255,.10)"},
+  legendary:{label:"Legendary", colour:"#E8B32A", dim:"#6B5316", glow:"rgba(232,179,42,.10)"},
+  mythic:   {label:"Mythic",    colour:"#E8453C", dim:"#6E2420", glow:"rgba(232,69,60,.10)"}
+};
 const CAR_MODELS=[
-  {id:"gt",     label:"GT"},
-  {id:"formula",label:"Formula"},
-  {id:"yaris",  label:"Yaris"},
-  {id:"kart",   label:"Kart"},
+  {id:"gt",     label:"GT",      rarity:"epic"},
+  {id:"formula",label:"Formula", rarity:"legendary"},
+  {id:"yaris",  label:"Yaris",   rarity:"rare"},
+  {id:"kart",   label:"Kart",    rarity:"rare"},
   /* Being tried out, and shown to one account only until they are done —
      the same gate the AI opponents sit behind. Everything else about them
      is ordinary: they are chosen in the garage, they set lap records of
      their own, and the relay checks their laps like any other. */
-  {id:"bike",   label:"Superbike X", test:true},
-  {id:"trike",  label:"Rocket Trike",test:true},
-  {id:"v12",    label:"V12 Monster", test:true}
+  {id:"bike",   label:"Superbike X", test:true, rarity:"epic"},
+  {id:"trike",  label:"Rocket Trike",test:true, rarity:"epic"},
+  {id:"v12",    label:"V12 Monster", test:true, rarity:"mythic"}
 ];
+const carRarity=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return (m&&RARITY[m.rarity])||null; };
 /* the ones anybody may drive, and whether a given account may drive a given
    one — the test cars answer to the same name the AI opponents do */
 const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
 /* the one account that sees things still being tried out */
 const TEST_ACCOUNT="cosmo38";
+/* Everything still being tried out answers to this one question: the test
+   cars, the AI opponents, and now the shop. */
+function isTester(){ return acctIn()&&ACCT.user.name===TEST_ACCOUNT; }
 function carAllowed(k){
   if(!carTest(k)) return true;
   /* the daily hands one out for the day, and only for the day */
   if(DAILY.on&&k===dailyCar()) return true;
-  return acctIn()&&ACCT.user.name===TEST_ACCOUNT;
+  return isTester();
 }
 /* Multipliers on the shared physics constants. Because these change lap
    times, the car is part of the best-lap key — a Formula lap and a Yaris lap
@@ -7819,8 +7817,25 @@ function garPicture(kind,colour,cv){
    one frame with the smoothing turned off. It cannot be seen, because the
    copy it lands on is identical to the one it left. */
 const GAR_COPIES=3;                 // one either side of the one you are on
+/* Stamp each card with its car's rarity — the colour as a custom property
+   the stylesheet can use, and the word itself under the name. Done before
+   the row is copied, so the copies come out already wearing it. */
+function garRarities(){
+  for(const c of document.querySelectorAll("#garCards .gar-card")){
+    const R=carRarity(c.dataset.car); if(!R)continue;
+    c.style.setProperty("--rar",R.colour);
+    c.style.setProperty("--rarDim",R.dim);
+    c.style.setProperty("--rarGlow",R.glow);
+    if(!c.querySelector(".rar")){
+      const e=document.createElement("em");
+      e.className="rar"; e.textContent=R.label;
+      c.insertBefore(e,c.querySelector("b"));
+    }
+  }
+}
 function garRail(){
   const r=$("garCards"); if(!r||r.dataset.railed)return;
+  garRarities();
   const one=[...r.children];
   if(!one.length)return;
   r.dataset.railed="1";
@@ -8244,8 +8259,93 @@ function baseShow(v){
   else { $("home").hidden=true; $("editor").hidden=!v; if(v)fitPad(); }
 }
 function closeScreens(){
-  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet"]) $(id).hidden=true;
-  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting"]) document.body.classList.remove(c);
+  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet","shop"]) $(id).hidden=true;
+  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting","shopping"]) document.body.classList.remove(c);
+}
+/* ---- the shop ----
+   The cars are the three still being tried out, priced. Rarity comes off
+   the car itself rather than being written down again here, and the
+   picture is the same one the garage draws, at the same size, from the
+   same renderer — a second way of drawing a car would be a second way of
+   being wrong about one. */
+const SHOP_CARS=[
+  {id:"bike", price:0.50, blurb:"280+ km/h, 165 kg. Leans into the corner with the rider. Unforgiving."},
+  {id:"trike",price:0.50, blurb:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back."},
+  {id:"v12",  price:1.50, blurb:"360 km/h — far and away the fastest thing here. 1,450 kg of it."}
+];
+const SHOP_PACKS=[
+  {name:"Starter pack",  blurb:"A car, a handful of coins and a colour or two."},
+  {name:"Racer pack",    blurb:"More of the same, and something that isn't sold on its own."},
+  {name:"Collector pack",blurb:"The rare end of the shelf."}
+];
+const SHOP_COINS=[{n:"500"},{n:"1,200"},{n:"3,000"},{n:"8,000"}];
+/* British money reads as pence below a pound and as pounds above it */
+const money=p=>p<1?Math.round(p*100)+"p":"£"+p.toFixed(2);
+function shopSay(t){ $("shSaid").textContent=t||""; }
+function shopBuild(){
+  const cars=$("shCars"); if(!cars||cars.dataset.built)return;
+  cars.dataset.built="1";
+  for(const it of SHOP_CARS){
+    const m=CAR_MODELS.find(x=>x.id===it.id), R=carRarity(it.id);
+    const b=document.createElement("div");
+    b.className="sh-card"; b.dataset.car=it.id;
+    if(R){ b.style.setProperty("--rar",R.colour);
+           b.style.setProperty("--rarDim",R.dim);
+           b.style.setProperty("--rarGlow",R.glow); }
+    b.innerHTML='<canvas width="360" height="220"></canvas>'+
+      '<em class="rar">'+(R?R.label:"")+'</em>'+
+      '<b></b><span></span>'+
+      '<div class="sh-buy"><i></i><button class="chip go">Buy</button></div>';
+    b.querySelector("b").textContent=m?m.label:it.id;
+    b.querySelector("span").textContent=it.blurb;
+    b.querySelector(".sh-buy i").textContent=money(it.price);
+    b.querySelector("button").addEventListener("click",()=>
+      shopSay("Checkout isn't connected yet — "+(m?m.label:it.id)+" would be "+money(it.price)+"."));
+    cars.appendChild(b);
+  }
+  for(const p of SHOP_PACKS){
+    const b=document.createElement("div");
+    b.className="sh-card soon";
+    b.innerHTML='<em class="rar">Pack</em><b></b><span></span>'+
+      '<div class="sh-buy"><i>Price to come</i></div>';
+    b.querySelector("b").textContent=p.name;
+    b.querySelector("span").textContent=p.blurb;
+    $("shPacks").appendChild(b);
+  }
+  for(const c of SHOP_COINS){
+    const b=document.createElement("div");
+    b.className="sh-card soon coin";
+    b.innerHTML='<em class="rar">Coins</em><b></b>'+
+      '<div class="sh-buy"><i>Price to come</i></div>';
+    b.querySelector("b").textContent=c.n;
+    $("shCoins").appendChild(b);
+  }
+}
+/* the pictures, drawn the once the shop is first opened */
+function shopPictures(){
+  for(const b of document.querySelectorAll("#shCars .sh-card")){
+    const cv=b.querySelector("canvas"); if(!cv)continue;
+    try{ garPicture(b.dataset.car,ED.opts.color,cv); }catch(e){ console.error(e); }
+  }
+}
+/* The door on the home page. Open for the account trying it out; for
+   everybody else it stays exactly the grey "coming soon" it always was. */
+function shopUI(){
+  const card=$("hmShop"); if(!card)return;
+  const on=isTester();
+  card.classList.toggle("grey",!on);
+  card.classList.toggle("gold",on);
+  card.querySelector("span").textContent=on
+    ? "Cars, packs and coins. Being built — have a look."
+    : "Coming soon.";
+}
+function showShop(on){
+  if(on&&!isTester())return;
+  if(on){ shopBuild(); }
+  $("shop").hidden=!on; baseShow(!on);
+  document.body.classList.toggle("shopping",on);
+  if(on) requestAnimationFrame(shopPictures); else fitPad();
+  shopSay("");
 }
 function goHome(){
   if(document.body.classList.contains("driving")) $("pBack").click();
@@ -8276,7 +8376,13 @@ $("brand").addEventListener("click",goHome);
 $("hmDraw").addEventListener("click",goDraw);
 $("hmMulti").addEventListener("click",goMulti);
 $("hmDaily").addEventListener("click",goDaily);
-$("hmShop").addEventListener("click",()=>{ const b=$("hmShop").querySelector("span"); b.textContent="Coming soon — nothing to buy yet."; setTimeout(()=>{ b.textContent="Coming soon."; },1800); });
+$("hmShop").addEventListener("click",()=>{
+  if(isTester()){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true); return; }
+  const b=$("hmShop").querySelector("span");
+  b.textContent="Coming soon — nothing to buy yet.";
+  setTimeout(()=>{ b.textContent="Coming soon."; },1800);
+});
+$("shBack").addEventListener("click",goHome);
 $("hmAccount").addEventListener("click",()=>{ AU_MODE="in"; showAuth(true); });
 $("hmSignUp").addEventListener("click",()=>{ AU_MODE="up"; showAuth(true); });
 $("hmAdmin").addEventListener("click",()=>showAdmin(true));
@@ -8573,6 +8679,7 @@ function acctIn(){ return !!(ACCT.token&&ACCT.user); }
 function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
   document.body.classList.toggle("aiok",on&&ACCT.user.name===TEST_ACCOUNT);
+  shopUI();
   /* Signing out of the account that has them puts you back in the GT
      rather than leaving you sitting in something you can no longer see. */
   if(!carAllowed(ED.opts.car)){
