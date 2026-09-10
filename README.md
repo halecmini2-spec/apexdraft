@@ -28,6 +28,21 @@ lead back.
   before it, and the board shows both places — a dotted marker where it was
   asked for, the checkered line where it is. Corners are numbered from the
   line, and a banked corner keeps its angle when the numbers change.
+- **Pick the setting** — **Alpine**, pines on rolling ground; **Desert**,
+  cactus and open sand; or **City**, which is a night race through a downtown.
+  In the city there is no sun to speak of: the key light is turned right
+  down, and what you see by is the lit windows, the street lamps and your own
+  headlights. Blocks of ten different shapes stand back from the barrier on
+  both sides, each with its windows on all four faces — about three in five
+  of them lit, and a strip of neon up the front of some — so the skyline is a
+  skyline rather than one tower stamped three hundred times. Lamps run down
+  the road on alternate sides, every 21 metres, each laying a pool of light
+  on the tarmac; they are not real lights, which at a hundred and forty a
+  circuit would stop the game dead, but a picture of a glow laid flat on the
+  road and tilted to sit along its camber. The ground is nearly flat there,
+  because twenty metres of hill through the middle of a city reads as a
+  mistake. **Dusk**, which the city replaced, is gone from the settings, but
+  a circuit saved as Dusk still opens — at night, in the city.
 - **Pick a car** in the garage, which is where **Drive it** takes you: a GT
   racer, a Formula single-seater, a kart with no top end and enormous grip
   that has to be driven into a corner rather than pointed at one,

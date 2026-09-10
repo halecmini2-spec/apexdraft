@@ -16,7 +16,7 @@
  */
 const NET_VER = 3;
 const PAD_W = 1600, PAD_H = 1000, TAU = Math.PI * 2;
-const THEMES = ["alpine", "desert", "dusk"];
+const THEMES = ["alpine", "desert", "city"];
 
 /* A small deterministic generator: the same day gives the same numbers on
    every relay that ever runs this. */

@@ -1882,7 +1882,7 @@ body.daily .gar-arrow{display:none}
           <div class="chips" id="themes">
             <button class="chip" data-theme="alpine" aria-pressed="true">Alpine</button>
             <button class="chip" data-theme="desert">Desert</button>
-            <button class="chip" data-theme="dusk">Dusk</button>
+            <button class="chip" data-theme="city">City</button>
           </div>
         </div>
 
@@ -2829,8 +2829,8 @@ function nearest(T,x,z,hintI,yHint){
 
 /* surface height anywhere in the world (road, verge, or open country) */
 function terrainBase(T,x,z){
-  const th=T.opts.theme;
-  const a = th==="desert"? 16 : th==="dusk"? 13 : 20;
+  const TH=THEMES[T.opts.theme]||THEMES.alpine;
+  const a = TH.relief!==undefined? TH.relief : 20;
   return (fbm(x*0.0021+11.5,z*0.0021-4.2,4)-0.5)*2*a
        + (fbm(x*0.0087,z*0.0087,3)-0.5)*2*3.2;
 }
@@ -2873,18 +2873,32 @@ const THEMES={
     grassA:0xA98A57, grassB:0xBC9C68, rock:0x8A5F44, dirt:0xB08F5E,
     verge:0x55565A, kerbA:0xD8402A, kerbB:0xEDEDE6,
     asphalt:0x3E4042, line:0xE2E2DA, foliage:0x4E6B3A, trunk:0x5A4A32,
+    relief:16,
     flora:"cactus", floraN:300, rockN:420, ambientCar:1
   },
-  dusk:{
-    label:"Dusk", skyTop:0x121C34, skyBot:0xC96A3C, fog:0x2B3450, fogD:0.0013,
-    sun:0xFFC58A, sunI:.85, hemiSky:0x3A4A6B, hemiGnd:0x1C2118, hemiI:.5,
-    sunDir:[0.78,0.24,0.55],
-    grassA:0x2C3A26, grassB:0x37472E, rock:0x4A4B4E, dirt:0x453C2C,
-    verge:0x35383A, kerbA:0xC8382A, kerbB:0xD8D8D0,
-    asphalt:0x2B2E31, line:0xC9CFCC, foliage:0x1D2E22, trunk:0x241C15,
-    flora:"pine", floraN:560, rockN:150, ambientCar:1.35
+  /* Night, in a city, between the buildings. There is no sun to light it —
+     the key light is turned right down and tinted the colour of sodium, and
+     what you actually see by is the windows, the street lights and your own
+     headlights. Everything on the ground is a shade of wet tarmac, because
+     out here there is no grass: the verge is pavement and the run-off is
+     more road. */
+  city:{
+    label:"City", skyTop:0x05070E, skyBot:0x16213A, fog:0x0B1120, fogD:0.0026,
+    sun:0xFFD9A6, sunI:.26, hemiSky:0x2B3A5C, hemiGnd:0x14181E, hemiI:.50,
+    sunDir:[0.35,0.86,-0.30],
+    grassA:0x1A1D22, grassB:0x21252B, rock:0x2A2E34, dirt:0x24272C,
+    verge:0x3A3E44, kerbA:0xC8382A, kerbB:0xE6E6DE,
+    asphalt:0x2E3236, line:0xE2E8E5, foliage:0x1C2028, trunk:0x14171C,
+    /* A city is built on flat ground. Twenty metres of hill through the
+       middle of one looks like a mistake rather than a landscape. */
+    relief:6,
+    flora:"block", floraN:300, rockN:0, ambientCar:1.9,
+    /* what a city has instead of trees and stones */
+    lamps:true, windows:0xFFD79A, neon:[0xFF4A6E,0x36E0FF,0xFFC63A,0x7A5CFF]
   }
 };
+/* Circuits saved when this was called Dusk still open, and open at night. */
+THEMES.dusk=THEMES.city;
 
 /* Colours are authored as sRGB hex but the renderer shades in linear space.
    Every authored colour has to be converted or the whole scene renders milky
@@ -3475,6 +3489,12 @@ function floraGeometry(kind,TH){
         new THREE.Color(TH.foliage).offsetHSL(0,0,0.04+i*0.03).getHex(),
         matrix:new THREE.Matrix4().makeTranslation(0,y+h/2-0.6,0)});
     }
+  } else if(kind==="block"){
+    /* A block of city: a dark slab with a band of lit windows up each face.
+       The windows are their own geometry so they can be handed to a flat
+       material that ignores the lighting — at night an unlit material is
+       exactly what a lit window looks like, and it costs one more draw. */
+    return null;                       // built by cityBlock, which returns two
   } else { /* cactus */
     parts.push({geo:new THREE.CylinderGeometry(0.35,0.42,3.4,8),color:TH.foliage,
       matrix:new THREE.Matrix4().makeTranslation(0,1.7,0)});
@@ -3485,11 +3505,51 @@ function floraGeometry(kind,TH){
   }
   return mergeGeos(parts);
 }
+/* One building: the slab, and the windows that go on it. Returned as two
+   geometries because they want two different materials. */
+function cityBlock(TH,rnd){
+  const w=lerp(7,15,rnd()), d=lerp(7,15,rnd()), h=lerp(14,58,rnd());
+  const body=[{geo:new THREE.BoxGeometry(w,h,d),color:TH.trunk,
+    matrix:new THREE.Matrix4().makeTranslation(0,h/2,0)}];
+  /* a parapet, so the roofline is not a plain cut */
+  body.push({geo:new THREE.BoxGeometry(w*1.06,0.8,d*1.06),color:TH.foliage,
+    matrix:new THREE.Matrix4().makeTranslation(0,h+0.4,0)});
+  const win=[];
+  const cols=Math.max(2,Math.round(w/2.6)), rows=Math.max(3,Math.round(h/3.4));
+  const lit=new THREE.Color(TH.windows);
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    if(rnd()<0.42)continue;                       // most of a block is dark
+    const y=2.6+r*(h-3.4)/rows;
+    const u=-w/2+1.0+c*(w-2.0)/Math.max(1,cols-1);
+    const v=-d/2+1.0+c*(d-2.0)/Math.max(1,cols-1);
+    /* a little variety in how warm each window is */
+    const k=lit.clone().offsetHSL(0,0,(rnd()-0.5)*0.16).getHex();
+    body.length;                                   // (bodies and windows kept apart)
+    win.push({geo:new THREE.BoxGeometry(1.3,1.5,0.12),color:k,
+      matrix:new THREE.Matrix4().makeTranslation(u,y,d/2+0.02)});
+    if(rnd()<0.7) win.push({geo:new THREE.BoxGeometry(1.3,1.5,0.12),color:k,
+      matrix:new THREE.Matrix4().makeTranslation(u,y,-d/2-0.02)});
+    if(rnd()<0.7) win.push({geo:new THREE.BoxGeometry(0.12,1.5,1.3),color:k,
+      matrix:new THREE.Matrix4().makeTranslation(w/2+0.02,y,v)});
+    if(rnd()<0.7) win.push({geo:new THREE.BoxGeometry(0.12,1.5,1.3),color:k,
+      matrix:new THREE.Matrix4().makeTranslation(-w/2-0.02,y,v)});
+  }
+  /* a strip of neon somewhere up the front, which is what makes it a city
+     rather than an office park */
+  if(rnd()<0.45){
+    const c=TH.neon[Math.floor(rnd()*TH.neon.length)];
+    const y=lerp(6,h*0.8,rnd());
+    win.push({geo:new THREE.BoxGeometry(w*0.7,0.55,0.14),color:c,
+      matrix:new THREE.Matrix4().makeTranslation(0,y,d/2+0.05)});
+  }
+  return {body:mergeGeos(body), win:win.length?mergeGeos(win):null};
+}
+
 function buildScatter(T,TH){
   const grp=new THREE.Group();
   const b=T.bounds, pad=250;
   const rnd=mulberry(T.opts.seed*977+13);
-  function place(count,geo,minD,maxSlope,scale0,scale1,vary){
+  function place(count,geo,minD,maxSlope,scale0,scale1,vary,glow){
     if(count<=0)return null;
     const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.9,
       metalness:0.0,envMapIntensity:0.35});
@@ -3509,6 +3569,7 @@ function buildScatter(T,TH){
       m.scale(new THREE.Vector3(sc,sc*lerp(0.85,1.25,rnd()),sc));
       m.setPosition(x,h-0.2,z);
       inst.setMatrixAt(placed,m);
+      if(glow)glow.setMatrixAt(placed,m);
       /* a little per-instance tint, so a forest doesn't read as one tree
          stamped 600 times */
       if(vary){
@@ -3523,13 +3584,115 @@ function buildScatter(T,TH){
     fitInstancedBounds(inst);
     if(vary&&inst.instanceColor)inst.instanceColor.needsUpdate=true;
     inst.frustumCulled=true;
+    if(glow){ glow.count=placed; glow.instanceMatrix.needsUpdate=true;
+              fitInstancedBounds(glow); glow.frustumCulled=true; }
     return placed?inst:null;
   }
-  const tree=place(TH.floraN,floraGeometry(TH.flora,TH),T.halfW+16,0.55,0.8,1.7,true);
-  if(tree)grp.add(tree);
+  if(TH.flora==="block"){
+    /* Each block is its own shape rather than one stamped two hundred
+       times, so a skyline reads as a skyline. They go up in groups of one
+       geometry each, which is still only a handful of draws. */
+    const kinds=10;
+    for(let k=0;k<kinds;k++){
+      const B=cityBlock(TH,rnd);
+      const glow=B.win?new THREE.InstancedMesh(B.win,
+        new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false,fog:true}),
+        Math.ceil(TH.floraN/kinds)):null;
+      const body=place(Math.ceil(TH.floraN/kinds),B.body,T.halfW+13,0.42,0.85,1.5,true,glow);
+      if(body){ grp.add(body); if(glow&&glow.count)grp.add(glow); }
+    }
+  }else{
+    const tree=place(TH.floraN,floraGeometry(TH.flora,TH),T.halfW+16,0.55,0.8,1.7,true);
+    if(tree)grp.add(tree);
+  }
+  if(TH.lamps)grp.add(buildStreetLights(T,TH));
   const rockGeo=mergeGeos([{geo:new THREE.IcosahedronGeometry(1,0),color:TH.rock}]);
   const rocks=place(TH.rockN,rockGeo,T.halfW+13,0.9,0.7,2.6,true);
   if(rocks)grp.add(rocks);
+  return grp;
+}
+/* Lamps down the side of the road, on alternate sides, with a head that
+   ignores the lighting so it reads as the thing doing the lighting. They
+   follow the centreline rather than being scattered, because a street light
+   in the middle of a field is scenery and one beside the road is a street. */
+/* The soft round patch a street lamp puts on the road. Real lights would be
+   the honest way to do this and eleven dozen of them would bring the whole
+   thing to a halt, so each lamp gets a picture of its own glow laid flat on
+   the tarmac and added to whatever is underneath. Drawn once, kept. */
+let POOL_TEX=null;
+function poolTexture(){
+  if(POOL_TEX)return POOL_TEX;
+  const c=document.createElement("canvas"); c.width=c.height=128;
+  const g=c.getContext("2d");
+  const rad=g.createRadialGradient(64,64,0,64,64,64);
+  rad.addColorStop(0.00,"rgba(255,255,255,1)");
+  rad.addColorStop(0.35,"rgba(255,255,255,0.55)");
+  rad.addColorStop(0.70,"rgba(255,255,255,0.14)");
+  rad.addColorStop(1.00,"rgba(255,255,255,0)");
+  g.fillStyle=rad; g.fillRect(0,0,128,128);
+  POOL_TEX=new THREE.CanvasTexture(c);
+  POOL_TEX.needsUpdate=true;
+  return POOL_TEX;
+}
+function buildStreetLights(T,TH){
+  const grp=new THREE.Group();
+  const every=21;                                   // metres between lamps
+  const n=Math.max(2,Math.floor(T.len/every));
+  const off=T.halfW+3.4, H=8.4;
+  const poleG=mergeGeos([
+    {geo:new THREE.CylinderGeometry(0.16,0.22,H,6),color:0x2A2E33,
+     matrix:new THREE.Matrix4().makeTranslation(0,H/2,0)},
+    {geo:new THREE.BoxGeometry(2.3,0.22,0.22),color:0x2A2E33,
+     matrix:new THREE.Matrix4().makeTranslation(1.05,H-0.2,0)}
+  ]);
+  const headG=mergeGeos([
+    {geo:new THREE.BoxGeometry(1.5,0.30,0.62),color:TH.windows,
+     matrix:new THREE.Matrix4().makeTranslation(1.9,H-0.42,0)}
+  ]);
+  const poles=new THREE.InstancedMesh(poleG,
+    new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,metalness:0.3}),n);
+  const heads=new THREE.InstancedMesh(headG,
+    new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false,fog:true}),n);
+  /* a flat square carrying the glow, laid on the road under each head */
+  const poolG=new THREE.PlaneGeometry(1,1);
+  poolG.rotateX(-Math.PI/2);
+  const pools=new THREE.InstancedMesh(poolG,new THREE.MeshBasicMaterial({
+    map:poolTexture(), color:TH.windows, transparent:true, opacity:0.62,
+    blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false,
+    fog:true, side:THREE.DoubleSide}),n);
+  pools.renderOrder=2;
+  const m=new THREE.Matrix4(), q=new THREE.Quaternion(), up=new THREE.Vector3(0,1,0);
+  const pos=new THREE.Vector3(), one=new THREE.Vector3(1,1,1);
+  const nrm=new THREE.Vector3(), pp=new THREE.Vector3();
+  for(let i=0;i<n;i++){
+    const s=i*T.len/n;
+    const u=s/(T.len/T.N); const j=Math.floor(u)%T.N, t=u-Math.floor(u);
+    const k=(j+1)%T.N;
+    const x=lerp(T.X[j],T.X[k],t), z=lerp(T.Z[j],T.Z[k],t);
+    const rx=lerp(T.RX[j],T.RX[k],t), rz=lerp(T.RZ[j],T.RZ[k],t);
+    const side=(i%2)?1:-1;
+    pos.set(x+rx*off*side, heightAt(T,x+rx*off*side,z+rz*off*side)-0.1, z+rz*off*side);
+    /* the arm points at the road, whichever side the lamp is on */
+    q.setFromAxisAngle(up,Math.atan2(-rx*side,-rz*side));
+    m.compose(pos,q,one);
+    poles.setMatrixAt(i,m); heads.setMatrixAt(i,m);
+    /* The pool sits under the head, out over the road, and is tilted to lie
+       along the surface — the road banks, and a patch of light that ignored
+       the banking would sink into it on one side and float on the other. */
+    const px=x+rx*(off-4.2)*side, pz=z+rz*(off-4.2)*side;
+    const py=heightAt(T,px,pz);
+    const ex=heightAt(T,px+rx*3,pz+rz*3)-heightAt(T,px-rx*3,pz-rz*3);
+    const fy=heightAt(T,px+rz*3,pz-rx*3)-heightAt(T,px-rz*3,pz+rx*3);
+    nrm.set(-ex/6*rx-fy/6*rz,1,-ex/6*rz+fy/6*rx).normalize();
+    q.setFromUnitVectors(up,nrm);
+    pp.set(px,py+0.10,pz);
+    m.compose(pp,q,new THREE.Vector3(17,1,13));
+    pools.setMatrixAt(i,m);
+  }
+  poles.instanceMatrix.needsUpdate=true; heads.instanceMatrix.needsUpdate=true;
+  pools.instanceMatrix.needsUpdate=true;
+  fitInstancedBounds(poles); fitInstancedBounds(heads); fitInstancedBounds(pools);
+  grp.add(poles); grp.add(heads); grp.add(pools);
   return grp;
 }
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
