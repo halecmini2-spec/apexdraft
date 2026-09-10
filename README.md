@@ -210,14 +210,27 @@ race screen asks: how many machine-driven
 cars line up (up to ten), their **strength**, the laps, and whether you
 start at the front, the back or wherever the draw puts you — and, if you
 are in a party, that party's laps and starting grid in the same place.
-**On a phone the whole step is on the screen** — both of these steps are,
-in either orientation, without scrolling for the button at the bottom. Seven
-cars and a colour row do not fit a phone at desk sizes, so the cards drop
-their blurb and keep the picture and the name, which is what anybody is
-choosing by; the V12 keeps its number because that is the point of that car.
-Lying down the subtitle goes as well and the pictures are cropped to a
-letterbox. The button also rides the bottom of the scroll, so on anything
-smaller still it is on the screen anyway.
+**The cars are on a rail.** One row you push sideways, running round for
+ever — past the last car is the first one, in either direction, with no seam
+to see. Rather than cloning the row and jumping between copies, the card
+that has just gone out of sight at one end is moved to the other and the
+scroll is moved by exactly its width in the same breath: nothing appears to
+happen, and there are still only seven cars in the page. An arrow either
+side steps one car along and wraps at the ends, the left and right keys do
+the same, and tapping a card picks it. On the daily, where the car is the
+day's and not yours, the arrows are not there at all.
+
+It replaced a grid, which is what forced the pictures out of shape: seven
+cars in a grid meant three rows of shrinking boxes on a phone and a canvas
+squashed to a letterbox to make them fit. One row is one row at any width,
+so every picture is drawn at the proportions it was modelled in — measured
+at 1.64 against 1.64 as drawn, on a desktop and on three phone sizes.
+
+**And the whole step is on the screen** — both of these steps are, in either
+orientation, without scrolling for the button at the bottom. Measured at
+390x844, 844x390, 360x640 and 640x360: on all four, both pages, the content
+is no taller than the window. The button also rides the bottom of the
+scroll, so on anything smaller still it is on the screen anyway.
 
 **Next** takes you to the garage for the car, and that takes you to the
 track. Three steps, each asking one thing: the race, the car, the circuit.

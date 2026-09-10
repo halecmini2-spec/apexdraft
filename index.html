@@ -1110,12 +1110,41 @@ body.admining #lobbybar{display:none}
 /* the garage */
 #garage{overflow-y:auto;padding:calc(16px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal))}
 .gar-wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-.gar-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+/* ---- the cars, on a rail ----
+   One row you push sideways, running round for ever: the last car is
+   followed by the first. A grid meant seven cars became three rows of
+   shrinking boxes on a phone and the pictures had to be squashed out of
+   shape to fit; a rail is one row at any width, and the pictures keep the
+   proportions they were drawn in. */
+.gar-rail{display:flex;align-items:stretch;gap:6px;min-width:0}
+.gar-cards{flex:1;min-width:0;display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x proximity;scroll-behavior:smooth;padding:2px 0;
+  scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior-x:contain}
+.gar-cards::-webkit-scrollbar{display:none}
+.gar-card{flex:0 0 clamp(148px,20vw,208px);scroll-snap-align:center}
+.gar-arrow{flex:0 0 auto;align-self:center;width:32px;height:44px;border:1px solid var(--line);
+  border-radius:3px;background:var(--panel2);color:var(--dim);font-size:19px;line-height:1;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:border-color .12s,color .12s}
+.gar-arrow:hover{border-color:var(--faint);color:var(--ink)}
+body.daily .gar-arrow{display:none}
 @media (max-width:760px) and (orientation:portrait){.gar-cards{gap:8px}}
+@media (max-width:760px){.gar-card{flex-basis:clamp(132px,42vw,168px)}}
+/* A narrow phone held upright: the sentence under the settings is held to
+   one line and everything closes up a little, which is the last of what was
+   between the whole step and the bottom of the screen. */
+@media (max-width:430px) and (orientation:portrait){
+  .rs-body{gap:10px}
+  .rs-body .grp{padding:10px 12px 11px}
+  .rs-body .grp>.hint{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  #raceSet .gar-go{margin-top:10px}
+}
 .gar-card{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px 11px;text-align:left;cursor:pointer;
   display:flex;flex-direction:column;gap:3px;color:var(--dim);min-width:0;overflow:hidden;
   transition:border-color .12s,background .12s}
 .gar-card canvas{width:100%;height:auto;aspect-ratio:360/220;display:block;border-radius:2px;background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);margin-bottom:5px}
+/* two lines of blurb on every card, so a row of them is a row of one height */
+.gar-card span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .gar-card b{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);
   min-width:0;overflow-wrap:anywhere;hyphens:auto}
 .gar-card span{font-size:11px;line-height:1.4;min-width:0;overflow-wrap:anywhere}
@@ -1137,13 +1166,10 @@ body.admining #lobbybar{display:none}
   .gar-wrap .auth-sub{font-size:11px;margin-top:1px}
   .gar-cards{gap:6px}
   .gar-card{padding:5px 6px 6px;gap:1px}
-  .gar-card canvas{margin-bottom:2px;aspect-ratio:360/190}
+  .gar-card canvas{margin-bottom:2px}
   .gar-card b{font-size:11px;letter-spacing:.03em}
-  .gar-card span{display:none}
-  .gar-card span .big{display:block;font-size:12px;margin:0}
-  .gar-card span:has(.big){display:block}
-  /* the number, but not the sentence after it: one card twice the height of
-     the rest is worse than one card with less on it */
+  .gar-card span{font-size:10px;line-height:1.3;-webkit-line-clamp:2}
+  .gar-card span .big{font-size:12px;margin:0}
   .gar-card span i{display:none}
   .gar-colours{gap:8px}
   .gar-colours .k{font-size:10px}
@@ -1160,19 +1186,13 @@ body.admining #lobbybar{display:none}
   .rs-body .grp .slider input[type=range]{height:14px;margin:0}
   .rs-wrap,.gar-wrap{gap:4px}
   .rs-body{gap:4px}
-  .rs-body .grp{padding:5px 8px 6px;row-gap:4px}
+  .rs-body .grp{padding:5px 8px 6px;row-gap:3px}
+  .rs-body .grp>.chips{margin-bottom:0}
   #raceSet .gar-go,#garage .gar-go{margin-top:4px;padding:7px 14px;font-size:11.5px}
-  .gar-card canvas{aspect-ratio:360/118}
   .swatches .sw{width:19px;height:19px}
   #raceSet,#garage{padding-top:calc(5px + var(--sat));padding-bottom:calc(5px + var(--sab))}
 }
-/* portrait: three across is what makes seven fit in three rows */
-@media (max-width:760px) and (orientation:portrait){
-  .gar-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
-}
-@media (max-width:340px) and (orientation:portrait){
-  .gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
-}
+
 .gar-card:hover{border-color:var(--faint)}
 .gar-card[aria-pressed="true"]{border-color:var(--amber);background:var(--amber-glow)}
 .gar-card[aria-pressed="true"] b{color:var(--amber)}
@@ -1424,9 +1444,9 @@ body.admining #lobbybar{display:none}
   /* the garage: four across, and the colours beside the button on one row */
   #garage{padding-top:calc(8px + var(--sat));padding-bottom:calc(10px + var(--sab))}
   .gar-wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:16px;row-gap:8px}
-  .gar-wrap .tk-head,.gar-wrap .gar-cards{grid-column:1/-1}
+  .gar-wrap .tk-head,.gar-wrap .gar-rail{grid-column:1/-1}
   .gar-wrap .tk-head{margin-bottom:0}
-  .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .gar-cards{gap:8px}
   .gar-card{padding:6px 8px 8px;gap:2px}
   .gar-card canvas{margin-bottom:3px}
   .gar-card b{font-size:12.5px}
@@ -1456,7 +1476,6 @@ body.admining #lobbybar{display:none}
      this is — and the pictures are cropped to a letterbox. */
   #garage .auth-sub,#raceSet .auth-sub{display:none}
   .gar-wrap .auth-brand,.rs-wrap .auth-brand{font-size:16px}
-  .gar-card canvas{aspect-ratio:360/128}
   .gar-card{padding:3px 6px 4px;gap:0}
   .gar-card b{font-size:10px}
   .gar-wrap{gap:5px}
@@ -2016,7 +2035,9 @@ body.admining #lobbybar{display:none}
         </div>
         <div class="chips"><button class="chip" id="garBack">Back to the board</button></div>
       </div>
-      <div class="gar-cards" id="garCards">
+      <div class="gar-rail">
+        <button class="gar-arrow" id="garPrev" aria-label="The car before this one">‹</button>
+        <div class="gar-cards" id="garCards">
         <button class="gar-card" data-car="gt"><canvas width="360" height="220"></canvas><b>GT</b><span>Grip and pace. The all-rounder.</span></button>
         <button class="gar-card" data-car="formula"><canvas width="360" height="220"></canvas><b>Formula</b><span>The fastest thing here, and the twitchiest.</span></button>
         <button class="gar-card" data-car="yaris"><canvas width="360" height="220"></canvas><b>Yaris</b><span>Soft, forgiving, never quite settled.</span></button>
@@ -2024,6 +2045,8 @@ body.admining #lobbybar{display:none}
         <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Superbike X</b><span>280+ km/h, 165 kg. Leans. Challenging.</span></button>
         <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 210 kg. Three wheels, very twitchy.</span></button>
         <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span><b class="big">360 km/h</b><i>Far and away the fastest thing here. 1,450 kg, heavy and stable.</i></span></button>
+        </div>
+        <button class="gar-arrow" id="garNext" aria-label="The car after this one">›</button>
       </div>
       <div class="gar-colours">
         <span class="k">Colour</span>
@@ -7269,6 +7292,61 @@ function garPicture(kind,colour,cv){
   }
   const x=cv.getContext("2d"); x.clearRect(0,0,cv.width,cv.height); x.drawImage(img,0,0,cv.width,cv.height);
 }
+/* ---- the rail ----
+   Pushed past the last car you get the first one, and there is no seam to
+   see: rather than cloning the row and jumping between copies, the card at
+   the end that has just gone out of sight is moved to the other end and the
+   scroll is moved by exactly its width in the same breath. Nothing appears
+   to happen, and the row can be pushed round for ever in either direction.
+   A card that is not on the page — one still being tried out, or every car
+   but the day's on the daily — is passed over rather than moved, or the
+   moving would never stop. */
+function garShown(){
+  const r=$("garCards"); if(!r)return [];
+  return [...r.children].filter(c=>c.offsetParent!==null);
+}
+let garRolling=false;
+function garLoop(){
+  const r=$("garCards"); if(!r||garRolling)return;
+  const cards=garShown();
+  if(cards.length<3||r.scrollWidth<=r.clientWidth+8)return;   // nothing to run round
+  const gap=parseFloat(getComputedStyle(r).columnGap||getComputedStyle(r).gap)||0;
+  const near=6;
+  garRolling=true;
+  try{
+    if(r.scrollLeft<=near){
+      const last=cards[cards.length-1], w=last.offsetWidth+gap;
+      r.insertBefore(last,r.firstElementChild);
+      r.scrollLeft+=w;
+    }else if(r.scrollLeft>=r.scrollWidth-r.clientWidth-near){
+      const first=cards[0], w=first.offsetWidth+gap;
+      r.appendChild(first);
+      r.scrollLeft-=w;
+    }
+  }finally{ garRolling=false; }
+}
+/* the chosen car, brought to the middle of the rail */
+function garCentre(smooth){
+  const r=$("garCards"); if(!r)return;
+  const c=r.querySelector('.gar-card[data-car="'+(ED.opts.car||"gt")+'"]');
+  if(!c||c.offsetParent===null)return;
+  const to=c.offsetLeft-(r.clientWidth-c.offsetWidth)/2;
+  const max=Math.max(0,r.scrollWidth-r.clientWidth);
+  const x=Math.max(0,Math.min(max,to));
+  if(smooth===false){ const b=r.style.scrollBehavior; r.style.scrollBehavior="auto"; r.scrollLeft=x; r.style.scrollBehavior=b; }
+  else r.scrollLeft=x;
+}
+/* one car along, wrapping round the ends */
+function garStep(dir){
+  const pick=CAR_MODELS.filter(m=>carAllowed(m.id)&&(!DAILY.on||m.id===dailyCar()));
+  if(pick.length<2)return;
+  let i=pick.findIndex(m=>m.id===ED.opts.car);
+  if(i<0)i=0;
+  const next=pick[((i+dir)%pick.length+pick.length)%pick.length].id;
+  const b=$("garCards").querySelector('.gar-card[data-car="'+next+'"]');
+  if(b)b.click(); else { ED.opts.car=next; }
+  garCentre(true);
+}
 function garPictures(){
   document.querySelectorAll("#garCards .gar-card").forEach(b=>{
     try{ garPicture(b.dataset.car,ED.opts.color,b.querySelector("canvas")); }catch(e){ console.error(e); }
@@ -7336,7 +7414,7 @@ function showGarage(on){
       ? ("Today's daily is the "+(dm?dm.label:"GT")+", for everyone — pick a colour and go.")
       : NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
     dailyLock();
-    requestAnimationFrame(garPictures);
+    requestAnimationFrame(()=>{ garPictures(); garCentre(false); });
   } else fitPad();
 }
 /* ---- the daily time trial ----
@@ -7656,6 +7734,14 @@ function garBackOut(){
      rather than dropping two steps to the board */
   if(RS_FROM) showRaceSet(true);
 }
+$("garCards").addEventListener("scroll",garLoop,{passive:true});
+$("garPrev").addEventListener("click",()=>garStep(-1));
+$("garNext").addEventListener("click",()=>garStep(1));
+addEventListener("keydown",e=>{
+  if($("garage").hidden)return;
+  if(e.code==="ArrowLeft"){ e.preventDefault(); garStep(-1); }
+  if(e.code==="ArrowRight"){ e.preventDefault(); garStep(1); }
+});
 $("garBack").addEventListener("click",garBackOut);
 addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("garage").hidden)garBackOut(); });
 addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("raceSet").hidden){ RS_FROM=false; showRaceSet(false); } });
