@@ -210,17 +210,32 @@ race screen asks: how many machine-driven
 cars line up (up to ten), their **strength**, the laps, and whether you
 start at the front, the back or wherever the draw puts you — and, if you
 are in a party, that party's laps and starting grid in the same place.
-**The cars are on a rail.** One row you push sideways, running round for
-ever — past the last car is the first one, in either direction, with no seam
-to see. Rather than cloning the row and jumping between copies, the card
-that has just gone out of sight at one end is moved to the other and the
-scroll is moved by exactly its width in the same breath: nothing appears to
-happen, and there are still only seven cars in the page. An arrow either
-side steps one car along and wraps at the ends, the left and right keys do
-the same, and tapping a card picks it. On the daily, where the car is the
-day's and not yours, the arrows are not there at all.
+**The cars are on a rail.** One row you push sideways, and it never stops:
+the seven cars are laid out three times over and you sit in the middle copy,
+so a flick can run for a whole extra set in either direction before it could
+reach an end — and the moment you cross out of the middle copy the position
+is shifted back by exactly one set, in one frame, with no smoothing. It
+cannot be seen, because the copy it lands on is identical to the one it
+left. Flicked at 260 pixels a frame, six sets of travel in one go, it never
+reaches an end in either direction.
 
-It replaced a grid, which is what forced the pictures out of shape: seven
+Two earlier goes at this were worse in instructive ways. The first kept one
+copy and shuffled a card from one end to the other on arrival at the edge —
+but the edge is exactly where a flick has already been stopped, and moving
+the scroll on a row set to scroll smoothly makes the browser animate the
+correction, so every wrap slid a card's width across the screen. The second
+waited for the scrolling to settle before correcting, which let a hard flick
+reach a real end first: the browser bounces you there and throws the flick
+away, and the correction lands on top of that. Correcting on the way past,
+not on arrival, is what makes it continuous.
+
+An arrow either side steps one car along and wraps, going to whichever copy
+of that car is nearest rather than always the middle one — otherwise the
+arrows could slide you a whole set sideways to reach a car already next to
+you. The left and right keys do the same, and tapping a card picks it. On
+the daily, where the car is the day's and not yours, the arrows are gone.
+
+A grid is what forced the pictures out of shape before: seven
 cars in a grid meant three rows of shrinking boxes on a phone and a canvas
 squashed to a letterbox to make them fit. One row is one row at any width,
 so every picture is drawn at the proportions it was modelled in — measured

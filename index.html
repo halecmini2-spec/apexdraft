@@ -1117,11 +1117,15 @@ body.admining #lobbybar{display:none}
    shape to fit; a rail is one row at any width, and the pictures keep the
    proportions they were drawn in. */
 .gar-rail{display:flex;align-items:stretch;gap:6px;min-width:0}
+/* No snapping and no smoothing on the row itself: snapping makes it click
+   from car to car instead of running, and a row set to scroll smoothly
+   animates every correction made to it, which is what turned each wrap into
+   a slide across the screen. The arrows ask for their own smooth scroll. */
 .gar-cards{flex:1;min-width:0;display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;
-  scroll-snap-type:x proximity;scroll-behavior:smooth;padding:2px 0;
-  scrollbar-width:none;-ms-overflow-style:none;overscroll-behavior-x:contain}
+  padding:2px 0;scrollbar-width:none;-ms-overflow-style:none;
+  overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
 .gar-cards::-webkit-scrollbar{display:none}
-.gar-card{flex:0 0 clamp(148px,20vw,208px);scroll-snap-align:center}
+.gar-card{flex:0 0 clamp(148px,20vw,208px)}
 .gar-arrow{flex:0 0 auto;align-self:center;width:32px;height:44px;border:1px solid var(--line);
   border-radius:3px;background:var(--panel2);color:var(--dim);font-size:19px;line-height:1;
   cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -7301,55 +7305,126 @@ function garPicture(kind,colour,cv){
    A card that is not on the page — one still being tried out, or every car
    but the day's on the daily — is passed over rather than moved, or the
    moving would never stop. */
-function garShown(){
-  const r=$("garCards"); if(!r)return [];
-  return [...r.children].filter(c=>c.offsetParent!==null);
+/* ---- the rail ----
+   The row is the seven cars over again three times, and you sit in the
+   middle copy. That is what makes it scroll without ever stopping: a flick
+   can run for a whole extra set in either direction before it could reach
+   an end, so it never reaches one, and the browser never takes the momentum
+   away from you at a boundary.
+
+   The first go at this kept one copy and shuffled a card from one end to
+   the other as you arrived at the edge. Two things were wrong with it. It
+   only acted at the very edge, which is exactly where a flick has already
+   been stopped; and moving the scroll while the row is set to scroll
+   smoothly makes the browser animate the correction, so every wrap slid a
+   card's width across the screen. That slide was the whole problem.
+
+   Only when the scrolling has settled — nothing to interrupt — is the
+   position shifted back to the middle copy, by exactly one set's width, in
+   one frame with the smoothing turned off. It cannot be seen, because the
+   copy it lands on is identical to the one it left. */
+const GAR_COPIES=3;                 // one either side of the one you are on
+function garRail(){
+  const r=$("garCards"); if(!r||r.dataset.railed)return;
+  const one=[...r.children];
+  if(!one.length)return;
+  r.dataset.railed="1";
+  const before=document.createDocumentFragment(), after=document.createDocumentFragment();
+  for(const c of one){ const x=c.cloneNode(true); x.dataset.copy="1"; before.appendChild(x); }
+  for(const c of one){ const x=c.cloneNode(true); x.dataset.copy="1"; after.appendChild(x); }
+  r.insertBefore(before,r.firstChild);
+  r.appendChild(after);
 }
-let garRolling=false;
-function garLoop(){
-  const r=$("garCards"); if(!r||garRolling)return;
-  const cards=garShown();
-  if(cards.length<3||r.scrollWidth<=r.clientWidth+8)return;   // nothing to run round
-  const gap=parseFloat(getComputedStyle(r).columnGap||getComputedStyle(r).gap)||0;
-  const near=6;
-  garRolling=true;
+/* one set's width, gaps and all: where the middle copy begins */
+function garSetWidth(){
+  const r=$("garCards"); if(!r)return 0;
+  const mid=r.querySelector('.gar-card:not([data-copy])');
+  return mid?mid.offsetLeft-r.firstElementChild.offsetLeft:0;
+}
+function garJump(x){
+  const r=$("garCards"); if(!r)return;
+  const was=r.style.scrollBehavior;
+  r.style.scrollBehavior="auto";
+  r.scrollLeft=x;
+  r.style.scrollBehavior=was;
+}
+/* Back to the middle copy, the moment you have left it — not once you have
+   stopped. Waiting for the scrolling to settle meant a hard flick could
+   reach a real end first, and an end is where the browser bounces you and
+   throws the flick away; the correction then landed on top of that, which
+   is the flash. Corrected the moment you cross out of the middle copy
+   instead, the end is never anywhere near, and the copy you land on is
+   identical to the one you left, so there is nothing to see. */
+let garFixing=false;
+function garRecentre(){
+  const r=$("garCards"); if(!r||garFixing)return;
+  const set=garSetWidth(); if(set<10)return;
+  garFixing=true;
   try{
-    if(r.scrollLeft<=near){
-      const last=cards[cards.length-1], w=last.offsetWidth+gap;
-      r.insertBefore(last,r.firstElementChild);
-      r.scrollLeft+=w;
-    }else if(r.scrollLeft>=r.scrollWidth-r.clientWidth-near){
-      const first=cards[0], w=first.offsetWidth+gap;
-      r.appendChild(first);
-      r.scrollLeft-=w;
-    }
-  }finally{ garRolling=false; }
+    if(r.scrollLeft<set*0.5) garJump(r.scrollLeft+set);
+    else if(r.scrollLeft>set*1.5) garJump(r.scrollLeft-set);
+  }finally{ garFixing=false; }
 }
-/* the chosen car, brought to the middle of the rail */
+let garSettle=0;
+function garScrolled(){
+  garRecentre();
+  /* and once more when it has stopped, in case a frame was missed */
+  clearTimeout(garSettle);
+  garSettle=setTimeout(garRecentre,140);
+}
+/* Whichever copy of a car is nearest to where you are looking. Always
+   going to the middle copy would mean the arrows could slide you a whole
+   set sideways to reach a car that was already next to you. */
+function garNearest(car){
+  const r=$("garCards"); if(!r)return null;
+  const mid=r.scrollLeft+r.clientWidth/2;
+  let best=null,bd=Infinity;
+  for(const c of r.querySelectorAll('.gar-card[data-car="'+car+'"]')){
+    if(c.offsetParent===null)continue;
+    const d=Math.abs(c.offsetLeft+c.offsetWidth/2-mid);
+    if(d<bd){ bd=d; best=c; }
+  }
+  return best;
+}
+/* the chosen car, brought to the middle of the screen */
 function garCentre(smooth){
   const r=$("garCards"); if(!r)return;
-  const c=r.querySelector('.gar-card[data-car="'+(ED.opts.car||"gt")+'"]');
+  const car=ED.opts.car||"gt";
+  /* opening the garage lands on the middle copy, so there is a set to run
+     into either way; from then on it is whichever copy is closest */
+  const c=(smooth===false)
+    ? (r.querySelector('.gar-card:not([data-copy])[data-car="'+car+'"]')||garNearest(car))
+    : garNearest(car);
   if(!c||c.offsetParent===null)return;
-  const to=c.offsetLeft-(r.clientWidth-c.offsetWidth)/2;
-  const max=Math.max(0,r.scrollWidth-r.clientWidth);
-  const x=Math.max(0,Math.min(max,to));
-  if(smooth===false){ const b=r.style.scrollBehavior; r.style.scrollBehavior="auto"; r.scrollLeft=x; r.style.scrollBehavior=b; }
-  else r.scrollLeft=x;
+  const x=c.offsetLeft-(r.clientWidth-c.offsetWidth)/2;
+  if(smooth===false) garJump(x);
+  else r.scrollTo({left:x,behavior:"smooth"});
 }
-/* one car along, wrapping round the ends */
+/* one car along, round the ends */
 function garStep(dir){
   const pick=CAR_MODELS.filter(m=>carAllowed(m.id)&&(!DAILY.on||m.id===dailyCar()));
   if(pick.length<2)return;
   let i=pick.findIndex(m=>m.id===ED.opts.car);
   if(i<0)i=0;
   const next=pick[((i+dir)%pick.length+pick.length)%pick.length].id;
-  const b=$("garCards").querySelector('.gar-card[data-car="'+next+'"]');
+  const b=garNearest(next);
   if(b)b.click(); else { ED.opts.car=next; }
   garCentre(true);
 }
 function garPictures(){
-  document.querySelectorAll("#garCards .gar-card").forEach(b=>{
-    try{ garPicture(b.dataset.car,ED.opts.color,b.querySelector("canvas")); }catch(e){ console.error(e); }
+  garRail();
+  /* Each car is drawn once, into the copy you are actually sitting on, and
+     the other two copies are handed the finished picture. Drawing all
+     twenty-one would be three times the work for the same three pictures. */
+  const done={};
+  document.querySelectorAll("#garCards .gar-card:not([data-copy])").forEach(b=>{
+    const cv=b.querySelector("canvas");
+    try{ garPicture(b.dataset.car,ED.opts.color,cv); done[b.dataset.car]=cv; }catch(e){ console.error(e); }
+  });
+  document.querySelectorAll("#garCards .gar-card[data-copy]").forEach(b=>{
+    const src=done[b.dataset.car], cv=b.querySelector("canvas");
+    if(!src||!cv)return;
+    try{ cv.width=src.width; cv.height=src.height; cv.getContext("2d").drawImage(src,0,0); }catch(e){}
   });
 }
 /* The board used to name the car and show its colour. It does not any more
@@ -7734,9 +7809,10 @@ function garBackOut(){
      rather than dropping two steps to the board */
   if(RS_FROM) showRaceSet(true);
 }
-$("garCards").addEventListener("scroll",garLoop,{passive:true});
+$("garCards").addEventListener("scroll",garScrolled,{passive:true});
 $("garPrev").addEventListener("click",()=>garStep(-1));
 $("garNext").addEventListener("click",()=>garStep(1));
+addEventListener("resize",()=>{ if(!$("garage").hidden) garCentre(false); });
 addEventListener("keydown",e=>{
   if($("garage").hidden)return;
   if(e.code==="ArrowLeft"){ e.preventDefault(); garStep(-1); }
