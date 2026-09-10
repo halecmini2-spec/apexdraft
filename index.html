@@ -636,7 +636,7 @@ body.mudoor .lb-party,body.mudoor #btnTracks{display:none!important}
 @media (pointer:coarse) and (max-height:500px){
   :root{--cutL:max(var(--sal),34px);--cutR:max(var(--sar),34px)}
   #lobbybar{padding-left:calc(10px + var(--cutL));padding-right:calc(10px + var(--cutR))}
-  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#auth{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
+  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#raceSet,#auth{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
 }
 body:not([data-app="home"]) #btnAbout,body:not([data-app="home"]) #btnAccount,body:not([data-app="home"]) #btnAdmin{display:none}
 body[data-app="daily"] #btnTracks{display:none}
@@ -676,9 +676,6 @@ body.aiok .gar-card.test{display:flex}
 body.aiok .chips .chip.test{display:inline-flex}
 .gar-card.test.today{display:flex}
 .chips .chip.test.today{display:inline-flex}
-.gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
-body.aiok .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media (min-width:1100px){body.aiok .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .grp-daily .chips{margin-top:8px}
 #aboutScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .about{max-width:680px;font-size:13.5px;line-height:1.65;color:var(--dim)}
@@ -1033,8 +1030,14 @@ body.admining #lobbybar{display:none}
 .ad-notice input:focus{outline:none;border-color:var(--faint)}
 .ad-row.hasnote{border-color:#C2410C}
 .ad-row .ad-wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%}
-/* ---- the race, between the board and the garage ---- */
-.rs-wrap{max-width:760px}
+/* ---- the race, between the board and the garage ----
+   It borrows the garage's wrapper for its heading and its button, but not
+   the garage's landscape layout: that puts the button in a column of its
+   own beside the cards, which for one tall panel left it floating in space
+   off to the right. Its own rules, and they win wherever they are read. */
+#raceSet{overflow-y:auto;
+  padding:calc(16px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal))}
+.rs-wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px;align-items:stretch}
 .rs-body{display:flex;flex-direction:column;gap:16px;margin-top:4px}
 .rs-body .grp{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:13px 15px 15px}
 .rs-body .grp[hidden]{display:none}
@@ -1042,7 +1045,11 @@ body.admining #lobbybar{display:none}
 .rs-body .race-ctl{display:block}
 .rs-body .slider{margin-top:12px}
 .rs-body .chips{flex-wrap:wrap}
-#raceSet .gar-go{margin-top:18px}
+#raceSet .gar-go{margin-top:18px;width:100%;max-width:none;align-self:stretch;
+  position:sticky;bottom:0;z-index:3;box-shadow:0 -10px 18px -6px var(--bg)}
+/* the garage has the same problem with seven cars on a phone, and the same
+   answer: the way out rides the bottom of the scroll */
+#garage .gar-go{position:sticky;bottom:0;z-index:3;box-shadow:0 -10px 18px -6px var(--bg)}
 /* ---- the admin desk ---- */
 .ad-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 8px;
   font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
@@ -1104,12 +1111,15 @@ body.admining #lobbybar{display:none}
 #garage{overflow-y:auto;padding:calc(16px + var(--sat)) calc(20px + var(--sar)) calc(20px + var(--sab)) calc(20px + var(--sal))}
 .gar-wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .gar-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-@media (max-width:760px) and (orientation:portrait){.gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px) and (orientation:portrait){.gar-cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}}
+@media (max-width:430px) and (orientation:portrait){.gar-cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .gar-card{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:8px 10px 11px;text-align:left;cursor:pointer;
-  display:flex;flex-direction:column;gap:3px;color:var(--dim);transition:border-color .12s,background .12s}
+  display:flex;flex-direction:column;gap:3px;color:var(--dim);min-width:0;overflow:hidden;
+  transition:border-color .12s,background .12s}
 .gar-card canvas{width:100%;height:auto;aspect-ratio:360/220;display:block;border-radius:2px;background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);margin-bottom:5px}
-.gar-card b{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
-.gar-card span{font-size:11px;line-height:1.4}
+.gar-card b{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);
+  min-width:0;overflow-wrap:anywhere;hyphens:auto}
+.gar-card span{font-size:11px;line-height:1.4;min-width:0;overflow-wrap:anywhere}
 .gar-card:hover{border-color:var(--faint)}
 .gar-card[aria-pressed="true"]{border-color:var(--amber);background:var(--amber-glow)}
 .gar-card[aria-pressed="true"] b{color:var(--amber)}
@@ -1369,6 +1379,27 @@ body.admining #lobbybar{display:none}
   .gar-card b{font-size:12.5px}
   .gar-card span{font-size:10.5px;line-height:1.3}
   .gar-go{max-width:none;width:auto;padding:11px 22px;font-size:13px;align-self:center}
+  /* the race step keeps its single column and trims itself instead */
+  #raceSet{padding-top:calc(8px + var(--sat));padding-bottom:calc(10px + var(--sab))}
+  .rs-wrap{display:flex;flex-direction:column;gap:9px;max-width:640px}
+  .rs-wrap .tk-head{margin-bottom:0}
+  .rs-body{gap:9px;margin-top:0}
+  .rs-body .grp{padding:9px 11px 11px}
+  .rs-body .grp h2{margin-bottom:7px;font-size:10.5px}
+  .rs-body .slider{margin-top:8px}
+  .rs-body .lab{margin-bottom:3px}
+  #raceSet .hint,.rs-body .hint{font-size:10.5px;margin-top:8px}
+  #raceSet .gar-go{margin-top:9px;padding:11px 22px;font-size:13px;width:100%}
+  /* A phone lying down is wide and has no height at all, and this panel is
+     a tall stack of short rows — so it is dealt into two columns and the
+     whole step fits without scrolling for it. The chips that need the room
+     take the full width; the pairs of settings sit side by side. */
+  .rs-body .grp{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;row-gap:7px;align-content:start}
+  .rs-body .grp>h2,.rs-body .grp>.chips,.rs-body .grp>.hint,.rs-body .race-k{grid-column:1/-1}
+  .rs-body .grp>.slider{margin-top:0}
+  .rs-body .grp>.slider .chips{margin-bottom:0}
+  .rs-body .grp .chip{min-height:30px;padding:5px 9px;font-size:11.5px}
+  .rs-body .grp .lab{font-size:11px}
   /* the pause menu: a wider card with the buttons in two columns, so the
      whole menu is on the screen at once */
   .pause .card{width:min(700px,94vw);padding:12px 18px 14px}
@@ -1910,9 +1941,9 @@ body.admining #lobbybar{display:none}
         <button class="gar-card" data-car="formula"><canvas width="360" height="220"></canvas><b>Formula</b><span>The fastest thing here, and the twitchiest.</span></button>
         <button class="gar-card" data-car="yaris"><canvas width="360" height="220"></canvas><b>Yaris</b><span>Soft, forgiving, never quite settled.</span></button>
         <button class="gar-card" data-car="kart"><canvas width="360" height="220"></canvas><b>Kart</b><span>No top end, enormous grip.</span></button>
-        <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Superbike X</b><span>280+ km/h, 2.3 s, 165 kg. Leans. Challenging.</span></button>
-        <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 2.8 s, 210 kg. Three wheels, very twitchy.</span></button>
-        <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span>370+ km/h, 1,450 kg. Heavy, stable, and the fastest thing here.</span></button>
+        <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Superbike X</b><span>280+ km/h, 165 kg. Leans. Challenging.</span></button>
+        <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 210 kg. Three wheels, very twitchy.</span></button>
+        <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span>360+ km/h, 1,450 kg. Heavy, stable, fastest here.</span></button>
       </div>
       <div class="gar-colours">
         <span class="k">Colour</span>
@@ -3608,13 +3639,13 @@ const CAR_PERF={
      anything here, but the nose takes its time and the front end does less
      of the work, so it has to be driven into a corner rather than pointed
      at one. */
-  kart:   {power:0.94, top:0.58, grip:1.20, turnin:0.30, front:0.66},
+  kart:   {power:0.94, top:0.58, grip:1.20, turnin:0.55, front:0.66},
   /* The three being tried out, from the figures on their card. Top speed is
      against the GT's 230 km/h, so 280 is 1.22 and 350 is 1.52; power is set
      by the standing hundred, and the handling words decide the rest. */
   bike:   {power:1.30, top:1.22, grip:1.26, turnin:1.86, front:1.46},  // 280+, 2.3 s, challenging
   trike:  {power:1.12, top:1.04, grip:1.08, turnin:2.10, front:1.56},  // 240+, 2.8 s, very twitchy
-  v12:    {power:1.04, top:1.62, grip:1.24, turnin:1.30, front:1.28}   // 370+, heavy but stable
+  v12:    {power:1.04, top:1.5625, grip:1.24, turnin:1.30, front:1.28} // 360 km/h exactly, heavy but stable
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -5547,8 +5578,16 @@ function step(dt){
   /* a locked rear axle puts no drive down, so the handbrake cuts the throttle:
      without this you could hold the handbrake and still accelerate */
   if(gas&&!hand){
-    const t=clamp(Math.abs(vLong)/vmax,0,1);
-    a+=DRIVE.power*P.power*S.power*(1-t*t*0.90);
+    /* The old curve fell to a tenth of its thrust at the top of the gears,
+       which was less than the drag there, so nothing ever reached the speed
+       written on its card — a GT stopped about 205 of its 230 and the V12
+       about 300 of its 370. Thrust now falls from full power to exactly the
+       drag at the top speed, so the number on the card is the number the
+       car does, and it pulls harder through the middle of the range on the
+       way there, which is where acceleration is actually felt. */
+    const t=clamp(Math.abs(vLong)/vmax,0,1), t2=t*t;
+    const holds=vmax*vmax*0.00040+S.drag0+vmax*S.dragV*3;   // what it has to beat up there
+    a+=(DRIVE.power*P.power*S.power)*(1-t2)+holds*t2;
   }
   if(brake){
     /* A locked wheel stops the car worse than one on the edge of grip, which
@@ -5583,11 +5622,19 @@ function step(dt){
      whether you're in a hairpin at 30 km/h or a sweeper at 200. Below about
      35 km/h that formula exceeds the physical steering rack, so it clamps and
      you get the full ~35 degrees and a 6 m turning circle. */
-  /* Direct: the wheel takes its set almost at once — full lock in well
-     under a tenth of a second on the road cars — and lets go as fast, so
-     the car goes where it is pointed the moment it is pointed there. */
-  const srate=(steerIn?24.0:26.0)*(P.turnin||1);
+  /* The wheel takes its set quickly but not instantly. It used to arrive at
+     full lock inside three hundredths of a second, which on a keyboard —
+     where the input is all or nothing — meant the nose snapped across the
+     moment the key went down. It now takes about three times as long to
+     wind on, and still lets go as fast as ever, so straightening up is
+     immediate and turning in is something you lean into. */
+  const srate=(steerIn?7.0:26.0)*(P.turnin||1);
   CAR.steer+=clamp(steerIn-CAR.steer,-srate*dt,srate*dt);
+  /* The wheel is pointed by the square-ish of the input rather than by the
+     input, so the first part of the travel asks for less than it used to
+     and full lock still asks for all of it. Pressing the key no longer
+     snaps the nose across; leaning on it still takes you round. */
+  const bite=Math.sign(CAR.steer)*Math.pow(Math.abs(CAR.steer),1.35);
   const vv=Math.max(Math.abs(vLong),4);
   const lowBoost=1+DRIVE.lowGrip*clamp(1-vv/DRIVE.lowUntil,0,1);
   /* how long the wheel has been held this way */
@@ -5597,7 +5644,7 @@ function step(dt){
   const latCap=DRIVE.latAccel*P.grip*S.mu*lowBoost*holdBoost;   // grip to corner with: most when slow, more the longer it is held
   const lock=Math.min(DRIVE.maxSteer,
                       Math.atan(DRIVE.overdrive*latCap*DRIVE.wheelbase/(vv*vv)));
-  const wheelAngle=CAR.steer*lock;                    // + = wheels pointed right
+  const wheelAngle=bite*lock;                         // + = wheels pointed right
   const dir=vLong<-0.3?-1:1;
   const yawWant=-Math.tan(wheelAngle)*Math.abs(vLong)/DRIVE.wheelbase*dir;
   const yawCap=latCap/vv;                             // what the tyres can deliver
@@ -6265,8 +6312,30 @@ function drawMinimap(){
   ctx.restore();
 }
 
-/* ---------- audio ---------- */
-const AU={ctx:null,master:null,eng:null,engGain:null,eng2:null,skid:null,skidGain:null,wind:null,windGain:null};
+/* ---------- audio ----------
+   What makes one engine sound unlike another is not the pitch alone but
+   which harmonics are in it and how bright it is allowed to be. A big
+   twelve fires six times a crank revolution against a V8's four, so it
+   sings an octave and a half above a road car at the same road speed, and
+   it does it evenly — no lumpy beat underneath, which is what the octave
+   below is. Give it almost none of that, a strong third harmonic, and a
+   filter that opens right up, and it wails instead of grumbling.
+
+     pitch  where the whole voice sits
+     sub    the octave below: the lump in a big lazy engine
+     hi     the third harmonic: the edge on a high-revving one
+     cut    how far the filter opens, which is how bright it gets     */
+const ENGINE={
+  gt:     {pitch:1.00, sub:0.35, hi:0.00, cut:1.00},
+  formula:{pitch:1.42, sub:0.10, hi:0.30, cut:1.45},
+  yaris:  {pitch:0.92, sub:0.40, hi:0.00, cut:0.86},
+  kart:   {pitch:1.70, sub:0.14, hi:0.16, cut:1.30},   // small, busy, two-stroke buzz
+  bike:   {pitch:1.60, sub:0.08, hi:0.34, cut:1.55},   // an inline four, screaming
+  trike:  {pitch:0.70, sub:0.62, hi:0.10, cut:1.15},   // a blown V8, all lump
+  v12:    {pitch:1.92, sub:0.03, hi:0.46, cut:1.85},   // even, high and smooth
+};
+const engineVoice=k=>ENGINE[k]||ENGINE.gt;
+const AU={ctx:null,master:null,eng:null,engGain:null,eng2:null,eng3:null,g2:null,g3:null,skid:null,skidGain:null,wind:null,windGain:null};
 function initAudio(){
   if(AU.ctx)return;
   try{
@@ -6279,7 +6348,11 @@ function initAudio(){
     const o1=ctx.createOscillator(); o1.type="sawtooth"; o1.frequency.value=60; o1.connect(eg);
     const o2=ctx.createOscillator(); o2.type="square"; o2.frequency.value=30; o2.detune.value=8;
     const g2=ctx.createGain(); g2.gain.value=0.35; o2.connect(g2); g2.connect(eg);
-    o1.start(); o2.start();
+    /* the harmonic above, which is what a high-revving engine has and a
+       lazy one does not */
+    const o3=ctx.createOscillator(); o3.type="sawtooth"; o3.frequency.value=180; o3.detune.value=-6;
+    const g3=ctx.createGain(); g3.gain.value=0.0; o3.connect(g3); g3.connect(eg);
+    o1.start(); o2.start(); o3.start();
     /* noise */
     const buf=ctx.createBuffer(1,ctx.sampleRate*2,ctx.sampleRate);
     const dd=buf.getChannelData(0);
@@ -6293,7 +6366,7 @@ function initAudio(){
     };
     AU.skidGain=mk("bandpass",2400,3.5);
     AU.windGain=mk("lowpass",600,0);
-    AU.ctx=ctx;AU.master=master;AU.eng=o1;AU.eng2=o2;AU.engGain=eg;AU.lp=lp;
+    AU.ctx=ctx;AU.master=master;AU.eng=o1;AU.eng2=o2;AU.eng3=o3;AU.g2=g2;AU.g3=g3;AU.engGain=eg;AU.lp=lp;
   }catch(e){}
 }
 function updateAudio(){
@@ -6304,12 +6377,16 @@ function updateAudio(){
   const lo=g?gearTop[g-1]:0;
   const rpm=clamp((sp-lo)/Math.max(1,(gearTop[g]-lo)),0,1);
   const gas=(keys.KeyW||keys.ArrowUp||touch.gas)?1:0;
-  const f=46+rpm*150+g*6;
+  const V=engineVoice(ED.opts.car);
+  const f=(46+rpm*150+g*6)*V.pitch;
   const t=AU.ctx.currentTime;
   AU.eng.frequency.setTargetAtTime(f,t,0.05);
   AU.eng2.frequency.setTargetAtTime(f*0.5,t,0.05);
+  AU.eng3.frequency.setTargetAtTime(f*3,t,0.05);
+  AU.g2.gain.setTargetAtTime(V.sub,t,0.12);
+  AU.g3.gain.setTargetAtTime(V.hi*(0.45+0.55*rpm),t,0.12);   // the edge comes in with the revs
   AU.engGain.gain.setTargetAtTime(0.10+gas*0.13+rpm*0.05,t,0.08);
-  AU.lp.frequency.setTargetAtTime(700+rpm*2200+gas*900,t,0.1);
+  AU.lp.frequency.setTargetAtTime((700+rpm*2200+gas*900)*V.cut,t,0.1);
   AU.skidGain.gain.setTargetAtTime(clamp(CAR.slip*0.5,0,1)*0.16+CAR.rumble*0.10,t,0.06);
   AU.windGain.gain.setTargetAtTime(clamp(sp/70,0,1)*0.07,t,0.15);
 }
@@ -9035,7 +9112,9 @@ function aiTick(dt){
     if(Math.abs(c.aRoll)>0.9){ /* up on its side: no tyres on the road */ c.v*=Math.max(0,1-1.6*dt); }
     else if(go){
       const want=Math.min(vAllow,vCap), t=Math.min(1,c.v/Math.max(1,vmax));
-      const thrust=accel*(1-t*t*0.90)-c.v*c.v*0.00040-(SURF.road.drag0+c.v*SURF.road.dragV*3);
+      const t2=t*t;
+      const holds=vmax*vmax*0.00040+SURF.road.drag0+vmax*SURF.road.dragV*3;
+      const thrust=accel*(1-t2)+holds*t2-c.v*c.v*0.00040-(SURF.road.drag0+c.v*SURF.road.dragV*3);
       if(c.v<want-0.3){ c.v=Math.min(want,c.v+Math.max(0,thrust)*dt); c.gas=1; }
       else if(c.v>want+0.3){ c.v=Math.max(want,c.v-brake*dt); c.gas=0; }
       else c.gas=0.55;              // holding a speed still takes some pedal

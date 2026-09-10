@@ -49,11 +49,37 @@ lead back.
   track, and there is a toggle in the pause menu. iPhone Safari has no
   Fullscreen API at all, so there the route is Add to Home Screen: the page
   is set up to launch standalone, with no browser around it.
+- **Every car sounds like what it is.** What tells one engine from another
+  is not the pitch but which harmonics are in it: a big twelve fires six
+  times a crank revolution against a V8's four, so it sings well above a
+  road car at the same road speed and does it evenly, with none of the lump
+  underneath that a lazy engine has. Each car has a note, an amount of that
+  lump, a harmonic above it that comes in with the revs, and a filter that
+  opens as far as it deserves. The V12 sits nearly an octave over the GT
+  with a twelfth of the lump and twice the brightness — a wail rather than
+  a grumble — and the Rocket Trike is the opposite of it in every one of
+  those four.
 - **The Yaris has a beat.** An original drill track — sliding 808s, a
   clapped snare, rolling hats, a dark piano line — synthesised in the
   browser while it is driven; nothing is a file and nothing is anyone's
   record. It stops with the pause menu and on the board, and has its own
   switch in the pause menu, separate from the engine sound.
+- **Every car does the speed on its card.** Thrust falls from full power to
+  exactly the drag at that car's top speed, so the number written on it is
+  the number it reaches — a GT gets to all of its 230 and the V12 to all of
+  its 360, where before they stopped at about 205 and 300. It also pulls
+  harder through the middle of the range on the way there, which is where
+  acceleration is actually felt: a GT does 0–200 in six and a half seconds
+  against nine.
+- **The wheel winds on rather than snapping.** Full lock used to arrive
+  inside three hundredths of a second, which on a keyboard — where the
+  input is all or nothing — meant the nose flicked across the moment the
+  key went down. It takes about three times as long to wind on now and the
+  angle asked for is the square-ish of the input rather than the input, so
+  the first twentieth of a second is less than half as sharp: a GT turns at
+  66 degrees a second where it used to turn at 147. By a tenth of a second
+  it has caught up, and the rate it settles at is exactly what it was. It
+  still lets go as fast as ever, so straightening up is immediate.
 - **It turns.** The rack goes to forty-six degrees, the wheel takes its set
   in a couple of hundredths of a second, and there is far more grip the
   slower the car is — more than double at walking pace, fading to the plain
@@ -266,7 +292,7 @@ rather than leaving you in something you can no longer pick.
   lock held through a slow corner put it on its roof; anything less leaned
   hard and stayed down. It is the player's trike that does this; the
   machines drive theirs flat.
-- **V12 Monster**, mid-engined and the fastest thing here at 370+ km/h. Also
+- **V12 Monster**, mid-engined and the fastest thing here at 360 km/h. Also
   the heaviest at 1,450 kg, which is what makes it the one that will not be
   shoved about — and the slowest of the three to get going.
 

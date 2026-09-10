@@ -79,10 +79,12 @@ function carFor(day) {
 
 /* What a strong lap actually takes, against what the verifier says is the
    quickest one possible. Measured across all seven cars on this very
-   generator: a machine at full strength comes in at 1.15 times the bound,
-   near enough the same multiple for every one of them, which is what makes
-   the bound usable as a stopwatch here rather than only as a limit. */
-const PACE = 1.15;
+   generator: a machine at full strength comes in at a shade over 1.06 times
+   the bound, near enough the same multiple for every one of them, which is
+   what makes the bound usable as a stopwatch here rather than only as a
+   limit. It was 1.15 until the cars were made to reach the speeds on their
+   cards, which brought every one of them closer to what the bound allows. */
+const PACE = 1.065;
 const TARGET = 45;                 // seconds for that strong lap
 const SIZE_LO = 0.45, SIZE_HI = 2.10;
 
