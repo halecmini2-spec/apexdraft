@@ -152,8 +152,12 @@ they sign in, set in NOTICES (name=message;...).
 
 ## Opponents
 
-Racing alone can be a race too, and so can racing in a party. **Drive it**
-now goes to a **race** screen before the garage: how many machine-driven
+Racing alone can be a race too, and so can racing in a party. The button
+under the board says **Next**, because it no longer starts anything — it
+goes to a **race** screen, and the garage is the step after that. The board
+has no car on it either, for the same reason: the garage is where the car
+is chosen and two ways into it was two places to change one thing. What the
+race screen asks: how many machine-driven
 cars line up (up to ten), their **strength**, the laps, and whether you
 start at the front, the back or wherever the draw puts you — and, if you
 are in a party, that party's laps and starting grid in the same place.

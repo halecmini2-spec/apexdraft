@@ -666,7 +666,7 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dailybox b{font-family:var(--mono);font-weight:500;color:var(--ink)}
 .dailybox .wr b{color:var(--purple)}
 .dailybox .g{color:var(--faint);font-size:10px}
-body.daily .rail-scroll .grp:not(.grp-daily):not(.grp-gar){opacity:.45;pointer-events:none}
+body.daily .rail-scroll .grp:not(.grp-daily){opacity:.45;pointer-events:none}
 body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
 /* Being tried out: shown to one account and to nobody else, the same way
    the AI opponents are. Hidden outright rather than greyed, so there is
@@ -1114,8 +1114,6 @@ body.admining #lobbybar{display:none}
 .gar-colours{display:flex;align-items:center;gap:14px}
 .gar-colours .k{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 .gar-go{max-width:360px;align-self:flex-start}
-.chip.gar-open{display:inline-flex;align-items:center;gap:8px}
-.chip.gar-open .dot{width:12px;height:12px;border-radius:50%;background:var(--amber);display:inline-block;border:1px solid rgba(255,255,255,.25)}
 /* the rail scrolls, and on a phone that is not obvious: a pill at the
    bottom says so while there is more below */
 .rail-more{position:relative;height:0;z-index:2}
@@ -1829,10 +1827,9 @@ body.admining #lobbybar{display:none}
           <p class="hint" id="aiHint">Pick how many, and Drive it starts a race against them.</p>
         </div>
 
-        <div class="grp grp-gar">
-          <h2>Car</h2>
-          <button class="chip gar-open" id="btnGarage"><i class="dot" id="garDot"></i><span id="garWhat">GT</span> · change in the garage</button>
-        </div>
+        <!-- No car here. It is chosen in the garage, which is the step after
+             the race, and having a second way in from the board only made
+             two places to change the same thing. -->
       </div>
       <div class="rail-more" id="railMore" hidden><span><i id="railMoreBtn">More settings ▾</i></span></div>
       <div class="rail-foot">
@@ -7062,11 +7059,10 @@ function garPictures(){
     try{ garPicture(b.dataset.car,ED.opts.color,b.querySelector("canvas")); }catch(e){ console.error(e); }
   });
 }
-function garLabel(){
-  const m=CAR_MODELS.find(x=>x.id===ED.opts.car);
-  $("garWhat").textContent=m?m.label:"GT";
-  $("garDot").style.background=ED.opts.color;
-}
+/* The board used to name the car and show its colour. It does not any more
+   — that is the garage's job and the garage is a step of its own — so this
+   is left as the one place that would have to change if it ever came back. */
+function garLabel(){}
 /* The race step. It carries whatever applies: opponents when the mode has
    room for them, and the party's laps and grid when there is a party. If
    neither applies — the daily, which is one timed lap and nothing else —
@@ -7414,7 +7410,7 @@ function showAbout(on){
 $("btnAbout").addEventListener("click",()=>showAbout(true));
 $("abBack").addEventListener("click",()=>showAbout(false));
 addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("aboutScreen").hidden)showAbout(false); });
-$("btnGarage").addEventListener("click",()=>showGarage(true));
+
 function garBackOut(){
   showGarage(false);
   /* straight back to the race step if that is where Drive it went first,
@@ -8573,12 +8569,13 @@ function netUI(){
    go, send everyone out, or wait to be sent. */
 function driveLabel(){
   const b=$("btnDrive"), m=document.body.dataset.mode;
-  if(m==="host") b.textContent=NET.raceLaps>0?"Start race \u00B7 "+NET.raceLaps+(NET.raceLaps===1?" lap":" laps"):"Start practice";
-  else if(m==="guest") b.textContent=document.body.classList.contains("starting")
-    ? "Race starting" : NET.live ? "Join the race" : "Waiting for host";
-  else b.textContent=(aiAllowed()&&AI.count>0)
-    ? "Race "+AI.count+(AI.count===1?" opponent":" opponents")+" \u00B7 "+AI.laps+(AI.laps===1?" lap":" laps")
-    : "Drive it";
+  /* It no longer starts anything: the race is set up on the next screen and
+     the car after that, so the board says where it goes rather than what it
+     is about to do. A guest keeps a status here, because whether the host
+     has sent everyone out is the one thing the button has to tell them. */
+  if(m==="guest") b.textContent=document.body.classList.contains("starting")
+    ? "Race starting" : NET.live ? "Next" : "Waiting for host";
+  else b.textContent="Next";
   document.body.classList.toggle("live",m==="guest"&&NET.live);
 }
 function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
