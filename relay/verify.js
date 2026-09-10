@@ -14,17 +14,17 @@ const { centreline, nearest } = require("./geom");
 
 /* the car model's ceilings, with a little on top */
 const PERF = {
-  gt:      { power: 1.00, top: 1.00, grip: 1.12 },
-  formula: { power: 1.26, top: 1.20, grip: 1.46 },
-  yaris:   { power: 0.72, top: 0.74, grip: 0.90 },
+  gt:      { power: 1.00, top: 1.00, grip: 1.08 },
+  formula: { power: 1.26, top: 1.20, grip: 1.42 },
+  yaris:   { power: 0.72, top: 0.74, grip: 0.88 },
   kart:    { power: 0.94, top: 0.58, grip: 1.34 },
 };
 const TOP = 64;          // m/s on tarmac, GT
-const GRIP = 23.0;       // m/s^2 of lateral grip, GT, at speed
+const GRIP = 21.4;       // m/s^2 of lateral grip, GT, at speed
 /* the page gives more grip the slower the car: the same curve here */
-const latBoost = (v) => 1 + 1.30 * Math.max(0, Math.min(1, 1 - v / 40));
-/* holding the wheel over is worth half as much grip again */
-const HOLD = 1.5;
+const latBoost = (v) => 1 + 1.25 * Math.max(0, Math.min(1, 1 - v / 40));
+/* holding the wheel over is worth this much grip again */
+const HOLD = 1.42;
 const BRAKE = 19;        // m/s^2
 const POWER = 14;        // m/s^2 off the line
 
@@ -34,7 +34,7 @@ const POWER = 14;        // m/s^2 off the line
    Anything quicker than this was not driven. */
 function lapBound(C, car) {
   const p = PERF[car] || PERF.gt;
-  const vmax = TOP * p.top * 1.03, aLat = GRIP * p.grip * 1.30 * HOLD, accel = POWER * p.power * 1.15, brake = BRAKE * 1.15;
+  const vmax = TOP * p.top * 1.03, aLat = GRIP * p.grip * 1.25 * HOLD, accel = POWER * p.power * 1.15, brake = BRAKE * 1.15;
   const N = C.N, sp = C.len / N;
   /* the line straightens the road: at best a bend is taken on a radius
      wider by most of the road */

@@ -53,17 +53,20 @@ lead back.
   browser while it is driven; nothing is a file and nothing is anyone's
   record. It stops with the pause menu and on the board, and has its own
   switch in the pause menu, separate from the engine sound.
-- **It turns.** The rack goes to fifty degrees, the wheel takes its set in
-  a couple of hundredths of a second, and there is far more grip the slower
-  the car is — more than double at walking pace, fading to the plain figure
-  by 145 km/h. A GT at 40 km/h turns inside four and a half metres and at
-  80 km/h inside seventeen, so hairpins are a matter of the wheel and the
+- **It turns.** The rack goes to forty-six degrees, the wheel takes its set
+  in a couple of hundredths of a second, and there is far more grip the
+  slower the car is — more than double at walking pace, fading to the plain
+  figure by 145 km/h. A GT at 30 km/h turns inside three metres and at
+  60 km/h inside ten, so hairpins are a matter of the wheel and the
   throttle rather than the brake. The Formula turns sharper again. Full lock
   asks exactly the grip there is and never more, so the car never pushes
   wide of its tightest circle; the wheel alone will not slide it, and the
   handbrake still will. **Holding** the wheel over keeps tightening the
-  line: half as much grip again after about a second, so a GT at 100 km/h
-  comes from a 16 m circle down to 12 m for as long as you hold it.
+  line, by about two fifths again after a second, for as long as you hold
+  it. This sits deliberately short of where it was briefly taken: the darty
+  version turned inside two and a half metres at 30 km/h and read as
+  twitchy, and the car before it needed four and a half and would not turn
+  at all. It is nearer the darty end than the old one.
 - **Cars are solid, and shaped like themselves.** Each car's hitbox is
   measured from the model that is drawn, so anything you can see of it is
   something you can hit — a Formula's long nose, a kart's stubbiness.
@@ -158,11 +161,29 @@ order and the finishing order of a party race. They are not driven through
 the car model: each runs a racing line — the least-curvature path the road
 edges allow, worked out for the circuit when the race starts — at a speed set
 by that line and the strength, braking in time for what is coming. Each keeps
-a line of its own around it, follows rather than drives through a car ahead
-and goes round it where there is room, holds its grid slot off the line, and
-is solid to you and to the others. Below full strength each has a pace of
-its own and now and then lifts, wobbles or runs wide; the weaker, the more
-often and the worse.
+a line of its own around it, holds its grid slot off the line, and is solid
+to you and to the others. Below full strength each has a pace of its own and
+now and then lifts, wobbles or runs wide; the weaker, the more often and the
+worse.
+
+**They race you rather than follow you.** Catch a car that is genuinely
+slower — the road would let this one go quicker and it is closing — and it
+pulls out to the side with more road and goes past, you included. The move
+is remembered once begun: pulling alongside takes the other car out of the
+corridor a driver watches, so judging it afresh each frame made them swing
+out, lose sight of it, tuck back in and start again, alongside for ever and
+never past. Now the car being gone round is kept in mind until it is
+properly behind. A car it cannot actually beat is not attacked; it queues
+instead.
+
+**And they drive tidily where the road is straight.** The lane a driver
+prefers and the wander that is theirs alone are wound most of the way out
+on the straights, where there is one place to be and all of them know it,
+and come back through the corners where a different line is a worth having.
+They also cannot move sideways without moving forwards: nothing on the grid
+slides across the start line any more, and the nose takes its direction
+from how fast the car is going along the road and across it, so a shove
+from a contact can no longer flick the whole car sideways for a frame.
 
 ## The daily time trial
 
