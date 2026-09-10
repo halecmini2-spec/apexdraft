@@ -218,6 +218,7 @@ wss.on("connection", (ws) => {
                  cfg: room.cfg || null, race: room.race || null });
       played();
       broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
+      if (room.ai && room.ai.length) send(ws, { t: "aiset", cars: room.ai });
       /* Ask the host to re-send the circuit for the newcomer. */
       const host = room.players.get(room.hostId);
       if (host) send(host, { t: "want-track", id: ws.id });
@@ -278,6 +279,31 @@ wss.on("connection", (ws) => {
       room.race = raceCfg(m);
       room.cfg = room.race;
       broadcast(room, Object.assign({ t: "race" }, room.race), ws.id);
+      return;
+    }
+    /* ---- opponents in a party ----
+       Only the host runs them. The machines are simulated on one machine and
+       everybody else is told where they are, because a field simulated
+       separately on each browser would be a different field on each screen
+       within a corner. The room keeps the last field so somebody arriving
+       late is told about them too. */
+    if (m.t === "aiset") {
+      if (ws.id !== room.hostId) return;
+      room.ai = Array.isArray(m.cars) ? m.cars.slice(0, 12).map((c) => ({
+        id: String(c.id).slice(0, 12), name: String(c.name || "Driver").slice(0, 24),
+        car: String(c.car || "gt").slice(0, 16), colour: String(c.colour || "#8FA3A0").slice(0, 12),
+      })) : [];
+      broadcast(room, { t: "aiset", cars: room.ai }, ws.id);
+      return;
+    }
+    if (m.t === "aist") {
+      if (ws.id !== room.hostId) return;
+      broadcast(room, { t: "aist", a: Array.isArray(m.a) ? m.a.slice(0, 12) : [] }, ws.id);
+      return;
+    }
+    if (m.t === "aifin") {
+      if (ws.id !== room.hostId) return;
+      broadcast(room, { t: "aifin", id: String(m.id).slice(0, 12), ms: +m.ms || 0 }, ws.id);
       return;
     }
     if (m.t === "rlap") {

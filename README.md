@@ -150,14 +150,23 @@ opponent). Winning yesterday's daily brings a congratulations on the next
 sign-in. The relay can also leave a **notice** for one account, shown when
 they sign in, set in NOTICES (name=message;...).
 
-## AI opponents (being tried out)
+## Opponents
 
-Racing alone can be a race too. An **AI opponents** group on the board, shown
-for one account only while it is being tested, sets how many machine-driven
+Racing alone can be a race too, and so can racing in a party. **Drive it**
+now goes to a **race** screen before the garage: how many machine-driven
 cars line up (up to ten), their **strength**, the laps, and whether you
-start at the front, the back or wherever the draw puts you. **Drive it**
-then starts a race against them, with the grid, the lights, the running
-order and the finishing order of a party race. They are not driven through
+start at the front, the back or wherever the draw puts you — and, if you
+are in a party, that party's laps and starting grid in the same place.
+**Next** takes you to the garage for the car, and that takes you to the
+track. Three steps, each asking one thing: the race, the car, the circuit.
+
+Where there is nothing to ask, the step is not put in the way. The daily is
+the one place with no opponents and never will have: it is a single timed
+lap against a board, and a field of cars to trip over is not what that is —
+so on the daily, **Drive it** goes straight to the garage as it always did.
+
+They race with the grid, the lights, the running order and the finishing
+order of a party race. They are not driven through
 the car model: each runs a racing line — the least-curvature path the road
 edges allow, worked out for the circuit when the race starts — at a speed set
 by that line and the strength, braking in time for what is coming. Each keeps
@@ -165,6 +174,17 @@ a line of its own around it, holds its grid slot off the line, and is solid
 to you and to the others. Below full strength each has a pace of its own and
 now and then lifts, wobbles or runs wide; the weaker, the more often and the
 worse.
+
+**In a party, one machine runs them all.** A field simulated separately in
+each browser would be a different field on each screen within a corner, so
+the host runs them and everyone else is told where they are. Guests take
+them as ordinary peers — the same code that draws another player draws
+these, which is why they have name tags, appear in the standings and can be
+leaned on in exactly the same way, with no second kind of car anywhere in
+the page. The room remembers the field, so somebody joining late is told
+about it too, and it is cleared when the race is rather than when the party
+is. The grid is the players and the machines together, dropped in at the
+place the host asked for.
 
 **They race you rather than follow you.** Catch a car that is genuinely
 slower — the road would let this one go quicker and it is closing — and it
@@ -188,8 +208,9 @@ from a contact can no longer flick the whole car sideways for a frame.
 ## Three more, being tried out
 
 Alongside the GT, the Formula, the Yaris and the kart there are three others
-in the garage, shown to one account only while they are looked at — the same
-gate the AI opponents sit behind. Signed in as anyone else, or signed out,
+in the garage, shown to one account only while they are looked at — the
+same single-account gate the opponents used to sit behind, before they
+became part of the game. Signed in as anyone else, or signed out,
 there is nothing on the page to see: the cards are not greyed, they are not
 there. Picking one is refused server-side of nothing, because there is no
 server side to it; but the garage, the pause-menu switcher and the saved

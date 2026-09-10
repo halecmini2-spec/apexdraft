@@ -525,7 +525,7 @@ body.inparty #netHint{color:#C79289}
 .startrow .lab{flex-wrap:wrap;gap:0 8px}
 /* the AI group: one account, for now */
 .grp-ai{display:none}
-body.aiok[data-mode="solo"]:not(.daily) .grp-ai{display:block}
+#rsBody .grp-ai{display:block}
 .ai-tag{font-size:8.5px;letter-spacing:.14em;color:var(--purple);border:1px solid var(--purple);border-radius:2px;padding:1px 5px;margin-left:6px;vertical-align:middle}
 .grp-ai .aiRow .lab{margin-bottom:5px}
 .grp-ai .chips{margin-bottom:6px}
@@ -1031,6 +1031,16 @@ body.admining #lobbybar{display:none}
 .ad-notice input:focus{outline:none;border-color:var(--faint)}
 .ad-row.hasnote{border-color:#C2410C}
 .ad-row .ad-wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%}
+/* ---- the race, between the board and the garage ---- */
+.rs-wrap{max-width:760px}
+.rs-body{display:flex;flex-direction:column;gap:16px;margin-top:4px}
+.rs-body .grp{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:13px 15px 15px}
+.rs-body .grp[hidden]{display:none}
+.rs-body .grp h2{margin:0 0 10px;font-size:12px;letter-spacing:.10em;text-transform:uppercase;color:var(--dim)}
+.rs-body .race-ctl{display:block}
+.rs-body .slider{margin-top:12px}
+.rs-body .chips{flex-wrap:wrap}
+#raceSet .gar-go{margin-top:18px}
 /* ---- the admin desk ---- */
 .ad-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 8px;
   font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
@@ -1778,9 +1788,10 @@ body.admining #lobbybar{display:none}
           </div>
         </div>
 
-        <!-- AI opponents. Only one account sees this for now. -->
-        <div class="grp grp-ai" id="grpAi">
-          <h2>AI opponents <span class="ai-tag">testing</span></h2>
+        <!-- Opponents. Lives on the race screen now; this is the shell it
+             is moved into on load, so the markup stays in one place. -->
+        <div class="grp grp-ai" id="grpAi" hidden>
+          <h2 id="grpAiHead">Opponents</h2>
           <div class="chips" id="aiCount">
             <button class="chip" data-n="0" aria-pressed="true">None</button>
             <button class="chip" data-n="1">1</button>
@@ -1867,6 +1878,25 @@ body.admining #lobbybar{display:none}
   <!-- The garage: where a car and a colour are chosen, on the way out to
        the track. Every car is drawn from its own model in the colour picked,
        so what is chosen is what is driven. -->
+  <!-- ===================== THE RACE =====================
+       Between the board and the garage: how many opponents, how good they
+       are, how many laps, and where you start. Drive it comes here first
+       now, so the race is set up before the car is chosen rather than in a
+       panel on the board that most people never scrolled to. -->
+  <section id="raceSet" class="screen" hidden>
+    <div class="gar-wrap rs-wrap">
+      <div class="tk-head">
+        <div>
+          <h1 class="auth-brand">The <span>race</span></h1>
+          <p class="auth-sub" id="rsSub">Pick your opponents, then the car.</p>
+        </div>
+        <div class="chips"><button class="chip" id="rsBack">Back to the board</button></div>
+      </div>
+      <div class="rs-body" id="rsBody"></div>
+      <button class="go gar-go" id="rsNext">Next: the garage</button>
+    </div>
+  </section>
+
   <section id="garage" class="screen" hidden>
     <div class="gar-wrap">
       <div class="tk-head">
@@ -3554,7 +3584,9 @@ const CAR_MODELS=[
 /* the ones anybody may drive, and whether a given account may drive a given
    one — the test cars answer to the same name the AI opponents do */
 const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
-function carAllowed(k){ return !carTest(k)||(acctIn()&&ACCT.user.name===AI.okName); }
+/* the one account that sees things still being tried out */
+const TEST_ACCOUNT="cosmo38";
+function carAllowed(k){ return !carTest(k)||(acctIn()&&ACCT.user.name===TEST_ACCOUNT); }
 /* Multipliers on the shared physics constants. Because these change lap
    times, the car is part of the best-lap key — a Formula lap and a Yaris lap
    around the same circuit are not the same record. */
@@ -6940,6 +6972,36 @@ function garLabel(){
   $("garWhat").textContent=m?m.label:"GT";
   $("garDot").style.background=ED.opts.color;
 }
+/* The race step. It carries whatever applies: opponents when the mode has
+   room for them, and the party's laps and grid when there is a party. If
+   neither applies — the daily, which is one timed lap and nothing else —
+   there is nothing to ask and Drive it goes straight to the garage. */
+let RS_FROM=false;                       // did the garage arrive from here?
+function raceSetHas(){
+  return (aiAllowed()?1:0) + (NET.status==="in"?1:0);
+}
+function showRaceSet(on){
+  const box=$("rsBody");
+  if(on){
+    /* the two groups live here while the step is open; they are moved
+       rather than duplicated, so their controls keep working untouched */
+    const ai=$("grpAi"), rc=$("raceCtl");
+    if(ai&&ai.parentNode!==box) box.appendChild(ai);
+    if(rc&&rc.parentNode!==box) box.appendChild(rc);
+    ai.hidden=!aiAllowed();
+    rc.hidden=NET.status!=="in";
+    const m=document.body.dataset.mode;
+    $("rsSub").textContent=m==="guest"?"The host sets the race. Have a look, then pick your car."
+      :NET.status==="in"?"Set the race and your opponents, then pick your car."
+      :"Pick your opponents, then the car.";
+    $("rsNext").textContent="Next: the garage";
+    aiUI(); if(NET.status==="in")raceUI();
+  }
+  $("raceSet").hidden=!on;
+  baseShow(!on);
+  document.body.classList.toggle("racesetting",on);
+  if(!on) fitPad();
+}
 function showGarage(on){
   $("garage").hidden=!on;
   baseShow(!on);
@@ -6948,7 +7010,9 @@ function showGarage(on){
     pressGroup($("garCards"),"car",ED.opts.car);
     pressGroup($("colors"),"color",ED.opts.color);
     const m=document.body.dataset.mode;
-    $("garDrive").textContent=m==="host"?"Start the race":m==="guest"?"Join the race":"Drive it";
+    $("garDrive").textContent=m==="host"?"Start the race":m==="guest"?"Join the race"
+      :(aiAllowed()&&AI.count>0)?("Race "+AI.count+(AI.count===1?" opponent":" opponents")):"Drive it";
+    $("garBack").textContent=RS_FROM?"Back to the race":"Back to the board";
     $("garSub").textContent=DAILY.on?"The daily is the GT for everyone — pick a colour and go.":NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
     requestAnimationFrame(garPictures);
   } else fitPad();
@@ -7202,8 +7266,8 @@ function baseShow(v){
   else { $("home").hidden=true; $("editor").hidden=!v; if(v)fitPad(); }
 }
 function closeScreens(){
-  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen"]) $(id).hidden=true;
-  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor"]) document.body.classList.remove(c);
+  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet"]) $(id).hidden=true;
+  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting"]) document.body.classList.remove(c);
 }
 function goHome(){
   if(document.body.classList.contains("driving")) $("pBack").click();
@@ -7256,8 +7320,15 @@ $("btnAbout").addEventListener("click",()=>showAbout(true));
 $("abBack").addEventListener("click",()=>showAbout(false));
 addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("aboutScreen").hidden)showAbout(false); });
 $("btnGarage").addEventListener("click",()=>showGarage(true));
-$("garBack").addEventListener("click",()=>showGarage(false));
-addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("garage").hidden)showGarage(false); });
+function garBackOut(){
+  showGarage(false);
+  /* straight back to the race step if that is where Drive it went first,
+     rather than dropping two steps to the board */
+  if(RS_FROM) showRaceSet(true);
+}
+$("garBack").addEventListener("click",garBackOut);
+addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("garage").hidden)garBackOut(); });
+addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("raceSet").hidden){ RS_FROM=false; showRaceSet(false); } });
 $("garDrive").addEventListener("click",()=>{ $("garage").hidden=true; document.body.classList.remove("garaging"); driveOut(); });
 
 /* ---- the rail says when there is more of it ---- */
@@ -7386,7 +7457,7 @@ const RACE={on:false,laps:0,grid:[],t0:0,finished:[],mine:null,pos:0};
 /* Opponents driven by the machine, for racing alone. Each has a pace of its
    own around the strength you set, and the weaker ones make mistakes. For
    now only one account can see them, while they are being tried out. */
-const AI={on:false,count:0,strength:60,laps:3,slot:"random",cars:[],line:null,okName:"cosmo38"};
+const AI={on:false,count:0,strength:60,laps:3,slot:"random",cars:[],line:null};
 const AI_NAMES=["Vettori","Okada","Lindqvist","Marsh","Duarte","Kowalczyk","Ferreira","Nakamura","Brandt","Silva","Reyes","Halvorsen"];
 const AI_COLOURS=["#F2C230","#2E7BE8","#E8EDEC","#1B2427","#2ED47A","#E2482B","#B24FE8"];
 const PUBLIC_RELAY="wss://apexdrawn-relay.onrender.com";
@@ -7514,7 +7585,7 @@ function acctSave(){
 function acctIn(){ return !!(ACCT.token&&ACCT.user); }
 function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
-  document.body.classList.toggle("aiok",on&&ACCT.user.name===AI.okName);
+  document.body.classList.toggle("aiok",on&&ACCT.user.name===TEST_ACCOUNT);
   /* Signing out of the account that has them puts you back in the GT
      rather than leaving you sitting in something you can no longer see. */
   if(!carAllowed(ED.opts.car)){
@@ -8410,7 +8481,9 @@ function driveLabel(){
   if(m==="host") b.textContent=NET.raceLaps>0?"Start race \u00B7 "+NET.raceLaps+(NET.raceLaps===1?" lap":" laps"):"Start practice";
   else if(m==="guest") b.textContent=document.body.classList.contains("starting")
     ? "Race starting" : NET.live ? "Join the race" : "Waiting for host";
-  else b.textContent=(aiAllowed()&&AI.count>0&&!DAILY.on)?"Race "+AI.count+" AI \u00B7 "+AI.laps+(AI.laps===1?" lap":" laps"):"Drive it";
+  else b.textContent=(aiAllowed()&&AI.count>0)
+    ? "Race "+AI.count+(AI.count===1?" opponent":" opponents")+" \u00B7 "+AI.laps+(AI.laps===1?" lap":" laps")
+    : "Drive it";
   document.body.classList.toggle("live",m==="guest"&&NET.live);
 }
 function netSend(o){ if(NET.ws&&NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); }
@@ -8507,6 +8580,33 @@ function netHandle(m){
     netGo(false);
     return;
   }
+  /* The host's opponents, taken as ordinary peers: rendering, name tags,
+     standings and contact are all the peer code already, so there is no
+     second kind of car anywhere in here — only one that nobody is typing
+     for. Marked so they are cleared with the race rather than the room. */
+  if(m.t==="aiset"){
+    for(const [id,p] of [...NET.peers]) if(p.bot&&!(m.cars||[]).some(c=>c.id===id)){ netDropCar(id); NET.peers.delete(id); }
+    for(const c of (m.cars||[])){
+      const had=NET.peers.get(c.id);
+      NET.peers.set(c.id,{name:c.name,car:c.car,colour:c.colour,bot:true,buf:had?had.buf:[]});
+    }
+    netUI(); standingsUI();
+    return;
+  }
+  if(m.t==="aist"){
+    for(const a of (m.a||[])){
+      const p=NET.peers.get(a[0]); if(!p)continue;
+      p.buf.push({t:performance.now(),p:a.slice(1)});
+      if(p.buf.length>4)p.buf.shift();
+      p.lap=a[9]|0; p.prog=+a[10]||0;
+    }
+    return;
+  }
+  if(m.t==="aifin"){
+    const p=NET.peers.get(m.id);
+    raceFinish(m.id,p?(p.name||"Driver"):"Driver",+m.ms||0,false);
+    return;
+  }
   if(m.t==="state"){
     const p=NET.peers.get(m.id); if(!p)return;
     p.buf.push({t:performance.now(),p:m.p});
@@ -8533,7 +8633,12 @@ function netHandle(m){
    now and then lifts, wobbles or runs wide — the weaker, the more often
    and the worse. They wait for the lights, count their own laps, and take
    their place in the finishing order. */
-function aiAllowed(){ return acctIn()&&ACCT.user.name===AI.okName; }
+/* Opponents are part of the game rather than something one account is
+   trying out, so the only thing that decides whether they can be raced is
+   whether the mode makes sense of them. The daily is the exception and
+   always will be: it is one timed lap against a board, and a field of cars
+   to trip over is not what that is. */
+function aiAllowed(){ return !DAILY.on; }
 function aiLabel(v){ return v<=25?"Rookie":v<=45?"Club":v<=65?"Quick":v<=85?"Pro":"Alien"; }
 function aiSave(){ store.set("ad.ai",{count:AI.count,strength:AI.strength,laps:AI.laps,slot:AI.slot}); }
 function aiUI(){
@@ -8541,7 +8646,10 @@ function aiUI(){
   pressGroup($("aiLaps"),"laps",String(AI.laps));
   pressGroup($("aiSlot"),"slot",AI.slot);
   $("sAi").value=AI.strength; $("vAi").textContent=aiLabel(AI.strength)+" · "+AI.strength+"%";
-  $("aiHint").textContent=AI.count?("Drive it starts a "+AI.laps+"-lap race against "+AI.count+(AI.count===1?" opponent.":" opponents.")):"Pick how many, and Drive it starts a race against them.";
+  $("aiHint").textContent=AI.count
+    ? ("A "+AI.laps+"-lap race against "+AI.count+(AI.count===1?" opponent":" opponents")+", starting "+
+       (AI.slot==="front"?"from the front.":AI.slot==="back"?"from the back.":"wherever the draw puts you."))
+    : "None, and it is a lap of your own. Pick a number to make it a race.";
   driveLabel();
 }
 $("aiCount").addEventListener("click",e=>{ const b=e.target.closest("[data-n]"); if(!b)return; AI.count=+b.dataset.n; aiSave(); aiUI(); });
@@ -8551,6 +8659,25 @@ $("sAi").addEventListener("input",()=>{ AI.strength=+$("sAi").value; aiSave(); a
 (function(){ const v=store.get("ad.ai",null); if(v){ AI.count=Math.max(0,Math.min(10,v.count|0)); AI.strength=Math.max(10,Math.min(100,v.strength|0||60)); AI.laps=[1,3,5,10].includes(v.laps)?v.laps:3; AI.slot=["random","front","back"].includes(v.slot)?v.slot:"random"; } aiUI(); })();
 
 /* a race against them, from the board */
+/* What the room needs to build the same cars: who they are and what they
+   look like. Sent once when the field is made. */
+function aiNetField(){
+  if(NET.status!=="in"||document.body.dataset.mode!=="host")return;
+  netSend({t:"aiset",cars:AI.cars.map(c=>({id:c.id,name:c.name,car:c.kind,colour:c.colour}))});
+}
+/* And where they are, on the same beat as your own car. */
+function aiNetState(){
+  if(NET.status!=="in"||document.body.dataset.mode!=="host"||!AI.on)return;
+  netSend({t:"aist",a:AI.cars.map(c=>[
+    c.id,
+    +c.x.toFixed(2),+c.y.toFixed(2),+c.z.toFixed(2),
+    +c.yaw.toFixed(3),
+    +((c.mesh&&c.mesh.rotation.x)||0).toFixed(3),
+    +((c.mesh&&c.mesh.rotation.z)||0).toFixed(3),
+    +(c.steer||0).toFixed(2), +(c.spin||0).toFixed(2),
+    c.laps|0, +(c.prog||0).toFixed(3)
+  ])});
+}
 function aiRaceStart(){
   const n=Math.max(1,Math.min(10,AI.count));
   const ids=[]; for(let i=1;i<=n;i++) ids.push("ai"+i);
@@ -8658,6 +8785,7 @@ function aiSpawn(){
     G.scene.add(car.mesh);
     AI.cars.push(car);
   }
+  aiNetField();                    // and the room is told who they are
 }
 const aiLowBoost=(v)=>1+DRIVE.lowGrip*clamp(1-Math.max(v,4)/DRIVE.lowUntil,0,1);
 /* an open-wheeled car put over a wheel goes up, and comes down on gravity */
@@ -8795,7 +8923,11 @@ function aiTick(dt){
     /* along the lap; a lap is a lap */
     const sPrev=c.s; c.s+=c.v*dt;
     if(c.s>=T.len){ c.s-=T.len; c.laps++;
-      if(RACE.on&&!c.fin&&c.laps>=RACE.laps){ c.fin=true; raceFinish(c.id,c.name,Math.round(performance.now()-(RACE.t0||performance.now())),false); } }
+      if(RACE.on&&!c.fin&&c.laps>=RACE.laps){ c.fin=true;
+        const ms=Math.round(performance.now()-(RACE.t0||performance.now()));
+        raceFinish(c.id,c.name,ms,false);
+        if(NET.status==="in"&&document.body.dataset.mode==="host") netSend({t:"aifin",id:c.id,ms});
+      } }
     c.prog=c.s/T.len;
     /* where that is, and which way it faces */
     const p=aiAt(T,c.s);
@@ -8980,7 +9112,10 @@ function raceBegin(cfg){
   netSay(RACE.laps+(RACE.laps===1?"-lap race":"-lap race")+(me>=0?" — you start P"+(me+1):""));
   driveNow();
 }
-function raceOff(){ RACE.on=false; RACE.finished=[]; RACE.mine=null; $("raceEnd").hidden=true; if(AI.on)aiClear(); }
+function raceOff(){ RACE.on=false; RACE.finished=[]; RACE.mine=null; $("raceEnd").hidden=true;
+  if(AI.on)aiClear();                 // the host puts its own field away
+  netDropBots();                      // and everyone else drops their copy of it
+}
 /* somebody has done the laps: the first one is the winner */
 function raceFinish(id,name,ms,me){
   if(!RACE.on||RACE.finished.some(f=>f.id===String(id)))return;
@@ -9415,6 +9550,10 @@ function netDropCar(id){
   if(p&&p.mesh){ if(G.scene)G.scene.remove(p.mesh); disposeTree(p.mesh); p.mesh=null; }
 }
 function netDropCars(){ for(const id of NET.peers.keys()) netDropCar(id); }
+/* the host's opponents are not players and do not outlive the room */
+function netDropBots(){
+  for(const [id,p] of [...NET.peers]) if(p.bot){ netDropCar(id); NET.peers.delete(id); }
+}
 
 /* ---- name tags ----
    A car three hundred metres up the road is a few pixels, and one behind you
@@ -9607,6 +9746,7 @@ function netTick(){
   if(now-NET.sendAt<NET_RATE)return;
   NET.sendAt=now;
   const c=G.car;
+  aiNetState();
   netSend({t:"state",p:[
     +CAR.x.toFixed(2),+CAR.y.toFixed(2),+CAR.z.toFixed(2),
     +CAR.yaw.toFixed(3),
@@ -9734,8 +9874,13 @@ $("btnDrive").addEventListener("click",()=>{
   if(!ED.track)return;
   const m=document.body.dataset.mode;
   if(m==="guest"&&!NET.live)return;                        // the host sends everyone out
-  showGarage(true);                                        // choose the car on the way out
+  /* the race is set up before the car is chosen; where there is nothing to
+     set up, that step is not put in the way */
+  if(raceSetHas()){ RS_FROM=true; showRaceSet(true); }
+  else { RS_FROM=false; showGarage(true); }
 });
+$("rsNext").addEventListener("click",()=>{ showRaceSet(false); showGarage(true); });
+$("rsBack").addEventListener("click",()=>{ RS_FROM=false; showRaceSet(false); });
 /* Out of the garage and onto the track. A host takes the room with them
    from here, so the car everyone sees is the one just chosen. */
 function driveOut(){
@@ -9749,8 +9894,19 @@ function driveOut(){
        out onto it — however recently it was last touched. */
     netSendTrack();
     NET.live=true;                                           // the relay tells everyone else
-    if(NET.raceLaps>0){
-      const cfg={laps:NET.raceLaps,grid:gridIds()};
+    if(NET.raceLaps>0||(aiAllowed()&&AI.count>0)){
+      /* the field is dropped in among the players, at the place the host
+         asked for, and the whole grid goes out as one list */
+      const ids=gridIds();
+      const n=aiAllowed()?Math.max(0,Math.min(10,AI.count)):0;
+      if(n>0){
+        AI.on=true; AI.cars=[];
+        const bots=[]; for(let i=1;i<=n;i++) bots.push("ai"+i);
+        if(AI.slot==="front") ids.push(...bots);
+        else if(AI.slot==="back") ids.unshift(...bots);
+        else for(const b of bots) ids.splice(Math.floor(Math.random()*(ids.length+1)),0,b);
+      }
+      const cfg={laps:Math.max(1,NET.raceLaps||AI.laps),grid:ids};
       netSend(Object.assign({t:"race"},cfg));
       raceBegin(cfg);
       return;
