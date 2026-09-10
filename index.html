@@ -4493,7 +4493,7 @@ const G={
 };
 const CAR={
   x:0,z:0,y:0,vx:0,vz:0,vy:0,yaw:0,yawRate:0,steer:0,ax:0,ay:0,drift:0,
-  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,holdT:0,holdDir:0,
+  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,holdT:0,holdDir:0,slide:0,
   spinV:0, aRoll:0, aRollV:0, aPitch:0, aPitchV:0,
   grounded:true,vyS:0,prevSurf:0,
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
@@ -4648,7 +4648,7 @@ function resetCar(toStart){
   CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
   CAR.brakeHold=0; CAR.hbF=0; CAR.handArm=0; CAR.holdT=0; CAR.holdDir=0;
-  CAR.spinV=0; CAR.aRoll=0; CAR.aRollV=0; CAR.aPitch=0; CAR.aPitchV=0;
+  CAR.spinV=0; CAR.aRoll=0; CAR.aRollV=0; CAR.aPitch=0; CAR.aPitchV=0; CAR.slide=0;
   if(G.skid)resetSkids();
   CAR.y=heightAt(T,CAR.x,CAR.z); CAR.prevSurf=CAR.y;
   if(toStart){
@@ -4975,6 +4975,10 @@ function step(dt){
      the nose and the car washed wide. The rear is what lets go in a drift —
      that is the drift — while the front stays loaded and keeps steering. Only
      the rear term follows CAR.drift and the handbrake now. */
+  /* what is left of the last crash: 1 straight after it, nothing by the
+     time the car has gathered itself up */
+  CAR.slide=Math.max(0,CAR.slide-dt);
+  const sl=clamp(CAR.slide/SLIDE_T,0,1);
   const rearG =lerp(DRIVE.gripRate,DRIVE.driftGrip,CAR.drift)*(1-0.30*hb);
   /* The lever is on the rear axle, and hauling it on throws weight forward
      onto the nose — so the front does not merely keep its grip, it gets a
@@ -4982,7 +4986,8 @@ function step(dt){
      rather than the pair of them ploughing on together. */
   const frontG=DRIVE.gripRate*(1+0.14*hb)*(P.front||1);
   const gripRate=(frontG*DRIVE.frontBias+rearG*(1-DRIVE.frontBias))
-                 *S.grip*P.grip*(brake?1.12:1);         // braking loads the front
+                 *S.grip*P.grip*(brake?1.12:1)          // braking loads the front
+                 *(1-0.90*sl);                          // and a crash takes it away
   const yawAllow=yawCap*(1+DRIVE.driftYaw*CAR.drift+0.55*hbE);
   let yawRate=clamp(yawWant,-yawAllow,yawAllow);
   /* steer is + to the right and yaw is negative to the right, so subtracting
@@ -4991,7 +4996,7 @@ function step(dt){
   /* self-aligning torque: the nose eases back toward the way the car is
      actually travelling, so a slide catches itself instead of snapping —
      held off while the rear is locked, or it would undo the slide */
-  yawRate-=vLat*0.008*(1-0.72*hb);
+  yawRate-=vLat*0.008*(1-0.72*hb)*(1-0.70*sl);   // knocked crooked, it does not straighten itself
   CAR.yaw+=yawRate*dt;
 
   /* ---------- 4. GRIP ----------
@@ -5013,13 +5018,17 @@ function step(dt){
   vLat*=Math.exp(-gripRate*dt);
   /* the anti-spin clamp opens up while the rear is locked, so a handbrake
      turn can reach an angle a normal slide is never allowed */
-  const slipMax=(DRIVE.maxSlip+0.10*hb)*Math.abs(vLong)+3.0;
+  /* The clamp is what makes an ordinary spin impossible, and it has to stay
+     that way for driving. A crash is the one thing allowed through it: for
+     as long as the car is scrabbling it may reach any angle at all, which
+     is what turns a heavy hit into a genuine spin rather than a wobble. */
+  const slipMax=(DRIVE.maxSlip+0.10*hb+2.6*sl)*Math.abs(vLong)+3.0+14*sl;
   vLat=clamp(vLat,-slipMax,slipMax);
   /* sliding scrubs speed, so drifting everywhere is slower than driving well */
   /* eased while the rear is locked: at full scrub a handbrake turn bled all
      its speed, which shrank the slip clamp, which killed the slide — the car
      spiralled to a stop instead of coming round and driving away */
-  vLong-=Math.sign(vLong)*Math.min(Math.abs(vLat)*DRIVE.scrub*(1-0.70*hb),7)*dt;
+  vLong-=Math.sign(vLong)*Math.min(Math.abs(vLat)*DRIVE.scrub*(1-0.70*hb-0.45*sl),7)*dt;
 
   /* Lateral acceleration in the car's right-positive frame. Body-frame
      kinematics give a_right = w_dot - u*r, so in steady cornering it is
@@ -5085,6 +5094,7 @@ function step(dt){
       const scale=crashScale(vN);
       crashTurn(ax,az,CAR.x,CAR.z,ix,iz,scale);
       crashLean((-nx*jN)*nrx+(-nz*jN)*nrz,scale*0.6);
+      crashSlide(vN,scale);
       worst=vN;
     }
     /* Sitting against the rail at walking pace, the car is eased parallel
@@ -5111,11 +5121,9 @@ function step(dt){
   const np2=nearest(T,CAR.x,CAR.z,null,CAR.y);
 
   /* ---- vertical ----
-     The car sits on the surface unless something threw it off. Nothing about
-     the road can launch it — two earlier attempts at "has it launched?" both
-     turned ordinary undulation into hopping — so the only way into the air
-     is a real impact, and the only way out is landing. In between it is a
-     thrown object: gravity, and whatever speed it left with. */
+     The car sits on the surface under it, always. Nothing lifts it: two
+     earlier attempts at "has it launched?" both turned ordinary undulation
+     into hopping, and crashes throwing cars around looked worse still. */
   /* the height hint matters most here: this is the line that decides which
      road the car is standing on, and without it a flyover put you on the
      deck when you were underneath it and on the road below when you were on
@@ -5149,15 +5157,26 @@ function step(dt){
      onto its roof, or back down the way it came. It is a rotation about the
      car, not a jump — the wheels never leave the road. */
   if(Math.abs(CAR.aRoll)>TIP_ANGLE){
-    CAR.aRollV+=(-2.0*Math.sin(2*CAR.aRoll)-1.0*CAR.aRollV)*dt;
+    /* A car dropping onto its wheels lands on tyres and springs, it does
+       not swing like a pendulum: while it is still going over the roll is
+       left alone, but as it slows near an attitude it can rest in, the
+       damping comes up hard and it takes the set at once. */
+    const rest=Math.round(CAR.aRoll/Math.PI)*Math.PI;
+    const near=Math.abs(CAR.aRoll-rest);
+    const damp=1.4+11.0*clamp(1-Math.abs(CAR.aRollV)/1.6,0,1)*clamp(1-near/1.1,0,1);
+    CAR.aRollV+=(-5.0*Math.sin(2*CAR.aRoll)-damp*CAR.aRollV)*dt;
     CAR.aRoll+=CAR.aRollV*dt;
     /* come to rest on its wheels or on its roof, whichever it reached */
-    if(Math.abs(CAR.aRollV)<0.12){
-      const rest=Math.round(CAR.aRoll/Math.PI)*Math.PI;
-      if(Math.abs(CAR.aRoll-rest)<0.10){ CAR.aRoll=rest-TAU*Math.round(rest/TAU); CAR.aRollV=0; }
+    if(Math.abs(CAR.aRollV)<0.30&&near<0.16){
+      CAR.aRoll=rest-TAU*Math.round(rest/TAU); CAR.aRollV=0;
     }
   }else{
-    CAR.aRollV+=(-40*CAR.aRoll-5*CAR.aRollV)*dt;
+    /* Just short of critical, so a knock settles instead of swinging. The
+       damping backs off when the body is really moving: that is a wheel
+       being climbed and the springs on that side are already at full droop,
+       and holding them stiff there would swallow the tip before it began. */
+    const dampS=11-8*clamp((Math.abs(CAR.aRollV)-3.2)/1.5,0,1);
+    CAR.aRollV+=(-40*CAR.aRoll-dampS*CAR.aRollV)*dt;
     CAR.aRoll+=CAR.aRollV*dt;
   }
   CAR.aPitchV+=(-64*CAR.aPitch-12*CAR.aPitchV)*dt;
@@ -8133,14 +8152,15 @@ function aiTick(dt){
     c.y=ground;
     /* the same springs, and the same way over, as the player's car */
     if(Math.abs(c.aRoll)>TIP_ANGLE){
-      c.aRollV+=(-2.0*Math.sin(2*c.aRoll)-1.0*c.aRollV)*dt;
+      const rest=Math.round(c.aRoll/Math.PI)*Math.PI;
+      const near=Math.abs(c.aRoll-rest);
+      const damp=1.4+11.0*clamp(1-Math.abs(c.aRollV)/1.6,0,1)*clamp(1-near/1.1,0,1);
+      c.aRollV+=(-5.0*Math.sin(2*c.aRoll)-damp*c.aRollV)*dt;
       c.aRoll+=c.aRollV*dt;
-      if(Math.abs(c.aRollV)<0.12){
-        const rest=Math.round(c.aRoll/Math.PI)*Math.PI;
-        if(Math.abs(c.aRoll-rest)<0.10){ c.aRoll=rest-TAU*Math.round(rest/TAU); c.aRollV=0; }
-      }
+      if(Math.abs(c.aRollV)<0.30&&near<0.16){ c.aRoll=rest-TAU*Math.round(rest/TAU); c.aRollV=0; }
     }else{
-      c.aRollV+=(-40*c.aRoll-5*c.aRollV)*dt; c.aRoll+=c.aRollV*dt;
+      const dampS=11-8*clamp((Math.abs(c.aRollV)-3.2)/1.5,0,1);
+      c.aRollV+=(-40*c.aRoll-dampS*c.aRollV)*dt; c.aRoll+=c.aRollV*dt;
     }
     /* A machine on its roof has nobody to press the button, so after a few
        seconds of lying still it puts itself back on its wheels and carries
@@ -8561,9 +8581,18 @@ function bumpReady(o){ const t=performance.now()/1000; if(o.bumpT&&t-o.bumpT<BUM
    The car model above is untouched by any of this: only the velocity, the
    heading and the body's lean are changed, the same three things a knock
    changed before. */
-const SPIN_PER=0.060;           // rad/s per unit of turning impulse
-const SPIN_MAX=3.0;
-const ROLL_MAX=6.0;             // rad/s of body roll
+const SPIN_PER=0.190;           // rad/s per unit of turning impulse
+const SPIN_MAX=5.5;
+/* How long the tyres are scrabbling after a crash. Everything in the grip
+   model assumes four tyres loaded and pointing where the car is going; a
+   real impact makes nonsense of that for a moment, and that moment is the
+   difference between a bang the car shrugs off and one that spins it. */
+const SLIDE_T=1.7;
+function crashSlide(close,scale){
+  if(scale<=0)return;
+  CAR.slide=Math.max(CAR.slide,SLIDE_T*clamp(close/16,0,1)*scale);
+}
+const ROLL_MAX=7.0;             // rad/s of body roll
 /* Past this the car is up on two wheels and the springs cannot bring it
    back on their own. */
 const TIP_ANGLE=0.30;
@@ -8576,7 +8605,7 @@ const TIP_ANGLE=0.30;
    at all leaves the ground. */
 const TIP_LEAN=8;               // m/s of closing before a wheel lifts it at all
 const CLIMB_LEAD=0.35;          // how much further forward the climbing wheel must be
-const tipRate=(close)=>clamp((close-TIP_LEAN)*0.30,0,ROLL_MAX);
+const tipRate=(close)=>clamp((close-TIP_LEAN)*0.36,0,ROLL_MAX);
 /* nothing much below walking pace, all of it by 8 m/s into the contact */
 const crashScale=(close)=>clamp((close-1.5)/6.5,0,1);
 /* The turning a blow gives: the moment of the impulse about the middle of
@@ -8639,6 +8668,7 @@ function netCollide(){
     const scale=crashScale(m.close);
     crashTurn(ov.cx,ov.cz,CAR.x,CAR.z,ix,iz,scale);
     crashLean(ix*rx+iz*rz,scale);
+    crashSlide(m.close,scale);
     if(m.close>4&&CAR.hitCool<=0){ G.shake=Math.min(0.7,m.close/30); thud(m.close); CAR.hitCool=0.16; }
   };
   if(AI.on) for(const c of AI.cars){

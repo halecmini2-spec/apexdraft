@@ -82,8 +82,24 @@ lead back.
   more it stops you, the shallower the more it turns and drags you along.
 - **Blows off the middle turn the car.** The reaction is the moment of the
   impulse about the middle of the car, so a square hit through the nose
-  does not rotate it at all, while the same blow on one corner brings the
-  tail round. A tap in traffic does neither.
+  does not rotate it at all, and neither does being rear-ended squarely;
+  the same blow on one corner brings the tail round. A tap in traffic does
+  neither. The Armco at forty-five degrees and 150 km/h throws the car
+  round at three hundred degrees a second, a nose into someone's rear
+  corner at two hundred.
+- **A real hit puts you into a slide.** For a second or so afterwards the
+  tyres are scrabbling rather than gripping: the car keeps the momentum it
+  had, the nose stops pointing where it is going, and the limit that makes
+  an everyday spin impossible is lifted for as long as it lasts. That is
+  what turns a heavy knock into a genuine slide or spin instead of a wobble
+  the car shrugs off in a frame. It is set by the crash and by nothing else
+  — the slide is scaled to how hard the two things met, so a racing touch
+  at 45 km/h sets none of it and ordinary driving never sees it. Hold the
+  throttle and you can usually gather it up and drive out.
+- **The body settles, it does not rock.** Knocked over onto its springs, a
+  car leans once and takes the set — no pendulum swinging side to side
+  afterwards. Even put right over, it is dead still within about three
+  seconds of the impact.
 - **Getting a wheel off the ground is hard, and one-sided.** One tyre
   climbing another is the only thing here that lifts a car, so the other
   car must be an open-wheeler and the contact must be side to side and
@@ -94,8 +110,9 @@ lead back.
 - **A car can be put over, but it takes a real one.** Nothing throws a car
   into the air — no crash, no barrier, no landing; the wheels are on the
   road unless another tyre is lifting one side of you. Two Formulas closing
-  side to side at 17 m/s across gets a car to about forty degrees and back
-  down on its springs. Past twenty across it goes over, and a car that goes
+  side to side at seventeen metres a second across leans a car over about
+  twenty degrees and it comes straight back down on its springs. Past
+  twenty across it goes over, and a car that goes
   over stays over: its roof is held clear of the road, there is next to
   nothing to steer or drive with while it is there, and getting back on
   your wheels is your own job. Nothing resets you for you. The machines
