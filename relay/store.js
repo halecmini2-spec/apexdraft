@@ -74,6 +74,15 @@ function fileStore(file) {
       await save();
       return u;
     },
+    /* A word left on an account by an admin, which its owner sees the next
+       time they are signed in. Empty clears it. */
+    async setNotice(id, text) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return false;
+      u.notice = text || null;
+      await save();
+      return true;
+    },
     async putSession(s) {
       db.sessions.push(s);
       await save();
@@ -168,7 +177,7 @@ function fileStore(file) {
     /* ---- what an admin can see and undo ---- */
     async users() {
       return db.users.slice().sort((a, b) => b.created - a.created).map((u) => ({
-        id: u.id, name: u.name, email: u.email, created: u.created,
+        id: u.id, name: u.name, email: u.email, created: u.created, notice: u.notice || null,
         tracks: db.tracks.filter((t) => t.user_id === u.id).length,
         laps: db.laps.filter((l) => l.user_id === u.id).length,
       }));
@@ -303,6 +312,8 @@ function pgStore(url) {
       /* uniqueness of an email, where one is given, is checked before the
          insert; the index cannot hold the empty ones */
       await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_lower_key`);
+      /* a word from an admin to the person whose account it is */
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notice TEXT`);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           token_hash TEXT PRIMARY KEY,
@@ -493,9 +504,13 @@ function pgStore(url) {
     },
 
     /* ---- what an admin can see and undo ---- */
+    async setNotice(id, text) {
+      const r = await pool.query(`UPDATE users SET notice=$2 WHERE id=$1`, [id, text || null]);
+      return r.rowCount > 0;
+    },
     async users() {
       return (await pool.query(`
-        SELECT u.id, u.name, u.email, u.created,
+        SELECT u.id, u.name, u.email, u.created, u.notice,
                (SELECT COUNT(*)::int FROM tracks t WHERE t.user_id=u.id) AS tracks,
                (SELECT COUNT(*)::int FROM laps   l WHERE l.user_id=u.id) AS laps
         FROM users u ORDER BY u.created DESC`)).rows;

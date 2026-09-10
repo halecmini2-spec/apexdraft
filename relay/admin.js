@@ -29,6 +29,7 @@ function makeAdmin(store, userFor, liveNow, presence) {
       return json(res, 200, { users: (await store.users()).map((u) => ({
         name: u.name, email: u.email, created: Number(u.created),
         tracks: Number(u.tracks), laps: Number(u.laps), admin: isAdmin(u),
+        notice: u.notice || null,
       })) }), true;
     }
 
@@ -57,6 +58,23 @@ function makeAdmin(store, userFor, liveNow, presence) {
     let body;
     try { body = await readBody(req); }
     catch (e) { return json(res, 400, { error: "That request didn't make sense." }), true; }
+
+    /* A word left on an account: the owner sees it the next time they are
+       signed in, and it stays until an admin takes it down or they act on
+       it. This is the one thing here that puts something onto an account
+       rather than removing something from it, and it exists because the
+       alternative to telling somebody their name has to change is deleting
+       the account without warning. */
+    if (url.pathname === "/api/admin/users/notice") {
+      const name = String(body.name || "").trim().toLowerCase();
+      const text = String(body.text == null ? "" : body.text).trim().slice(0, 400);
+      const u = await store.userByName(name);
+      if (!u) return json(res, 404, { error: "No account by that name." }), true;
+      if (!store.setNotice) return json(res, 503, { error: "Not available just now." }), true;
+      await store.setNotice(u.id, text || null);
+      console.log("admin " + me.name + (text ? " left a notice on " + u.name : " cleared the notice on " + u.name));
+      return json(res, 200, { ok: true, notice: text || null }), true;
+    }
 
     if (url.pathname === "/api/admin/users/delete") {
       const name = String(body.name || "").trim().toLowerCase();

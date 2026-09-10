@@ -168,6 +168,10 @@ const isAdmin = (u) => !!u && ADMINS.has(u.name_lower || String(u.name || "").to
 
 const publicUser = (u) => ({
   name: u.name, email: u.email, created: Number(u.created), admin: isAdmin(u),
+  /* Anything an admin has left for this account to read. It rides along with
+     the account itself rather than being fetched, so it is in front of them
+     the moment they are signed in and cannot be missed. */
+  notice: u.notice || null,
 });
 
 function makeAuth(store) {

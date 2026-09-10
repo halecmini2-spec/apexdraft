@@ -668,6 +668,15 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dailybox .g{color:var(--faint);font-size:10px}
 body.daily .rail-scroll .grp:not(.grp-daily):not(.grp-gar){opacity:.45;pointer-events:none}
 body.daily .gar-card:not([data-car="gt"]){opacity:.35;pointer-events:none}
+/* Being tried out: shown to one account and to nobody else, the same way
+   the AI opponents are. Hidden outright rather than greyed, so there is
+   nothing on the page for anyone else to wonder about. */
+.gar-card.test,.chips .chip.test{display:none}
+body.aiok .gar-card.test{display:flex}
+body.aiok .chips .chip.test{display:inline-flex}
+.gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+body.aiok .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (min-width:1100px){body.aiok .gar-cards{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .grp-daily .chips{margin-top:8px}
 #aboutScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .about{max-width:680px;font-size:13.5px;line-height:1.65;color:var(--dim)}
@@ -1005,6 +1014,23 @@ body.admining #lobbybar{display:none}
 /* the flag: the winner over the line, seen from beside the track */
 #fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .aback{width:100%;margin-top:16px;padding:9px 10px}
+/* A word left on an account by an admin. It is the one thing on the page
+   that is allowed to shout, because the alternative to somebody reading it
+   is their account going. */
+.notice{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:11px 13px;
+  border:1px solid #C2410C;border-left-width:3px;border-radius:3px;background:rgba(194,65,12,.13)}
+.notice i{font-style:normal;font-size:13px;line-height:1.1;color:#F97316;flex:0 0 auto}
+.notice div{min-width:0}
+.notice b{display:block;font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:#F97316;margin-bottom:3px}
+.notice span{display:block;font-size:12.5px;line-height:1.45;color:var(--ink)}
+.home-acct{flex-wrap:wrap}
+.home-acct .notice{flex:0 0 100%;margin:0}
+.ad-notice{display:flex;gap:6px;margin-top:7px;width:100%}
+.ad-notice input{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:3px;
+  color:var(--ink);font:inherit;font-size:12px;padding:6px 8px}
+.ad-notice input:focus{outline:none;border-color:var(--faint)}
+.ad-row.hasnote{border-color:#C2410C}
+.ad-row .ad-wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;width:100%}
 /* ---- the admin desk ---- */
 .ad-head{display:flex;justify-content:space-between;align-items:center;margin:20px 0 8px;
   font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
@@ -1575,6 +1601,7 @@ body.admining #lobbybar{display:none}
            moment, and it is what puts your name on your car and your laps
            on every device. Signed in, the strip just says who you are. -->
       <div class="home-acct" id="hmAcct">
+        <div class="notice" id="hmNotice" hidden><i>!</i><div><b>A message about your account</b><span id="hmNoticeTxt"></span></div></div>
         <div class="home-acct-txt">
           <b id="hmAcctHead">Easy and free: make an account</b>
           <span id="hmAcctSub">A name and a password. No email, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.</span>
@@ -1854,6 +1881,9 @@ body.admining #lobbybar{display:none}
         <button class="gar-card" data-car="formula"><canvas width="360" height="220"></canvas><b>Formula</b><span>The fastest thing here, and the twitchiest.</span></button>
         <button class="gar-card" data-car="yaris"><canvas width="360" height="220"></canvas><b>Yaris</b><span>Soft, forgiving, never quite settled.</span></button>
         <button class="gar-card" data-car="kart"><canvas width="360" height="220"></canvas><b>Kart</b><span>No top end, enormous grip.</span></button>
+        <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Supervikr X</b><span>280+ km/h, 2.3 s, 165 kg. Leans. Challenging.</span></button>
+        <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 2.8 s, 210 kg. Three wheels, very twitchy.</span></button>
+        <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span>350+ km/h, 3.1 s, 1,450 kg. Heavy, stable, fastest here.</span></button>
       </div>
       <div class="gar-colours">
         <span class="k">Colour</span>
@@ -1952,6 +1982,9 @@ body.admining #lobbybar{display:none}
             <button class="chip" data-car="formula">Formula</button>
             <button class="chip" data-car="yaris">Yaris</button>
             <button class="chip" data-car="kart">Kart</button>
+            <button class="chip test" data-car="bike">Supervikr X</button>
+            <button class="chip test" data-car="trike">Rocket Trike</button>
+            <button class="chip test" data-car="v12">V12 Monster</button>
           </div>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
           <!-- A car's own music, made in the browser as it plays. The row
@@ -2025,6 +2058,7 @@ body.admining #lobbybar{display:none}
       </div>
 
       <div id="authWho" hidden>
+        <div class="notice" id="auNotice" hidden><i>!</i><div><b>A message about your account</b><span id="auNoticeTxt"></span></div></div>
         <p class="awho">Signed in as <b id="auWhoName">—</b></p>
         <p class="amail" id="auWhoMail">—</p>
         <div class="astats" id="auStats" hidden>
@@ -3508,8 +3542,19 @@ const CAR_MODELS=[
   {id:"gt",     label:"GT"},
   {id:"formula",label:"Formula"},
   {id:"yaris",  label:"Yaris"},
-  {id:"kart",   label:"Kart"}
+  {id:"kart",   label:"Kart"},
+  /* Being tried out, and shown to one account only until they are done —
+     the same gate the AI opponents sit behind. Everything else about them
+     is ordinary: they are chosen in the garage, they set lap records of
+     their own, and the relay checks their laps like any other. */
+  {id:"bike",   label:"Supervikr X", test:true},
+  {id:"trike",  label:"Rocket Trike",test:true},
+  {id:"v12",    label:"V12 Monster", test:true}
 ];
+/* the ones anybody may drive, and whether a given account may drive a given
+   one — the test cars answer to the same name the AI opponents do */
+const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
+function carAllowed(k){ return !carTest(k)||(acctIn()&&ACCT.user.name===AI.okName); }
 /* Multipliers on the shared physics constants. Because these change lap
    times, the car is part of the best-lap key — a Formula lap and a Yaris lap
    around the same circuit are not the same record. */
@@ -3523,7 +3568,13 @@ const CAR_PERF={
   yaris:  {power:0.72, top:0.74, grip:0.88, turnin:1.48, front:1.32},
   /* a kart has almost no top end but corners on rails: slow down the
      straights, quickest thing here through anything tight */
-  kart:   {power:0.94, top:0.58, grip:1.34, turnin:1.00, front:1.00}
+  kart:   {power:0.94, top:0.58, grip:1.34, turnin:1.00, front:1.00},
+  /* The three being tried out, from the figures on their card. Top speed is
+     against the GT's 230 km/h, so 280 is 1.22 and 350 is 1.52; power is set
+     by the standing hundred, and the handling words decide the rest. */
+  bike:   {power:1.30, top:1.22, grip:1.26, turnin:1.86, front:1.46},  // 280+, 2.3 s, challenging
+  trike:  {power:1.12, top:1.04, grip:1.08, turnin:2.10, front:1.56},  // 240+, 2.8 s, very twitchy
+  v12:    {power:0.94, top:1.52, grip:1.22, turnin:1.30, front:1.28}   // 350+, 3.1 s, heavy but stable
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -3563,9 +3614,13 @@ function hitbox(kind){
   return HITBOX[k]={hl,hw,hh,r:hw,offs};
 }
 /* How much car there is to shove. A kart gives way to a GT. */
-const CAR_MASS={gt:1.00, formula:0.78, yaris:0.92, kart:0.42};
+/* Not the kerb weight but what it is worth in a shove, on the same
+   compressed scale the kart already sits on: a 165 kg bike is not a
+   seventh of a GT to lean on, only a good deal less than one. */
+const CAR_MASS={gt:1.00, formula:0.78, yaris:0.92, kart:0.42,
+                bike:0.46, trike:0.54, v12:1.12};
 const carMass=k=>CAR_MASS[k]||1;
-const openWheel=k=>k==="formula"||k==="kart";
+const openWheel=k=>k==="formula"||k==="kart"||k==="bike"||k==="trike";
 /* the circles of one car, in the world */
 function carCircles(x,z,yaw,kind){
   const H=hitbox(kind), fx=Math.sin(yaw), fz=Math.cos(yaw), out=[];
@@ -3736,8 +3791,11 @@ function buildWheels(g,M,spec){
   const F=set(spec.r,spec.tw,spec.race);
   const R=(spec.twR||spec.rR)?set(spec.rR||spec.r,spec.twR||spec.tw,spec.race):F;
   const wheels=[];
+  /* how many of the leading wheels are on the front axle: two by default,
+     one on anything with a single wheel out in front */
+  const nF=spec.front==null?2:spec.front;
   spec.pos.forEach((p,i)=>{
-    const k=i<2?F:R;
+    const k=i<nF?F:R;
     const w=new THREE.Group();
     const tyre=new THREE.Mesh(k.tg,M.rubber); tyre.castShadow=true; w.add(tyre);
     if(k.race&&spec.plain){
@@ -3775,9 +3833,36 @@ function buildWheels(g,M,spec){
     w.position.set(p[0],k.r,p[1]);
     g.add(w); wheels.push(w);
   });
+  g.userData.steerN=nF;
   return wheels;
 }
 
+
+/* ---- fenders ----
+   The underside of each one follows the circle it has to clear, so the
+   opening is an arch rather than a gap under a lump: over the axle the
+   panel is a thin cap sitting on top of the tyre, and by the ends of the
+   arch it has become full-depth bodywork ahead of and behind the wheel.
+   Everything else about a wheel looking attached to the side of a car
+   follows from getting that one curve right, so anything here with covered
+   wheels is given its arches by this. */
+function addFenders(b,M,zw,R,crest,px,sit){
+  const gap=R*0.17, Ro=R+gap, reach=Ro+0.19, st=[], N=14;
+  for(let i=0;i<=N;i++){
+    const t=-1+2*i/N, z=zw+t*reach, d=Math.abs(z-zw), u=Math.abs(t);
+    const arc = d<Ro ? R+Math.sqrt(Ro*Ro-d*d)*0.995 : R-(d-Ro)*1.5;
+    const y1 = crest-(crest-sit)*u*u;
+    /* Rounded off rather than tapered to a spike: this falls away like the
+       edge of a blister instead of running out to a point. */
+    const fade=Math.pow(Math.max(0,1-u*u),0.62);
+    const y0 = Math.max(Math.min(arc, y1-0.03), y1-0.03-0.62*fade);
+    st.push({z, w:Math.max(0.02,(R*0.60)*fade), y0, y1, n:3.0+1.3*fade});
+  }
+  for(const sx of [-px,px]){
+    const f=new THREE.Mesh(loft(st,20),M.paint);
+    f.position.x=sx; f.castShadow=true; b.add(f);
+  }
+}
 
 /* ---- GT: a modern GT3 car, invented rather than copied ----
    Sculpted rather than assembled. The shell is one long lofted surface with
@@ -3841,29 +3926,8 @@ function bodyGT(b,M){
      arch it has become full-depth bodywork ahead of and behind the wheel.
      Everything else about a wheel looking "attached to the side" follows
      from getting that one curve right. */
-  const fender=(zw,R,crest,px,sit)=>{
-    const gap=R*0.17, Ro=R+gap, reach=Ro+0.19, st=[], N=14;
-    for(let i=0;i<=N;i++){
-      const t=-1+2*i/N, z=zw+t*reach, d=Math.abs(z-zw), u=Math.abs(t);
-      /* Underside: the circle it has to clear over the tyre, dropping away
-         once past it. Topside: a crest that sinks back into the shell. */
-      const arc = d<Ro ? R+Math.sqrt(Ro*Ro-d*d)*0.995 : R-(d-Ro)*1.5;
-      const y1 = crest-(crest-sit)*u*u;
-      /* Tapered to a sliver at both ends, so it dies into the flank instead
-         of finishing as a blade standing out of it. */
-      /* Rounded off rather than tapered to a spike: this falls away like the
-         edge of a blister instead of running out to a point. */
-      const fade=Math.pow(Math.max(0,1-u*u),0.62);
-      const y0 = Math.max(Math.min(arc, y1-0.03), y1-0.03-0.62*fade);
-      st.push({z, w:Math.max(0.02,(R*0.60)*fade), y0, y1, n:3.0+1.3*fade});
-    }
-    for(const sx of [-px,px]){
-      const f=new THREE.Mesh(loft(st,20),M.paint);
-      f.position.x=sx; f.castShadow=true; b.add(f);
-    }
-  };
-  fender(FZ,FR,0.815,FX,0.498);
-  fender(RZ,RR,0.888,RX,0.712);
+  addFenders(b,M,FZ,FR,0.815,FX,0.498);
+  addFenders(b,M,RZ,RR,0.888,RX,0.712);
 
   const carbonC=0x0E1112, darkC=0x15191B, grilleC=0x1E2428;
 
@@ -4464,6 +4528,425 @@ function bodyKart(b,M){
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
+/* =====================================================================
+   The three that only one account can see. They are shaped the same way
+   as the rest — lofted surfaces and turned parts, no boxes standing in for
+   bodywork — but two of them break an assumption the others never did:
+   that a vehicle has four wheels, two of which steer.
+   ===================================================================== */
+
+/* a round tube between two points, which is most of a bike and all of a
+   trike; the frame builders below are nothing but this */
+function tubeTo(b,a,c,r,mat,seg){
+  const A=new THREE.Vector3().fromArray(a), C=new THREE.Vector3().fromArray(c);
+  const d=new THREE.Vector3().subVectors(C,A);
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d.length(),seg||10),mat);
+  m.position.copy(A).add(C).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+  m.castShadow=true; b.add(m); return m;
+}
+
+/* ---- SUPERVIKR X: a litre superbike, riderless ----
+   Two wheels in line, so it is the one thing here with no track at all: it
+   leans rather than rolling on its springs, and everything is built about
+   the centreline instead of either side of it.
+   2.0 long, 0.72 across the bars, 1.1 tall, on a 1.42 wheelbase. */
+function bodySuperbike(b,M){
+  const FR=0.310, RR=0.325;                 // 17s, the rear the fatter
+  const FZ=0.735, RZ=-0.685;
+  const forkM =new THREE.MeshStandardMaterial({color:SRGB(0xC8A233),roughness:0.22,metalness:0.92});
+  const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x16191C),roughness:0.52,metalness:0.30});
+  const engM  =new THREE.MeshStandardMaterial({color:SRGB(0x2C3236),roughness:0.44,metalness:0.62});
+  const pipeM =new THREE.MeshStandardMaterial({color:SRGB(0xB9C0C4),roughness:0.22,metalness:0.94});
+  const seatM =new THREE.MeshStandardMaterial({color:SRGB(0x1B1F22),roughness:0.80,metalness:0.05});
+  const discM =new THREE.MeshStandardMaterial({color:SRGB(0x8A9095),roughness:0.42,metalness:0.72});
+  const T=(a,c,r,mat,seg)=>tubeTo(b,a,c,r,mat,seg);
+
+  /* ---- the lump everything else hangs off ---- */
+  const block=new THREE.Mesh(loft([
+    {z: 0.26,w:0.150,y0:0.300,y1:0.560,n:3.0},
+    {z: 0.10,w:0.182,y0:0.250,y1:0.600,n:3.2},
+    {z:-0.10,w:0.190,y0:0.235,y1:0.585,n:3.2},
+    {z:-0.30,w:0.155,y0:0.265,y1:0.520,n:3.0}
+  ],14),engM);
+  block.castShadow=true; b.add(block);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.300,0.115,0.235),engM);
+  head.position.set(0,0.585,0.130); head.rotation.x=-0.30; head.castShadow=true; b.add(head);
+  /* four headers sweeping down and back into the collector */
+  for(let i=0;i<4;i++){
+    const x=(i-1.5)*0.072;
+    T([x,0.560,0.235],[x*0.7,0.300,0.330],0.026,pipeM,8);
+    T([x*0.7,0.300,0.330],[x*0.4,0.175,0.090],0.026,pipeM,8);
+    T([x*0.4,0.175,0.090],[0,0.150,-0.180],0.026,pipeM,8);
+  }
+  const coll=new THREE.Mesh(new THREE.CylinderGeometry(0.062,0.052,0.34,10),pipeM);
+  coll.rotation.x=Math.PI/2-0.10; coll.position.set(0,0.160,-0.330); b.add(coll);
+  const can=new THREE.Mesh(new THREE.CylinderGeometry(0.066,0.058,0.290,12),blackM);
+  can.rotation.set(Math.PI/2-0.20,0,0.10); can.position.set(0.112,0.430,-0.430); can.castShadow=true; b.add(can);
+  const tip=new THREE.Mesh(new THREE.CylinderGeometry(0.060,0.060,0.040,12),pipeM);
+  tip.rotation.copy(can.rotation); tip.position.set(0.124,0.462,-0.570); b.add(tip);
+
+  /* ---- frame, swingarm, shock ---- */
+  for(const s of [-1,1]){
+    T([s*0.098,0.700,0.430],[s*0.150,0.640,0.130],0.038,blackM);
+    T([s*0.150,0.640,0.130],[s*0.150,0.520,-0.180],0.036,blackM);
+    T([s*0.150,0.520,-0.180],[s*0.088,0.640,-0.360],0.026,blackM);
+    T([s*0.150,0.520,-0.180],[s*0.128,RR*0.99,RZ],0.034,engM);
+  }
+  T([-0.140,0.470,-0.330],[0.140,0.470,-0.330],0.022,engM);
+  T([0,0.560,-0.160],[0,0.300,-0.300],0.030,forkM,8);
+
+  /* ---- forks, raked, through two yokes ---- */
+  const RAKE=0.42, sn=Math.sin(RAKE), cs=Math.cos(RAKE);
+  const up=(d)=>[FR+d*cs,FZ-d*sn];
+  for(const s of [-1,1]){
+    let a=up(0.330); T([s*0.118,FR,FZ],[s*0.118,a[0],a[1]],0.040,forkM,10);
+    let c=up(0.300), e=up(0.640); T([s*0.118,c[0],c[1]],[s*0.118,e[0],e[1]],0.031,pipeM,10);
+    const d=new THREE.Mesh(new THREE.CylinderGeometry(FR*0.72,FR*0.72,0.010,20),discM);
+    d.rotation.z=Math.PI/2; d.position.set(s*0.072,FR,FZ); b.add(d);
+    const cal=new THREE.Mesh(new THREE.BoxGeometry(0.036,0.110,0.062),blackM);
+    cal.position.set(s*0.086,FR+0.185,FZ-0.075); b.add(cal);
+  }
+  for(const [yy,ww] of [[0.300,0.290],[0.470,0.270]]){
+    const p=up(yy);
+    const yk=new THREE.Mesh(new THREE.BoxGeometry(ww,0.038,0.090),blackM);
+    yk.position.set(0,p[0],p[1]); yk.rotation.x=-RAKE; yk.castShadow=true; b.add(yk);
+  }
+  /* clip-ons, grips and mirrors — the widest thing on it, and up in the air */
+  for(const s of [-1,1]){
+    const a=up(0.470), c=up(0.560), m2=up(0.500);
+    T([s*0.100,a[0],a[1]],[s*0.355,a[0]-0.015,c[1]],0.019,blackM,8);
+    const grip=new THREE.Mesh(new THREE.CylinderGeometry(0.026,0.026,0.110,10),seatM);
+    grip.rotation.z=Math.PI/2; grip.position.set(s*0.330,a[0]-0.015,c[1]-0.005); b.add(grip);
+    const mir=new THREE.Mesh(lens(0.090,0.052,0.016),blackM);
+    mir.position.set(s*0.300,m2[0]+0.140,m2[1]); mir.rotation.y=s*0.42; b.add(mir);
+  }
+
+  /* ---- bodywork ----
+     A bike is a narrow thing with its mass carried high and forward, and
+     the wheels are meant to be seen. Every panel here is slim, elliptical
+     rather than full, and stops well above the tyre it sits over. */
+  /* the front mudguard, hugging the wheel */
+  const guard=new THREE.Mesh(loft([
+    {z:FZ+0.290,w:0.078,y0:FR+0.090,y1:FR+0.160,n:2.2},
+    {z:FZ+0.120,w:0.090,y0:FR+0.150,y1:FR+0.215,n:2.4},
+    {z:FZ-0.080,w:0.088,y0:FR+0.145,y1:FR+0.210,n:2.4},
+    {z:FZ-0.240,w:0.074,y0:FR+0.070,y1:FR+0.140,n:2.2}
+  ],14),M.paint);
+  guard.castShadow=true; b.add(guard);
+  /* upper fairing: a slim wedge from the screen forward to a blunt point */
+  const nose=new THREE.Mesh(loft([
+    {z: 1.020,w:0.062,y0:0.615,y1:0.700,n:2.0},
+    {z: 0.960,w:0.112,y0:0.590,y1:0.775,n:2.2},
+    {z: 0.880,w:0.152,y0:0.570,y1:0.845,n:2.4},
+    {z: 0.760,w:0.172,y0:0.560,y1:0.895,n:2.5},
+    {z: 0.610,w:0.176,y0:0.575,y1:0.912,n:2.5},
+    {z: 0.470,w:0.166,y0:0.610,y1:0.905,n:2.4}
+  ],20),M.paint);
+  nose.castShadow=true; b.add(nose);
+  /* the dark centre panel the lamps sit either side of */
+  const spine=new THREE.Mesh(loft([
+    {z: 1.016,w:0.030,y0:0.630,y1:0.695,n:2.0},
+    {z: 0.930,w:0.052,y0:0.600,y1:0.805,n:2.2},
+    {z: 0.800,w:0.058,y0:0.590,y1:0.865,n:2.3}
+  ],14),blackM);
+  b.add(spine);
+  /* side panels: thin, down the flanks of the engine, wheel left in view */
+  for(const s of [-1,1]){
+    const side=new THREE.Mesh(loft([
+      {z: 0.640,w:0.030,y0:0.520,y1:0.860,n:2.4},
+      {z: 0.440,w:0.048,y0:0.430,y1:0.820,n:2.6},
+      {z: 0.190,w:0.052,y0:0.375,y1:0.735,n:2.7},
+      {z:-0.040,w:0.038,y0:0.360,y1:0.600,n:2.5}
+    ],14),M.paint);
+    side.position.x=s*0.132; side.castShadow=true; b.add(side);
+    const flank=new THREE.Mesh(loft([
+      {z: 0.380,w:0.020,y0:0.350,y1:0.560,n:2.4},
+      {z: 0.130,w:0.024,y0:0.330,y1:0.510,n:2.5},
+      {z:-0.060,w:0.018,y0:0.335,y1:0.450,n:2.4}
+    ],12),blackM);
+    flank.position.x=s*0.166; b.add(flank);
+  }
+  const scr=new THREE.Mesh(loft([
+    {z: 0.700,w:0.088,y0:0.900,y1:0.925,n:2.0},
+    {z: 0.588,w:0.098,y0:0.925,y1:0.978,n:2.2},
+    {z: 0.492,w:0.086,y0:0.945,y1:1.020,n:2.2}
+  ],14),M.glass);
+  b.add(scr);
+  /* tank: narrow, and low enough that the frame rails show beside it */
+  const tank=new THREE.Mesh(loft([
+    {z: 0.440,w:0.132,y0:0.700,y1:0.860,n:2.4},
+    {z: 0.300,w:0.158,y0:0.680,y1:0.888,n:2.6},
+    {z: 0.130,w:0.146,y0:0.675,y1:0.872,n:2.6},
+    {z:-0.020,w:0.098,y0:0.688,y1:0.826,n:2.4}
+  ],18),M.paint);
+  tank.castShadow=true; b.add(tank);
+  const seat=new THREE.Mesh(loft([
+    {z:-0.020,w:0.092,y0:0.740,y1:0.812,n:2.6},
+    {z:-0.160,w:0.086,y0:0.752,y1:0.822,n:2.8},
+    {z:-0.290,w:0.076,y0:0.768,y1:0.832,n:2.8}
+  ],14),seatM);
+  seat.castShadow=true; b.add(seat);
+  /* tail: short, thin and lifted, the way a supersport ends */
+  const tail=new THREE.Mesh(loft([
+    {z:-0.280,w:0.082,y0:0.752,y1:0.848,n:2.6},
+    {z:-0.420,w:0.072,y0:0.782,y1:0.878,n:2.6},
+    {z:-0.540,w:0.052,y0:0.812,y1:0.884,n:2.5},
+    {z:-0.625,w:0.026,y0:0.836,y1:0.872,n:2.3}
+  ],16),M.paint);
+  tail.castShadow=true; b.add(tail);
+  const tailU=new THREE.Mesh(loft([
+    {z:-0.330,w:0.062,y0:0.712,y1:0.766,n:2.6},
+    {z:-0.520,w:0.042,y0:0.768,y1:0.812,n:2.5}
+  ],12),blackM);
+  b.add(tailU);
+  /* the hugger over the rear tyre */
+  const hug=new THREE.Mesh(loft([
+    {z:RZ+0.230,w:0.070,y0:RR+0.075,y1:RR+0.130,n:2.2},
+    {z:RZ+0.020,w:0.078,y0:RR+0.105,y1:RR+0.165,n:2.4},
+    {z:RZ-0.200,w:0.066,y0:RR+0.060,y1:RR+0.125,n:2.2}
+  ],12),blackM);
+  b.add(hug);
+  for(const s of [-1,1]) T([s*0.150,0.480,-0.230],[s*0.215,0.420,-0.250],0.016,pipeM,6);
+  const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
+    emissiveIntensity:0.95,roughness:0.20,metalness:0.10});
+  for(const s of [-1,1]){
+    const l=new THREE.Mesh(lens(0.115,0.048,0.030),lampM);
+    l.position.set(s*0.068,0.700,0.930); l.rotation.set(0.16,s*0.30,s*0.34); b.add(l);
+  }
+  const tailMats=addLamps(b,null,{w:0.068,h:0.030,y:0.852,z:-0.632,x:[0]});
+  return {tailMats,lean:0.62,
+    wheels:{race:true,front:1,
+            r:FR,tw:0.150, rR:RR,twR:0.220,
+            pos:[[0,FZ],[0,RZ]]}};
+}
+
+/* ---- ROCKET TRIKE: a blown V8 in a tube frame, on three wheels ----
+   One narrow wheel out in front on a long raked fork, two enormous slicks
+   at the back, and almost nothing between them but engine. There is no
+   bodywork to speak of: the frame is the shape of it.
+   3.3 long, 2.0 across the rears, 1.5 tall to the wing. */
+function bodyTrike(b,M){
+  const FR=0.330, RR=0.470;                 // a bike wheel and two drag slicks
+  const FZ=1.560, RZ=-0.980, RX=0.760;
+  const frameM=new THREE.MeshStandardMaterial({color:SRGB(0xD8281C),roughness:0.34,metalness:0.42});
+  const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x15181B),roughness:0.55,metalness:0.32});
+  const engM  =new THREE.MeshStandardMaterial({color:SRGB(0x30363A),roughness:0.46,metalness:0.62});
+  const chromeM=new THREE.MeshStandardMaterial({color:SRGB(0xC9D0D4),roughness:0.16,metalness:0.95});
+  const seatM =new THREE.MeshStandardMaterial({color:SRGB(0x1A1E21),roughness:0.80,metalness:0.05});
+  const T=(a,c,r,mat,seg)=>tubeTo(b,a,c,r,mat,seg);
+
+  /* ---- the frame: two rails from the headstock back to the axle ---- */
+  const HEAD=[0,0.980,0.980];                       // where the fork pivots
+  for(const s of [-1,1]){
+    T([s*0.060,0.940,1.000],[s*0.300,0.560,0.360],0.048,frameM);   // down and out
+    T([s*0.300,0.560,0.360],[s*0.330,0.470,-0.320],0.048,frameM);  // along the floor
+    T([s*0.330,0.470,-0.320],[s*0.470,0.560,-0.900],0.046,frameM); // out to the axle
+    T([s*0.060,0.980,0.960],[s*0.290,0.900,0.320],0.038,frameM);   // upper rail
+    T([s*0.290,0.900,0.320],[s*0.300,0.820,-0.240],0.038,frameM);
+    T([s*0.290,0.900,0.320],[s*0.300,0.560,0.360],0.030,frameM);   // tied down
+    T([s*0.300,0.820,-0.240],[s*0.330,0.470,-0.320],0.030,frameM);
+    /* the hoops behind the seat that carry the wing */
+    T([s*0.300,0.820,-0.240],[s*0.280,1.360,-0.500],0.040,frameM);
+    T([s*0.280,1.360,-0.500],[s*0.330,0.470,-0.320],0.030,frameM);
+  }
+  T([-0.300,0.560,0.360],[0.300,0.560,0.360],0.034,frameM);
+  T([-0.330,0.470,-0.320],[0.330,0.470,-0.320],0.034,frameM);
+  T([-0.280,1.360,-0.500],[0.280,1.360,-0.500],0.036,frameM);
+  T([-0.060,0.940,1.000],[0.060,0.940,1.000],0.040,frameM);
+  /* the headstock itself, and the long raked fork down to the front wheel */
+  const RAKE=0.62, sn=Math.sin(RAKE), cs=Math.cos(RAKE);
+  const stock=new THREE.Mesh(new THREE.CylinderGeometry(0.070,0.070,0.230,12),blackM);
+  stock.position.set(0,0.960,0.990); stock.rotation.x=-RAKE; b.add(stock);
+  for(const s of [-1,1]){
+    T([s*0.088,0.940,0.960],[s*0.100,FR,FZ],0.036,chromeM,10);
+    T([s*0.062,1.030,0.930],[s*0.100,FR+0.060,FZ-0.050],0.026,chromeM,8);
+  }
+  const disc=new THREE.Mesh(new THREE.CylinderGeometry(FR*0.66,FR*0.66,0.012,20),chromeM);
+  disc.rotation.z=Math.PI/2; disc.position.set(0.090,FR,FZ); b.add(disc);
+  /* bars, out over the front wheel */
+  for(const s of [-1,1]){
+    T([s*0.050,1.080,0.930],[s*0.400,1.100,0.860],0.020,blackM,8);
+    const grip=new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,0.120,10),seatM);
+    grip.rotation.z=Math.PI/2; grip.position.set(s*0.375,1.100,0.855); b.add(grip);
+  }
+
+  /* ---- the engine: a blown V8 sitting up where a passenger would ---- */
+  const blk=new THREE.Mesh(loft([
+    {z: 0.130,w:0.290,y0:0.560,y1:0.980,n:3.0},
+    {z:-0.070,w:0.310,y0:0.540,y1:1.000,n:3.2},
+    {z:-0.290,w:0.290,y0:0.560,y1:0.960,n:3.0}
+  ],14),engM);
+  blk.castShadow=true; b.add(blk);
+  /* the blower on top, and its drive */
+  const bl=new THREE.Mesh(new THREE.BoxGeometry(0.360,0.230,0.430),chromeM);
+  bl.position.set(0,1.130,-0.080); bl.castShadow=true; b.add(bl);
+  const belt=new THREE.Mesh(new THREE.BoxGeometry(0.055,0.360,0.055),blackM);
+  belt.position.set(0,1.080,0.170); belt.rotation.x=-0.30; b.add(belt);
+  /* two injector trumpets out of the top of it */
+  for(const s of [-1,1]){
+    const h=new THREE.Mesh(new THREE.CylinderGeometry(0.088,0.076,0.140,14),chromeM);
+    h.position.set(s*0.095,1.320,-0.080); h.castShadow=true; b.add(h);
+    const r=new THREE.Mesh(new THREE.TorusGeometry(0.088,0.014,6,16),chromeM);
+    r.rotation.x=Math.PI/2; r.position.set(s*0.095,1.390,-0.080); b.add(r);
+  }
+  /* zoomie headers: four a side, up and out, the way the picture has them */
+  for(const s of [-1,1]) for(let i=0;i<4;i++){
+    const z=0.110-i*0.130;
+    T([s*0.280,0.760,z],[s*0.470,0.900,z+0.050],0.032,chromeM,8);
+    T([s*0.470,0.900,z+0.050],[s*0.520,1.080,z+0.130],0.032,chromeM,8);
+  }
+  /* the bellhousing and the driveshaft back to the diff */
+  const bell=new THREE.Mesh(new THREE.CylinderGeometry(0.190,0.150,0.220,14),engM);
+  bell.rotation.x=Math.PI/2; bell.position.set(0,0.690,-0.430); b.add(bell);
+  T([0,0.640,-0.540],[0,0.560,-0.860],0.045,chromeM,10);
+  const diff=new THREE.Mesh(new THREE.SphereGeometry(0.180,14,10),engM);
+  diff.position.set(0,0.545,-0.960); diff.castShadow=true; b.add(diff);
+  const axle=new THREE.Mesh(new THREE.CylinderGeometry(0.062,0.062,RX*2-0.10,12),chromeM);
+  axle.rotation.z=Math.PI/2; axle.position.set(0,0.545,-0.960); b.add(axle);
+
+  /* ---- the seat, low and between the rails ---- */
+  const pan=new THREE.Mesh(loft([
+    {z: 0.330,w:0.200,y0:0.470,y1:0.530,n:3.4},
+    {z: 0.130,w:0.215,y0:0.460,y1:0.540,n:3.6},
+    {z:-0.040,w:0.205,y0:0.470,y1:0.560,n:3.4}
+  ],14),seatM);
+  pan.castShadow=true; b.add(pan);
+  const back=new THREE.Mesh(loft([
+    {z:-0.030,w:0.205,y0:0.500,y1:0.640,n:3.4},
+    {z:-0.120,w:0.195,y0:0.560,y1:0.960,n:3.6},
+    {z:-0.200,w:0.170,y0:0.640,y1:1.010,n:3.4}
+  ],14),seatM);
+  back.castShadow=true; b.add(back);
+  /* a floor, so it does not read as a car with the middle missing */
+  const floor=new THREE.Mesh(loft([
+    {z: 0.620,w:0.230,y0:0.490,y1:0.530,n:5.0},
+    {z: 0.330,w:0.290,y0:0.470,y1:0.510,n:5.5},
+    {z:-0.260,w:0.310,y0:0.450,y1:0.490,n:5.5}
+  ],16),blackM);
+  b.add(floor);
+
+  /* ---- the wing across the top, on its endplates ---- */
+  const wing=new THREE.Mesh(aerofoil(1.240,0.380,0.065),frameM);
+  wing.position.set(0,1.440,-0.560); wing.rotation.x=-0.18;
+  wing.castShadow=true; b.add(wing);
+  for(const s of [-1,1]){
+    const ep=new THREE.Mesh(panel([[0.24,-0.12],[0.24,0.12],[-0.22,0.14],[-0.22,-0.09]],0.018),frameM);
+    ep.position.set(s*0.620,1.452,-0.560); b.add(ep);
+    /* stays back down to the frame, so it is holding on to something */
+    tubeTo(b,[s*0.300,1.400,-0.560],[s*0.300,0.860,-0.250],0.020,frameM,6);
+  }
+  /* and the little splitter over the front wheel */
+  const spl=new THREE.Mesh(lens(0.300,0.170,0.022),frameM);
+  spl.position.set(0,1.150,0.905); spl.rotation.x=1.30; b.add(spl);
+
+  const tailMats=addLamps(b,null,{w:0.078,h:0.044,y:1.180,z:-0.470,x:[-0.250,0.250]});
+  return {tailMats,
+    /* one at the front, two at the back, and only the front one steers */
+    wheels:{race:true,front:1,
+            r:FR,tw:0.190, rR:RR,twR:0.560,
+            pos:[[0,FZ],[-RX,RZ],[RX,RZ]]}};
+}
+
+/* ---- V12 MONSTER: a mid-engined twelve, the heaviest thing here ----
+   Built like the GT but longer, wider and meaner: one long shell with the
+   cabin set well forward, deep intakes in the flanks, and a wing that means
+   it. 4.9 long, 2.14 across the arches, 1.19 tall, on a 2.72 wheelbase. */
+function bodyV12(b,M){
+  const FR=0.355, RR=0.378;
+  const FZ=1.380, RZ=-1.340;
+  const FX=0.870, RX=0.885;
+  const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x14171A),roughness:0.56,metalness:0.30});
+  const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.86,metalness:0.16});
+
+  const shell=new THREE.Mesh(loft([
+    {z: 2.44,w:0.760,y0:0.150,y1:0.400,n:2.5},   // a long, low, flat nose
+    {z: 2.30,w:0.880,y0:0.125,y1:0.470,n:2.8},
+    {z: 2.10,w:0.945,y0:0.105,y1:0.535,n:3.2},
+    {z: 1.86,w:0.930,y0:0.095,y1:0.590,n:3.6},
+    {z: 1.58,w:0.905,y0:0.090,y1:0.680,n:4.0},   // screen base, well forward
+    {z: 1.16,w:0.930,y0:0.090,y1:0.900,n:4.2},
+    {z: 0.62,w:0.960,y0:0.095,y1:1.075,n:4.4},   // roof
+    {z: 0.06,w:0.985,y0:0.100,y1:1.115,n:4.4},
+    {z:-0.52,w:0.995,y0:0.105,y1:1.040,n:4.4},   // over the engine
+    {z:-1.02,w:0.975,y0:0.115,y1:0.930,n:4.2},
+    {z:-1.46,w:0.930,y0:0.130,y1:0.860,n:3.8},
+    {z:-1.74,w:0.860,y0:0.165,y1:0.810,n:3.4}    // cut off square at the back
+  ],26),M.paint);
+  shell.castShadow=true; b.add(shell);
+
+  /* the greenhouse, sunk into the shell */
+  const glass=new THREE.Mesh(loft([
+    {z: 1.60,w:0.760,y0:0.700,y1:0.760,n:3.0},
+    {z: 1.24,w:0.815,y0:0.855,y1:0.920,n:3.6},
+    {z: 0.72,w:0.845,y0:1.035,y1:1.080,n:4.0},
+    {z: 0.10,w:0.860,y0:1.075,y1:1.120,n:4.2},
+    {z:-0.42,w:0.830,y0:0.990,y1:1.045,n:4.0}
+  ],22),M.glass);
+  b.add(glass);
+
+  /* arches over each wheel, the rears sitting higher and wider */
+  addFenders(b,M,FZ,FR,0.790,FX,0.500);
+  addFenders(b,M,RZ,RR,0.905,RX,0.720);
+  /* the deep side intake ahead of the rear arch */
+  for(const s of [-1,1]){
+    const duct=new THREE.Mesh(loft([
+      {z: 0.30,w:0.036,y0:0.360,y1:0.740,n:3.0},
+      {z:-0.16,w:0.052,y0:0.345,y1:0.790,n:3.4},
+      {z:-0.58,w:0.038,y0:0.345,y1:0.760,n:3.2}
+    ],12),meshM);
+    duct.position.x=s*0.950; b.add(duct);
+  }
+
+  /* front: a splitter, and two big corner intakes */
+  const spl=new THREE.Mesh(lens(1.760,0.560,0.030),blackM);
+  spl.position.set(0,0.105,2.180); spl.rotation.x=Math.PI/2; b.add(spl);
+  for(const s of [-1,1]){
+    const it=new THREE.Mesh(lens(0.400,0.230,0.070),meshM);
+    it.position.set(s*0.560,0.310,2.360); it.rotation.set(0.10,s*0.16,0); b.add(it);
+    const fin=new THREE.Mesh(lens(0.330,0.140,0.016),blackM);
+    fin.position.set(s*0.840,0.290,2.020); fin.rotation.y=Math.PI/2; b.add(fin);
+  }
+  const grille=new THREE.Mesh(lens(0.740,0.180,0.060),meshM);
+  grille.position.set(0,0.290,2.415); b.add(grille);
+
+  /* rear: diffuser, a bar of light, and the wing */
+  const dif=new THREE.Mesh(lens(1.600,0.420,0.030),blackM);
+  dif.position.set(0,0.185,-1.700); dif.rotation.x=Math.PI/2-0.22; b.add(dif);
+  for(const s of [-1,1]) for(const o of [0.18,0.48]){
+    const st=new THREE.Mesh(new THREE.BoxGeometry(0.026,0.150,0.420),blackM);
+    st.position.set(s*o,0.190,-1.700); b.add(st);
+  }
+  /* aerofoil() already turns itself across the car, so it wants nothing
+     from here but somewhere to sit and an angle of attack */
+  const wing=new THREE.Mesh(aerofoil(1.780,0.440,0.075),blackM);
+  wing.position.set(0,1.190,-1.640); wing.rotation.x=-0.16;
+  wing.castShadow=true; b.add(wing);
+  for(const s of [-1,1]){
+    const ep=new THREE.Mesh(panel([[0.26,-0.13],[0.26,0.14],[-0.24,0.16],[-0.24,-0.10]],0.020),M.paint);
+    ep.position.set(s*0.890,1.205,-1.640); b.add(ep);
+    const py=new THREE.Mesh(new THREE.BoxGeometry(0.050,0.330,0.170),blackM);
+    py.position.set(s*0.420,1.030,-1.620); b.add(py);
+    /* the pipes, stacked at the corners */
+    for(const yy of [0.360,0.470]){
+      const p=new THREE.Mesh(new THREE.CylinderGeometry(0.046,0.046,0.110,12),blackM);
+      p.rotation.x=Math.PI/2; p.position.set(s*0.300,yy,-1.760); b.add(p);
+    }
+  }
+
+  const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
+    emissiveIntensity:0.90,roughness:0.20,metalness:0.10});
+  for(const s of [-1,1]){
+    const l=new THREE.Mesh(lens(0.360,0.075,0.030),lampM);
+    l.position.set(s*0.560,0.470,2.320); l.rotation.set(0,s*0.20,s*0.10); b.add(l);
+  }
+  const tailMats=addLamps(b,null,{w:0.560,h:0.060,y:0.640,z:-1.755,x:[-0.520,0.520]});
+  return {tailMats,
+    wheels:{race:true,
+            r:FR,tw:0.320, rR:RR,twR:0.395,
+            pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
+}
+
 function buildCar(bodyColor,kind){
   const g=new THREE.Group();
   const b=new THREE.Group();
@@ -4471,12 +4954,17 @@ function buildCar(bodyColor,kind){
   const M=carMats(bodyColor);
   const make=kind==="formula"?bodyFormula
             :kind==="yaris"  ?bodyYaris
-            :kind==="kart"   ?bodyKart:bodyGT;
+            :kind==="kart"   ?bodyKart
+            :kind==="bike"   ?bodySuperbike
+            :kind==="trike"  ?bodyTrike
+            :kind==="v12"    ?bodyV12:bodyGT;
   const spec=make(b,M);
   g.userData.body=b;
   g.userData.wheels=buildWheels(g,M,spec.wheels);
   g.userData.tailMats=spec.tailMats;
   g.userData.bop=spec.bop||null;
+  /* how far this one lays over in a corner; nothing but the bike does */
+  g.userData.lean=spec.lean||0;
   /* wheelSpin is integrated against a 0.36 m reference, so a car on smaller
      wheels has to turn them faster to look like it is rolling, not skating */
   g.userData.spin=0.36/spec.wheels.r;
@@ -4493,7 +4981,7 @@ const G={
 };
 const CAR={
   x:0,z:0,y:0,vx:0,vz:0,vy:0,yaw:0,yawRate:0,steer:0,ax:0,ay:0,drift:0,
-  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,holdT:0,holdDir:0,slide:0,
+  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,holdT:0,holdDir:0,slide:0,lean:0,
   spinV:0, aRoll:0, aRollV:0, aPitch:0, aPitchV:0,
   grounded:true,vyS:0,prevSurf:0,
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
@@ -4648,7 +5136,7 @@ function resetCar(toStart){
   CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
   CAR.brakeHold=0; CAR.hbF=0; CAR.handArm=0; CAR.holdT=0; CAR.holdDir=0;
-  CAR.spinV=0; CAR.aRoll=0; CAR.aRollV=0; CAR.aPitch=0; CAR.aPitchV=0; CAR.slide=0;
+  CAR.spinV=0; CAR.aRoll=0; CAR.aRollV=0; CAR.aPitch=0; CAR.aPitchV=0; CAR.slide=0; CAR.lean=0;
   if(G.skid)resetSkids();
   CAR.y=heightAt(T,CAR.x,CAR.z); CAR.prevSurf=CAR.y;
   if(toStart){
@@ -5179,6 +5667,17 @@ function step(dt){
     CAR.aRollV+=(-40*CAR.aRoll-dampS*CAR.aRollV)*dt;
     CAR.aRoll+=CAR.aRollV*dt;
   }
+  /* A bike has no track to roll on: it corners by laying over until the
+     lean cancels the sideways force, which is what a rider feels for and
+     what makes one look right from behind. It is drawn, not driven — the
+     grip and the line are the model's as they are for everything else —
+     and it turns about the tyre on the road, so nothing has to be lifted
+     to keep it clear. Everything else here has two tracks and stays flat. */
+  const leanMax=(G.car&&G.car.userData.lean)||0;
+  if(leanMax>0){
+    const want=clamp(Math.atan2(CAR.ay,9.81),-leanMax,leanMax);
+    CAR.lean+=(want-CAR.lean)*Math.min(1,dt*7.0);
+  }else CAR.lean=0;
   CAR.aPitchV+=(-64*CAR.aPitch-12*CAR.aPitchV)*dt;
   CAR.aPitch+=CAR.aPitchV*dt;
   CAR.aPitch=clamp(CAR.aPitch,-0.35,0.35);
@@ -5352,13 +5851,14 @@ function updateCarMesh(){
   const ud=c.userData;
   ud.tPitch=lerp(ud.tPitch||0,pitch,0.14); ud.tRoll=lerp(ud.tRoll||0,roll,0.14);
   c.rotation.x=ud.tPitch+CAR.aPitch;
-  c.rotation.z=ud.tRoll+CAR.aRoll;
+  c.rotation.z=ud.tRoll+CAR.aRoll+CAR.lean;
   const w=c.userData.wheels;
   const st=-CAR.steer*0.44;      // +rotation.y turns the wheel left
   const spin=c.userData.spin||1; // smaller wheels have to turn faster
-  for(let i=0;i<4;i++){
+  const nF=c.userData.steerN==null?2:c.userData.steerN;
+  for(let i=0;i<w.length;i++){
     w[i].rotation.order="YXZ";
-    w[i].rotation.y=i<2?st:0;
+    w[i].rotation.y=i<nF?st:0;
     w[i].rotation.x=CAR.wheelSpin*spin;
   }
   /* The Yaris never settles — but it squashes rather than hops: it snaps
@@ -6309,6 +6809,7 @@ $("colors").addEventListener("click",e=>{
 $("garCards").addEventListener("click",e=>{
   const b=e.target.closest("[data-car]"); if(!b)return;
   if(DAILY.on&&b.dataset.car!=="gt")return;              // the daily is the GT for everyone
+  if(!carAllowed(b.dataset.car))return;                  // not yours to pick
   ED.opts.car=b.dataset.car; pressGroup($("garCards"),"car",ED.opts.car);
   store.set("ad.opts",ED.opts); rebuild(); netMeta(); garLabel();
 });
@@ -6943,6 +7444,14 @@ function acctIn(){ return !!(ACCT.token&&ACCT.user); }
 function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
   document.body.classList.toggle("aiok",on&&ACCT.user.name===AI.okName);
+  /* Signing out of the account that has them puts you back in the GT
+     rather than leaving you sitting in something you can no longer see. */
+  if(!carAllowed(ED.opts.car)){
+    ED.opts.car="gt"; store.set("ad.opts",ED.opts);
+    pressGroup($("garCards"),"car","gt");
+    if(G.T)rebuild();
+    garLabel();
+  }
   chip.textContent=on?ACCT.user.name:"Sign in";
   chip.classList.toggle("on",on);
   $("hmAccount").textContent=on?"Your account":"Sign in"; $("hmAccount").classList.toggle("on",on);
@@ -6956,6 +7465,11 @@ function acctUI(){
   if(on){
     $("auWhoName").textContent=ACCT.user.name;
     $("auWhoMail").textContent=ACCT.user.email||"";
+  }
+  /* Whatever an admin has left for them, in both places they would look. */
+  const note=on?(ACCT.user.notice||""):"";
+  for(const [box,txt] of [["auNotice","auNoticeTxt"],["hmNotice","hmNoticeTxt"]]){
+    $(box).hidden=!note; $(txt).textContent=note;
   }
   adminUI();                     // the controls exist only for the named few
   netUI();                       // the roster prints whatever this is now
@@ -7659,6 +8173,7 @@ function adRender(){
     meta.textContent=(u.email?u.email+" · ":"")+new Date(u.created).toLocaleDateString()
       +" · "+u.tracks+(u.tracks===1?" circuit":" circuits")+" · "+u.laps+(u.laps===1?" time":" times");
     who.appendChild(nm); who.appendChild(meta);
+    const note=document.createElement("button"); note.className="chip"; note.textContent=u.notice?"Notice ·":"Notice";
     const del=document.createElement("button"); del.className="chip tk-del"; del.textContent="Delete";
     del.disabled=!!u.admin;               // admins are not removed from here
     let armed=false,t=0;
@@ -7674,7 +8189,43 @@ function adRender(){
         AD.list=AD.list.filter(x=>x.name!==u.name); adRender(); adSay("Deleted "+u.name+".");
       }catch(e){ adSay(e.message,true); del.disabled=false; del.textContent="Delete"; }
     });
-    row.appendChild(who); row.appendChild(del); box.appendChild(row);
+    /* Leaving a word on the account. Open, type, send — and sending an
+       empty line takes the notice down again. */
+    const wrap=document.createElement("div"); wrap.className="ad-wrap";
+    const btns=document.createElement("span"); btns.className="chips";
+    btns.appendChild(note); btns.appendChild(del);
+    wrap.appendChild(who); wrap.appendChild(btns);
+    const bar=document.createElement("div"); bar.className="ad-notice"; bar.hidden=true;
+    const inp=document.createElement("input"); inp.type="text"; inp.maxLength=400;
+    inp.placeholder="What they should read next time they sign in";
+    inp.value=u.notice||"";
+    const send=document.createElement("button"); send.className="chip"; send.textContent="Send";
+    bar.appendChild(inp); bar.appendChild(send);
+    /* The one that gets sent most often is ready to send: open the box on an
+       account with nothing on it and the rename warning is already typed. */
+    const RENAME="Please change your username. Pick a new one on your account page — if it is not changed, this account will be deleted.";
+    note.addEventListener("click",()=>{
+      bar.hidden=!bar.hidden;
+      if(!bar.hidden){ if(!inp.value.trim()) inp.value=RENAME; inp.focus(); inp.select(); }
+    });
+    const post=async()=>{
+      send.disabled=true; send.textContent="…";
+      try{
+        const text=inp.value.trim();
+        await api("/api/admin/users/notice",{method:"POST",token:ACCT.token,body:{name:u.name,text}});
+        u.notice=text||null;
+        note.textContent=text?"Notice ·":"Notice";
+        row.classList.toggle("hasnote",!!text);
+        adSay(text?("Left a notice on "+u.name+"."):("Cleared the notice on "+u.name+"."));
+        bar.hidden=true;
+      }catch(e){ adSay(e.message,true); }
+      send.disabled=false; send.textContent="Send";
+    };
+    send.addEventListener("click",post);
+    inp.addEventListener("keydown",e=>{ if(e.key==="Enter")post(); });
+    row.classList.toggle("hasnote",!!u.notice);
+    row.style.flexWrap="wrap";
+    row.appendChild(wrap); row.appendChild(bar); box.appendChild(row);
   }
 }
 $("adRefresh").addEventListener("click",()=>{ AD.list=[]; adLoad(); });
@@ -8217,6 +8768,7 @@ function aiTick(dt){
       const q=aiAt(T,c.s); c.x=q.x; c.z=q.z; c.y=heightAt(T,c.x,c.z); c.aRoll=0; c.aRollV=0;
     }
     c.steer=clamp((c.d-dPrev)/Math.max(0.01,dt)*0.25+here.k*40,-1,1);
+    c.curv=here.k;
     c.spin+=c.v*dt/0.36;
   }
   /* solid to each other too: overlapping cars are pushed apart, half each,
@@ -8280,10 +8832,18 @@ function aiPose(c){
   const ud=m.userData;
   ud.tPitch=lerp(ud.tPitch||0,-Math.atan2(hF-hB,3.0),0.14);
   ud.tRoll=lerp(ud.tRoll||0,Math.atan2(hL-hR,1.8),0.14);
+  const lm=m.userData.lean||0;
+  if(lm>0){
+    /* their lateral force is their speed against the curvature of the line
+       they are on, which is the same sum the player's car does for real */
+    const want=clamp(Math.atan2(-c.v*c.v*(c.curv||0),9.81),-lm,lm);
+    c.lean=(c.lean||0)+(want-(c.lean||0))*0.10;
+  }else c.lean=0;
   m.rotation.x=ud.tPitch;
-  m.rotation.z=ud.tRoll+(c.aRoll||0);
+  m.rotation.z=ud.tRoll+(c.aRoll||0)+(c.lean||0);
   const w=m.userData.wheels, sp=m.userData.spin||1;
-  if(w){ const st=-c.steer*0.44; for(let i=0;i<4;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<2?st:0; w[i].rotation.x=c.spin*sp; } }
+  if(w){ const st=-c.steer*0.44, nF=m.userData.steerN==null?2:m.userData.steerN;
+    for(let i=0;i<w.length;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<nF?st:0; w[i].rotation.x=c.spin*sp; } }
   const bp=m.userData.bop, bd=m.userData.body;
   if(bp&&bd){ const q=Math.tanh(Math.sin((G.bopT||0)*bp.freq)*2.8); bd.scale.set(1-q*bp.sx,1+q*bp.sy,1-q*bp.sx); bd.position.y=-(bp.pivot||0)*q*bp.sy; }
 }
@@ -8480,6 +9040,7 @@ function garage(kind){
   $("pGar").hidden=true;
   if(DAILY.on&&kind!=="gt"){ flashPause("The daily is driven in the GT, for everyone."); return; }
   if(!G.T||!G.scene||!G.car||!CAR_MODELS.some(m=>m.id===kind))return;
+  if(!carAllowed(kind))return;                    // not yours to drive
   if(kind===ED.opts.car){ togglePause(false); return; }
   ED.opts.car=kind; G.T.opts.car=kind;
   pressGroup($("garCards"),"car",kind); store.set("ad.opts",ED.opts); garLabel();
@@ -9235,6 +9796,7 @@ $("pBack").addEventListener("click",()=>{
   $("soundState").className="s "+(SOUND?"on":"off");
   /* options stored before the car setting existed come back without it */
   if(!CAR_MODELS.some(m=>m.id===ED.opts.car)) ED.opts.car="gt";
+  if(!carAllowed(ED.opts.car)) ED.opts.car="gt";
   pressGroup($("themes"),"theme",ED.opts.theme);
   pressGroup($("colors"),"color",ED.opts.color);
   pressGroup($("garCards"),"car",ED.opts.car); garLabel();

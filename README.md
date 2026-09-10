@@ -185,6 +185,42 @@ slides across the start line any more, and the nose takes its direction
 from how fast the car is going along the road and across it, so a shove
 from a contact can no longer flick the whole car sideways for a frame.
 
+## Three more, being tried out
+
+Alongside the GT, the Formula, the Yaris and the kart there are three others
+in the garage, shown to one account only while they are looked at — the same
+gate the AI opponents sit behind. Signed in as anyone else, or signed out,
+there is nothing on the page to see: the cards are not greyed, they are not
+there. Picking one is refused server-side of nothing, because there is no
+server side to it; but the garage, the pause-menu switcher and the saved
+choice all check, so signing out of that account puts you back in the GT
+rather than leaving you in something you can no longer pick.
+
+- **Supervikr X**, a litre superbike. 280+ km/h, 165 kg, and the only thing
+  here with one wheel behind the other. It has no track to roll on, so it
+  cannot lean on its springs the way a car does — it lays over into a corner
+  instead, up to thirty-five degrees, by as much as the sideways force asks
+  for. It turns about the tyre on the road, so nothing has to be lifted to
+  keep it out of the tarmac. Quickest thing here off the line.
+- **Rocket Trike**, a blown V8 in a tube frame. 240+ km/h, 210 kg, one narrow
+  wheel out front on a long raked fork and two enormous slicks at the back.
+  There is no bodywork: the frame is the shape of it. The twitchiest thing
+  in the garage by some way.
+- **V12 Monster**, mid-engined and the fastest thing here at 350+ km/h. Also
+  the heaviest at 1,450 kg, which is what makes it the one that will not be
+  shoved about — and the slowest of the three to get going.
+
+Everything else about them is ordinary. They are chosen in the garage like
+any other car, their laps are records of their own, and the relay checks a
+lap in one against that car's ceilings exactly as it does a GT lap. The
+daily is still the GT for everyone, this account included.
+
+Two of them broke an assumption nothing had questioned before: that a
+vehicle has four wheels and the first two of them steer. Wheels are now
+built from however many positions a body asks for, and the body says how
+many of the leading ones are on the front axle — two for a car, one for a
+bike or a trike.
+
 ## The daily time trial
 
 **Daily** in the bar is one circuit a day, the same for everyone, always
@@ -371,6 +407,18 @@ cd relay && npm install && node server.js
 ```
 
 then open the game with `?relay=ws://localhost:8080`.
+
+### A word left on an account
+
+An admin can leave one line of text on an account, and its owner reads it
+the next time they are signed in — on the account page and on the panel on
+the front page, in the one place on the site that is allowed to shout. It
+is the only thing on the desk that puts something onto an account rather
+than taking something off one, and it exists because the alternative to
+telling somebody their username has to change is deleting the account
+without warning. Sending an empty line takes it down again. The desk shows
+which accounts are carrying one, and the message that gets sent most often
+— asking for a rename — is already typed when the box is opened.
 
 ## Being found
 
