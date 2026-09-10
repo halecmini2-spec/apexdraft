@@ -4820,7 +4820,7 @@ function bodySuperbike(b,M){
   const tailMats=addLamps(b,null,{w:0.068,h:0.030,y:0.852,z:-0.632,x:[0]});
   /* Twice the size it is drawn at: a bike among cars was small enough to
      lose behind one, and this is a game before it is a scale drawing. */
-  return {tailMats,lean:0.62,scale:2.0,
+  return {tailMats,lean:0.62,scale:2.0,noShadow:true,
     wheels:{race:true,front:1,
             r:FR,tw:0.150, rR:RR,twR:0.220,
             pos:[[0,FZ],[0,RZ]]}};
@@ -5110,6 +5110,11 @@ function buildCar(bodyColor,kind){
   /* how far this one lays over in a corner; nothing but the bike does */
   g.userData.lean=spec.lean||0;
   g.userData.flames=spec.flames||null;   // lit by the throttle, if it has any
+  /* The contact shadow is one fixed car-shaped patch, which under something
+     as narrow as a bike reads as a car's shadow with a bike standing on it.
+     A body that says so gets neither that nor a cast one. */
+  g.userData.noShadow=!!spec.noShadow;
+  if(spec.noShadow) g.traverse(o=>{ if(o.isMesh)o.castShadow=false; });
   g.userData.flip=spec.flip||0;          // and how near the limit it goes over
   /* wheelSpin is integrated against a 0.36 m reference, so a car on smaller
      wheels has to turn them faster to look like it is rolling, not skating */
@@ -6073,7 +6078,8 @@ function updateCarMesh(){
   }
   /* contact shadow stays on the ground and fades as the car leaves it */
   const b=G.blob;
-  if(b){
+  if(b&&c.userData.noShadow){ b.visible=false; }
+  else if(b){
     const surf=heightAt(T,CAR.x,CAR.z,null,CAR.y);
     const lift=Math.max(0,CAR.y-surf);
     b.position.set(CAR.x,surf+0.05,CAR.z);
@@ -8871,7 +8877,8 @@ function aiSpawn(){
       mistake:null,next:(12+90*k*k)*(0.5+Math.random()),mistakes:0,pass:0,passOf:null,passSide:1,passT:0,
       x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,aRoll:0,aRollV:0,mesh:null};
     const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
-    car.mesh=buildCar(car.colour,car.kind); car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
+    car.mesh=buildCar(car.colour,car.kind);
+    if(!car.mesh.userData.noShadow) car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
     car.mesh.position.set(car.x,car.y,car.z); car.mesh.rotation.order="YXZ"; car.mesh.rotation.y=car.yaw;
     G.scene.add(car.mesh);
     AI.cars.push(car);
@@ -9814,7 +9821,7 @@ function netUpdateCars(){
     }
     if(!p.mesh){
       p.mesh=buildCar(p.colour||"#8FA3A0",p.car||"gt");
-      p.mesh.traverse(o=>{ if(o.isMesh){o.castShadow=true;} });
+      if(!p.mesh.userData.noShadow) p.mesh.traverse(o=>{ if(o.isMesh){o.castShadow=true;} });
       G.scene.add(p.mesh);
     }
     let a=p.buf[0], b=p.buf[p.buf.length-1];

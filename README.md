@@ -230,7 +230,9 @@ choice all check, so signing out of that account puts you back in the GT
 rather than leaving you in something you can no longer pick.
 
 - **Superbike X**, a litre superbike, with a rider on it, drawn at twice
-  its own size so it is not lost behind a car. 280+ km/h, 165 kg,
+  its own size so it is not lost behind a car, and casting no shadow at all:
+  the contact shadow is one fixed car-shaped patch, and under something this
+  narrow it read as a car's shadow with a bike standing on it. 280+ km/h, 165 kg,
   and the only thing here with one wheel behind the other. It has no track
   to roll on, so it cannot lean on its springs the way a car does — it lays
   over into a corner instead, up to thirty-five degrees, by as much as the
