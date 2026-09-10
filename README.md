@@ -196,12 +196,18 @@ server side to it; but the garage, the pause-menu switcher and the saved
 choice all check, so signing out of that account puts you back in the GT
 rather than leaving you in something you can no longer pick.
 
-- **Supervikr X**, a litre superbike. 280+ km/h, 165 kg, and the only thing
-  here with one wheel behind the other. It has no track to roll on, so it
-  cannot lean on its springs the way a car does — it lays over into a corner
-  instead, up to thirty-five degrees, by as much as the sideways force asks
-  for. It turns about the tyre on the road, so nothing has to be lifted to
-  keep it out of the tarmac. Quickest thing here off the line.
+- **Supervikr X**, a litre superbike, with a rider on it. 280+ km/h, 165 kg,
+  and the only thing here with one wheel behind the other. It has no track
+  to roll on, so it cannot lean on its springs the way a car does — it lays
+  over into a corner instead, up to thirty-five degrees, by as much as the
+  sideways force asks for. It turns about the tyre on the road, so nothing
+  has to be lifted to keep it out of the tarmac: laid right over, the lowest
+  part of it is two centimetres into the road, which is about what a tyre
+  edge should be doing at that angle. The rider is tucked — chest on the
+  tank, chin behind the screen, knees in, feet on the pegs — and is built
+  into the same group as the bodywork, so they go over with the bike rather
+  than sitting bolt upright while it corners underneath them. Quickest thing
+  here off the line.
 - **Rocket Trike**, a blown V8 in a tube frame. 240+ km/h, 210 kg, one narrow
   wheel out front on a long raked fork and two enormous slicks at the back.
   There is no bodywork: the frame is the shape of it. The twitchiest thing
