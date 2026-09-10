@@ -28,18 +28,40 @@ lead back.
   before it, and the board shows both places — a dotted marker where it was
   asked for, the checkered line where it is. Corners are numbered from the
   line, and a banked corner keeps its angle when the numbers change.
-- **Pick the setting** — **Alpine**, pines on rolling ground; **Desert**,
-  cactus and open sand; or **City**, which is a night race through a downtown.
-  In the city there is no sun to speak of: the key light is turned right
-  down, and what you see by is the lit windows, the street lamps and your own
-  headlights. Blocks of ten different shapes stand back from the barrier on
-  both sides, each with its windows on all four faces — about three in five
-  of them lit, and a strip of neon up the front of some — so the skyline is a
-  skyline rather than one tower stamped three hundred times. Lamps run down
-  the road on alternate sides, every 21 metres, each laying a pool of light
-  on the tarmac; they are not real lights, which at a hundred and forty a
-  circuit would stop the game dead, but a picture of a glow laid flat on the
-  road and tilted to sit along its camber. The ground is nearly flat there,
+- **Pick the setting** — **Alpine**, **Desert** or **City**.
+- **What the settings are made of.** Each grows a dozen different plants
+  rather than one stamped six hundred times, which is the whole difference
+  between a wood and a wallpaper: alpine conifers of four to six tiers, a
+  broadleaf every fourth tree and a dead one every seventh; saguaro with the
+  elbow their arms actually have — out, then up — barrel cactus in flower,
+  and dry brush. Under them is a band of scrub down each side of the road.
+  It is a band rather than a scatter for a plain reason: spread over the
+  whole map, a thousand bushes is bare ground with a bush in it, and the
+  only part of the county anyone passes close enough to look at is the ten
+  metres past the run-off. Stones are four shapes with their vertices shoved
+  about, usually with a smaller one leaning on them, and the ground carries
+  patches of bare earth at a tighter frequency than its green-on-green, so
+  it is not one flat colour for a kilometre.
+- **And a horizon.** Both outdoor settings used to be a flat rim of ground
+  under an empty sky, which is what made them read as a lawn and a beach
+  however much stood on them — nothing said how far away anything was. Now
+  a ring of snow-capped ridges stands behind the alpine and flat-topped
+  mesas behind the desert, sunk into the ground so there is no seam. How far
+  out the ring stands follows the fog rather than a fixed number: the 1.9 km
+  that gave the alpine a range of peaks put the desert mesas so deep in the
+  haze they were the colour of the sand behind them.
+- **The city is a night race through a downtown.** There is no sun to speak
+  of: the key light is turned right down, and what you see by is the lit
+  windows, the street lamps and your own headlights. Blocks of ten different
+  shapes stand back from the barrier on both sides, each with its windows on
+  all four faces — about three in five lit, and a strip of neon up the front
+  of some. Lamps run down the road on alternate sides every 21 metres, and
+  the circuit is lit for its whole length: one ribbon of light built on the
+  road's own stations, so it sits exactly on the surface however the road
+  banks and climbs. Patches under each lamp were the first go and they were
+  wrong in the way that matters — a floodlit circuit is lit everywhere, and
+  what you got was bright rings with black between them. It brightens under
+  each lamp but never falls to nothing. The ground is nearly flat there,
   because twenty metres of hill through the middle of a city reads as a
   mistake. **Dusk**, which the city replaced, is gone from the settings, but
   a circuit saved as Dusk still opens — at night, in the city.

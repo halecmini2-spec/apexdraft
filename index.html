@@ -2864,7 +2864,7 @@ const THEMES={
     grassA:0x506E36, grassB:0x62804A, rock:0x767B78, dirt:0x6E6448,
     verge:0x4C5052, kerbA:0xD8402A, kerbB:0xEDEDE6,
     asphalt:0x3A3D40, line:0xD6DBD8, foliage:0x2E4A2B, trunk:0x3D2F22,
-    flora:"pine", floraN:640, rockN:150, ambientCar:1
+    flora:"pine", floraN:640, rockN:150, ambientCar:1, horizon:"peak"
   },
   desert:{
     label:"Desert", skyTop:0x3E7FA8, skyBot:0xE6CFA8, fog:0xD9C39B, fogD:0.0011,
@@ -2874,7 +2874,7 @@ const THEMES={
     verge:0x55565A, kerbA:0xD8402A, kerbB:0xEDEDE6,
     asphalt:0x3E4042, line:0xE2E2DA, foliage:0x4E6B3A, trunk:0x5A4A32,
     relief:16,
-    flora:"cactus", floraN:300, rockN:420, ambientCar:1
+    flora:"cactus", floraN:300, rockN:420, ambientCar:1, horizon:"mesa"
   },
   /* Night, in a city, between the buildings. There is no sun to light it —
      the key light is turned right down and tinted the colour of sodium, and
@@ -2884,7 +2884,7 @@ const THEMES={
      more road. */
   city:{
     label:"City", skyTop:0x05070E, skyBot:0x16213A, fog:0x0B1120, fogD:0.0026,
-    sun:0xFFD9A6, sunI:.26, hemiSky:0x2B3A5C, hemiGnd:0x14181E, hemiI:.50,
+    sun:0xFFD9A6, sunI:.34, hemiSky:0x33456B, hemiGnd:0x1B2029, hemiI:.66,
     sunDir:[0.35,0.86,-0.30],
     grassA:0x1A1D22, grassB:0x21252B, rock:0x2A2E34, dirt:0x24272C,
     verge:0x3A3E44, kerbA:0xC8382A, kerbB:0xE6E6DE,
@@ -3159,6 +3159,11 @@ function buildTerrain(T,TH){
     const slope=Math.min(1,Math.hypot(hr-hl,hd-hu)/(spanX/nx*2)*1.35);
     const n=fbm(pos[k*3]*0.011,pos[k*3+2]*0.011,3);
     t.copy(cA).lerp(cB,n);
+    /* Patches of bare ground at a tighter frequency than the green-on-green.
+       Without them the fields are one flat colour for a kilometre, and no
+       amount of scenery standing on that reads as ground. */
+    const patch=fbm(pos[k*3]*0.034+31.7,pos[k*3+2]*0.034-8.3,3);
+    t.lerp(cD,smoothstep(0.56,0.80,patch)*0.55);
     t.lerp(cR,smoothstep(0.42,0.85,slope));
     t.lerp(cD,smoothstep(26,15,Dt[k])*0.40);          // a light scuff just off the ribbon
     const shade=0.86+0.16*fbm(pos[k*3]*0.05,pos[k*3+2]*0.05,2);
@@ -3478,30 +3483,167 @@ function buildStartLine(T,TH){
 }
 
 /* ---- trees, cacti, rocks ---- */
-function floraGeometry(kind,TH){
+/* a part placed with a position and a rotation, which is most of what
+   follows and is otherwise four lines of matrix every time */
+function at(geo,color,x,y,z,rz,ry){
+  const m=new THREE.Matrix4();
+  if(rz||ry){
+    const e=new THREE.Euler(0,ry||0,rz||0,"YZX");
+    m.makeRotationFromEuler(e);
+  }
+  m.setPosition(x,y,z);
+  return {geo,color,matrix:m};
+}
+/* shove the vertices about, so a stone is a stone and not a solid of
+   revolution someone left lying in a field */
+function jitter(geo,amt,rnd){
+  const p=geo.attributes.position;
+  for(let i=0;i<p.count;i++){
+    p.setXYZ(i, p.getX(i)*(1+(rnd()-0.5)*amt),
+                p.getY(i)*(1+(rnd()-0.5)*amt),
+                p.getZ(i)*(1+(rnd()-0.5)*amt));
+  }
+  p.needsUpdate=true; geo.computeVertexNormals();
+  return geo;
+}
+const shade=(c,dl,dh)=>new THREE.Color(c).offsetHSL((dh||0),0,dl).getHex();
+
+/* One plant. Called over and over with the same random source, so each call
+   gives a different one: a wood is a dozen different trees rather than one
+   tree stamped six hundred times, which is what the old single shape looked
+   like the moment there were more than a few on screen. */
+function floraGeometry(kind,TH,rnd,v){
+  rnd=rnd||Math.random; v=v||0;
   const parts=[];
   if(kind==="pine"){
-    parts.push({geo:new THREE.CylinderGeometry(0.16,0.24,1.7,5),color:TH.trunk,
-      matrix:new THREE.Matrix4().makeTranslation(0,0.85,0)});
-    for(let i=0;i<3;i++){
-      const y=1.5+i*1.5, r=1.5-i*0.38, h=2.4-i*0.4;
-      parts.push({geo:new THREE.ConeGeometry(r,h,7),color:i===0?TH.foliage:
-        new THREE.Color(TH.foliage).offsetHSL(0,0,0.04+i*0.03).getHex(),
-        matrix:new THREE.Matrix4().makeTranslation(0,y+h/2-0.6,0)});
+    /* Every fourth is a broadleaf and every seventh a dead one, because a
+       hillside of nothing but conifers of one height is a Christmas display,
+       not a forest. */
+    const sort=(v%7===6)?"dead":(v%4===3)?"broad":"conifer";
+    const lean=(rnd()-0.5)*0.10;
+    if(sort==="broad"){
+      const th=lerp(1.5,2.3,rnd());
+      parts.push(at(new THREE.CylinderGeometry(0.13,0.22,th,5),shade(TH.trunk,0.03),0,th/2,0,lean));
+      const crown=shade(TH.foliage,0.10,0.02);
+      const n=3+Math.floor(rnd()*3);
+      for(let i=0;i<n;i++){
+        const r=lerp(0.7,1.2,rnd());
+        parts.push(at(jitter(new THREE.IcosahedronGeometry(r,0),0.34,rnd),
+          shade(crown,(rnd()-0.5)*0.10),
+          (rnd()-0.5)*1.0, th+lerp(0.1,1.0,rnd()), (rnd()-0.5)*1.0));
+      }
+    } else if(sort==="dead"){
+      const th=lerp(2.4,3.6,rnd());
+      parts.push(at(new THREE.CylinderGeometry(0.07,0.20,th,5),shade(TH.trunk,0.05),0,th/2,0,lean));
+      const n=4+Math.floor(rnd()*4);
+      for(let i=0;i<n;i++){
+        const y=lerp(th*0.35,th*0.95,rnd()), a=rnd()*TAU;
+        const L=lerp(0.5,1.3,rnd());
+        parts.push(at(new THREE.CylinderGeometry(0.04,0.07,L,4),shade(TH.trunk,0.08),
+          Math.cos(a)*L*0.4, y, Math.sin(a)*L*0.4, 1.0+(rnd()-0.5)*0.5, a));
+      }
+    } else {
+      /* Five tiers instead of three, but no taller than the three were: more
+         tiers is more tree, not more height. The first go at this stacked
+         them at the old spacing and grew a wood of fifteen-metre pines that
+         stood over the barrier. */
+      const th=lerp(0.9,1.5,rnd());
+      parts.push(at(new THREE.CylinderGeometry(0.13,0.24,th,5),shade(TH.trunk,(rnd()-0.5)*0.06),0,th/2,0,lean));
+      const tiers=4+Math.floor(rnd()*3);
+      const r0=lerp(0.95,1.45,rnd()), spread=lerp(0.24,0.38,rnd());
+      let y=th*0.7;
+      for(let i=0;i<tiers;i++){
+        const f=i/(tiers-1);
+        const r=r0*(1-f*(1-spread)), h=lerp(1.9,0.8,f)*lerp(0.88,1.12,rnd());
+        parts.push(at(new THREE.ConeGeometry(r,h,7),
+          shade(TH.foliage,0.02+f*0.06+(rnd()-0.5)*0.05,(rnd()-0.5)*0.02),
+          0, y+h/2-0.28, 0, 0, rnd()*TAU));
+        y+=h*lerp(0.38,0.48,rnd());
+      }
     }
   } else if(kind==="block"){
-    /* A block of city: a dark slab with a band of lit windows up each face.
-       The windows are their own geometry so they can be handed to a flat
-       material that ignores the lighting — at night an unlit material is
-       exactly what a lit window looks like, and it costs one more draw. */
     return null;                       // built by cityBlock, which returns two
-  } else { /* cactus */
-    parts.push({geo:new THREE.CylinderGeometry(0.35,0.42,3.4,8),color:TH.foliage,
-      matrix:new THREE.Matrix4().makeTranslation(0,1.7,0)});
-    const armL=new THREE.Matrix4().makeRotationZ(0.5); armL.setPosition(-0.55,2.2,0);
-    parts.push({geo:new THREE.CylinderGeometry(0.2,0.22,1.4,7),color:TH.foliage,matrix:armL});
-    const armR=new THREE.Matrix4().makeRotationZ(-0.6); armR.setPosition(0.6,2.6,0);
-    parts.push({geo:new THREE.CylinderGeometry(0.2,0.22,1.2,7),color:TH.foliage,matrix:armR});
+  } else if(kind==="cactus"){
+    /* Three things grow out here: saguaro, barrel, and something dead. The
+       old saguaro's arms were cylinders tilted off the trunk, which is not
+       how a saguaro is put together — the arm goes out, then turns and goes
+       up, and that elbow is the whole silhouette. */
+    const sort=(v%5===4)?"barrel":(v%5===3)?"dead":"saguaro";
+    if(sort==="saguaro"){
+      const th=lerp(2.6,4.6,rnd()), r=lerp(0.28,0.42,rnd());
+      const skin=shade(TH.foliage,(rnd()-0.5)*0.08);
+      parts.push(at(new THREE.CylinderGeometry(r*0.86,r,th,9),skin,0,th/2,0));
+      parts.push(at(new THREE.SphereGeometry(r*0.86,9,6),skin,0,th,0));
+      const arms=Math.floor(rnd()*3);
+      for(let i=0;i<arms;i++){
+        const a=rnd()*TAU, side=Math.cos(a), sz=Math.sin(a);
+        const y=lerp(th*0.35,th*0.68,rnd());
+        const out=lerp(0.55,0.95,rnd()), up=lerp(0.9,1.9,rnd()), ar=r*lerp(0.55,0.75,rnd());
+        parts.push(at(new THREE.CylinderGeometry(ar,ar,out*2,8),skin,
+          side*out, y, sz*out, Math.PI/2, a));
+        parts.push(at(new THREE.CylinderGeometry(ar,ar*1.05,up,8),skin,
+          side*out*2, y+up/2, sz*out*2));
+        parts.push(at(new THREE.SphereGeometry(ar,8,6),skin,side*out*2,y+up,sz*out*2));
+      }
+    } else if(sort==="barrel"){
+      const r=lerp(0.5,0.9,rnd()), h=r*lerp(1.0,1.6,rnd());
+      const skin=shade(TH.foliage,-0.04+(rnd()-0.5)*0.06);
+      parts.push(at(jitter(new THREE.CylinderGeometry(r*0.8,r,h,10),0.08,rnd),skin,0,h/2,0));
+      parts.push(at(new THREE.SphereGeometry(r*0.8,10,6),skin,0,h,0));
+      /* the flowers on top, which is the only colour out there */
+      if(rnd()<0.5) for(let i=0;i<3;i++){
+        const a=rnd()*TAU;
+        parts.push(at(new THREE.SphereGeometry(0.1,6,4),0xE0B23A,
+          Math.cos(a)*r*0.4, h+0.06, Math.sin(a)*r*0.4));
+      }
+    } else {
+      const n=4+Math.floor(rnd()*4);
+      for(let i=0;i<n;i++){
+        const a=rnd()*TAU, L=lerp(0.6,1.5,rnd());
+        parts.push(at(new THREE.CylinderGeometry(0.035,0.055,L,4),
+          shade(TH.trunk,0.10+(rnd()-0.5)*0.06),
+          Math.cos(a)*0.18, L*0.42, Math.sin(a)*0.18, lerp(0.15,0.55,rnd()), a));
+      }
+    }
+  } else { /* scrub: the low stuff, which is most of what is actually near
+              the road and was not there at all before */
+    const dry=kind==="dryscrub";
+    const sort=(v%3===2)?"tuft":"bush";
+    if(sort==="bush"){
+      const n=3+Math.floor(rnd()*3);
+      const skin=dry?shade(TH.foliage,-0.02,-0.03):shade(TH.foliage,0.06);
+      for(let i=0;i<n;i++){
+        const r=lerp(0.20,0.40,rnd());
+        parts.push(at(jitter(new THREE.IcosahedronGeometry(r,0),0.45,rnd),
+          shade(skin,(rnd()-0.5)*0.12),
+          (rnd()-0.5)*0.7, lerp(0.14,0.42,rnd()), (rnd()-0.5)*0.7));
+      }
+    } else {
+      const n=dry?(3+Math.floor(rnd()*3)):(4+Math.floor(rnd()*4));
+      const skin=dry?shade(TH.dirt,0.06):shade(TH.grassB,0.04);
+      for(let i=0;i<n;i++){
+        const a=rnd()*TAU, L=lerp(0.35,0.8,rnd());
+        parts.push(at(new THREE.ConeGeometry(0.05,L,3),shade(skin,(rnd()-0.5)*0.08),
+          Math.cos(a)*0.13, L/2, Math.sin(a)*0.13, lerp(0.10,0.42,rnd()), a));
+      }
+    }
+  }
+  return mergeGeos(parts);
+}
+/* a stone, of which there are four kinds and none of them round */
+function rockGeometry(TH,rnd){
+  const parts=[];
+  const r=lerp(0.8,1.4,rnd());
+  parts.push(at(jitter(new THREE.IcosahedronGeometry(r,0),0.55,rnd),
+    shade(TH.rock,(rnd()-0.5)*0.10), 0, r*lerp(0.45,0.7,rnd()), 0,
+    (rnd()-0.5)*0.5, rnd()*TAU));
+  /* most stones have a smaller one leaning on them */
+  const n=Math.floor(rnd()*3);
+  for(let i=0;i<n;i++){
+    const s=r*lerp(0.25,0.55,rnd()), a=rnd()*TAU, d=r*lerp(0.7,1.2,rnd());
+    parts.push(at(jitter(new THREE.IcosahedronGeometry(s,0),0.5,rnd),
+      shade(TH.rock,(rnd()-0.5)*0.12),
+      Math.cos(a)*d, s*0.6, Math.sin(a)*d, (rnd()-0.5)*0.6, rnd()*TAU));
   }
   return mergeGeos(parts);
 }
@@ -3588,6 +3730,42 @@ function buildScatter(T,TH){
               fitInstancedBounds(glow); glow.frustumCulled=true; }
     return placed?inst:null;
   }
+  /* scattered along the road rather than across the map: pick a distance
+     round the lap and a distance out from the middle of it */
+  function band(count,geo,dMin,dMax,scale0,scale1){
+    if(count<=0||!geo)return null;
+    const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95,
+      metalness:0.0,envMapIntensity:0.3});
+    const inst=new THREE.InstancedMesh(geo,mat,count);
+    const m=new THREE.Matrix4(), tint=new THREE.Color();
+    let placed=0;
+    for(let i=0;i<count;i++){
+      const u=rnd()*T.N, j=Math.floor(u)%T.N, t=u-Math.floor(u), k2=(j+1)%T.N;
+      const x0=lerp(T.X[j],T.X[k2],t), z0=lerp(T.Z[j],T.Z[k2],t);
+      const rx=lerp(T.RX[j],T.RX[k2],t), rz=lerp(T.RZ[j],T.RZ[k2],t);
+      /* bunched toward the road: the square puts more of them near the edge */
+      const f=rnd()*rnd();
+      const d=(lerp(dMin,dMax,f))*(rnd()<0.5?1:-1);
+      const x=x0+rx*d, z=z0+rz*d;
+      const np=nearest(T,x,z);
+      if(Math.abs(np.d)<dMin)continue;            // never on the run-off
+      const sc=lerp(scale0,scale1,rnd());
+      m.makeRotationY(rnd()*TAU);
+      m.scale(new THREE.Vector3(sc,sc*lerp(0.8,1.3,rnd()),sc));
+      m.setPosition(x,heightAt(T,x,z,np)-0.06,z);
+      inst.setMatrixAt(placed,m);
+      const g=0.82+rnd()*0.36;
+      tint.setRGB(g*(0.95+rnd()*0.1),g,g*(0.93+rnd()*0.1));
+      inst.setColorAt(placed,tint);
+      placed++;
+    }
+    inst.count=placed;
+    inst.instanceMatrix.needsUpdate=true;
+    if(inst.instanceColor)inst.instanceColor.needsUpdate=true;
+    fitInstancedBounds(inst);
+    inst.frustumCulled=true;
+    return placed?inst:null;
+  }
   if(TH.flora==="block"){
     /* Each block is its own shape rather than one stamped two hundred
        times, so a skyline reads as a skyline. They go up in groups of one
@@ -3602,38 +3780,129 @@ function buildScatter(T,TH){
       if(body){ grp.add(body); if(glow&&glow.count)grp.add(glow); }
     }
   }else{
-    const tree=place(TH.floraN,floraGeometry(TH.flora,TH),T.halfW+16,0.55,0.8,1.7,true);
-    if(tree)grp.add(tree);
+    /* Twelve shapes rather than one. Twelve instanced meshes is still a dozen
+       draws for six hundred trees, and the difference on screen between one
+       repeated tree and twelve is the whole of what makes a wood look like a
+       wood. */
+    const kinds=12, each=Math.ceil(TH.floraN/kinds);
+    for(let k=0;k<kinds;k++){
+      const g=floraGeometry(TH.flora,TH,rnd,k);
+      const tree=place(each,g,T.halfW+16,0.55,0.8,1.7,true);
+      if(tree)grp.add(tree);
+    }
+    /* And the low stuff. Scattering it over the whole map the way the trees
+       are scattered was the first go and it put almost none of it where it
+       could be seen — a thousand bushes spread over a square kilometre is
+       bare ground with a bush in it. This goes in a band down each side of
+       the road instead, which is the only part of the county anybody passes
+       close enough to look at. */
+    const scrub=TH.flora==="cactus"?"dryscrub":"scrub";
+    const sk=6, sn=Math.ceil(Math.min(1250,T.len*0.62)/sk);
+    for(let k=0;k<sk;k++){
+      const g=floraGeometry(scrub,TH,rnd,k);
+      const bush=band(sn,g,T.halfW+8.5,T.halfW+40,0.7,1.5);
+      if(bush)grp.add(bush);
+    }
   }
   if(TH.lamps)grp.add(buildStreetLights(T,TH));
-  const rockGeo=mergeGeos([{geo:new THREE.IcosahedronGeometry(1,0),color:TH.rock}]);
-  const rocks=place(TH.rockN,rockGeo,T.halfW+13,0.9,0.7,2.6,true);
-  if(rocks)grp.add(rocks);
+  if(TH.rockN>0){
+    const rk=4, rn=Math.ceil(TH.rockN/rk);
+    for(let k=0;k<rk;k++){
+      const rocks=place(rn,rockGeometry(TH,rnd),T.halfW+13,0.9,0.7,2.6,true);
+      if(rocks)grp.add(rocks);
+    }
+  }
+  if(TH.horizon)grp.add(buildHorizon(T,TH,rnd));
   return grp;
+}
+
+/* What is behind everything else. Both of these had an empty sky sitting on a
+   flat rim of ground, which is what made them read as a lawn and a beach
+   however much was scattered on them — there was nothing to say how far away
+   anything was. These stand in a ring well beyond the terrain, sunk into it
+   so there is no seam, and the fog does the rest. */
+function buildHorizon(T,TH,rnd){
+  const grp=new THREE.Group();
+  const b=T.bounds;
+  const cx=(b.minX+b.maxX)/2, cz=(b.minZ+b.maxZ)/2;
+  const half=Math.hypot(b.maxX-b.minX,b.maxZ-b.minZ)/2;
+  const haze=1/Math.max(0.0004,TH.fogD);
+  const R0=half+Math.min(560,haze*0.42), R1=half+Math.min(1900,haze*1.30);
+  const kinds=5, per=11;
+  for(let k=0;k<kinds;k++){
+    const g=TH.horizon==="mesa"?mesaGeometry(TH,rnd):peakGeometry(TH,rnd);
+    const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.95,
+      metalness:0.0,envMapIntensity:0.2});
+    const inst=new THREE.InstancedMesh(g,mat,per);
+    const m=new THREE.Matrix4(), tint=new THREE.Color();
+    for(let i=0;i<per;i++){
+      const a=((k*per+i)+rnd()*0.8)/(kinds*per)*TAU;
+      const d=lerp(R0,R1,rnd());
+      const x=cx+Math.cos(a)*d, z=cz+Math.sin(a)*d;
+      const sc=lerp(0.7,1.35,rnd());
+      m.makeRotationY(rnd()*TAU);
+      m.scale(new THREE.Vector3(sc,sc*lerp(0.7,1.3,rnd()),sc));
+      /* sunk, so the base is never a shape standing on nothing */
+      m.setPosition(x,terrainBase(T,x,z)-26,z);
+      inst.setMatrixAt(i,m);
+      const t=0.86+rnd()*0.24;
+      tint.setRGB(t,t*(0.98+rnd()*0.04),t*(0.98+rnd()*0.05));
+      inst.setColorAt(i,tint);
+    }
+    inst.instanceMatrix.needsUpdate=true;
+    if(inst.instanceColor)inst.instanceColor.needsUpdate=true;
+    fitInstancedBounds(inst);
+    inst.frustumCulled=true;
+    grp.add(inst);
+  }
+  return grp;
+}
+/* a mountain: a ridge of two or three summits, with snow on the tops */
+function peakGeometry(TH,rnd){
+  const parts=[];
+  const n=2+Math.floor(rnd()*2);
+  const stone=shade(TH.rock,-0.12,0.01);
+  for(let i=0;i<n;i++){
+    const h=lerp(150,330,rnd()), r=h*lerp(0.55,0.95,rnd());
+    const a=rnd()*TAU, d=i===0?0:r*lerp(0.5,1.0,rnd());
+    const x=Math.cos(a)*d, z=Math.sin(a)*d;
+    const g=jitter(new THREE.ConeGeometry(r,h,8,4),0.30,rnd);
+    parts.push(at(g,shade(stone,(rnd()-0.5)*0.06),x,26+h/2,z,(rnd()-0.5)*0.10,rnd()*TAU));
+    /* the snow line, as a smaller cone sitting in the top of the big one */
+    const sh=h*lerp(0.30,0.48,rnd());
+    parts.push(at(jitter(new THREE.ConeGeometry(r*sh/h*1.06,sh,8,2),0.18,rnd),
+      0xF2F7FA, x, 26+h-sh/2, z));
+  }
+  return mergeGeos(parts);
+}
+/* a mesa: flat on top, with the scree it has shed piled round the bottom */
+function mesaGeometry(TH,rnd){
+  const parts=[];
+  const h=lerp(60,165,rnd()), r=h*lerp(0.75,1.5,rnd());
+  const stone=shade(TH.rock,0.10,-0.01);
+  parts.push(at(jitter(new THREE.CylinderGeometry(r*0.92,r,h,9,2),0.10,rnd),
+    stone,0,26+h/2,0));
+  /* a band or two of different rock, which is what a mesa is */
+  const bands=1+Math.floor(rnd()*2);
+  for(let i=0;i<bands;i++){
+    const y=lerp(h*0.25,h*0.8,rnd()), bh=h*lerp(0.06,0.13,rnd());
+    parts.push(at(new THREE.CylinderGeometry(r*0.99,r*1.0,bh,9),
+      shade(stone,(rnd()<0.5?-1:1)*lerp(0.05,0.11,rnd())),0,26+y,0));
+  }
+  parts.push(at(new THREE.ConeGeometry(r*1.5,h*0.42,9),shade(TH.dirt,-0.12),0,26+h*0.21,0));
+  /* and a smaller one alongside more often than not */
+  if(rnd()<0.6){
+    const h2=h*lerp(0.35,0.7,rnd()), r2=r*lerp(0.4,0.7,rnd()), a=rnd()*TAU;
+    const d=r*lerp(1.3,2.0,rnd());
+    parts.push(at(jitter(new THREE.CylinderGeometry(r2*0.92,r2,h2,8,1),0.10,rnd),
+      shade(stone,(rnd()-0.5)*0.08),Math.cos(a)*d,26+h2/2,Math.sin(a)*d));
+  }
+  return mergeGeos(parts);
 }
 /* Lamps down the side of the road, on alternate sides, with a head that
    ignores the lighting so it reads as the thing doing the lighting. They
    follow the centreline rather than being scattered, because a street light
    in the middle of a field is scenery and one beside the road is a street. */
-/* The soft round patch a street lamp puts on the road. Real lights would be
-   the honest way to do this and eleven dozen of them would bring the whole
-   thing to a halt, so each lamp gets a picture of its own glow laid flat on
-   the tarmac and added to whatever is underneath. Drawn once, kept. */
-let POOL_TEX=null;
-function poolTexture(){
-  if(POOL_TEX)return POOL_TEX;
-  const c=document.createElement("canvas"); c.width=c.height=128;
-  const g=c.getContext("2d");
-  const rad=g.createRadialGradient(64,64,0,64,64,64);
-  rad.addColorStop(0.00,"rgba(255,255,255,1)");
-  rad.addColorStop(0.35,"rgba(255,255,255,0.55)");
-  rad.addColorStop(0.70,"rgba(255,255,255,0.14)");
-  rad.addColorStop(1.00,"rgba(255,255,255,0)");
-  g.fillStyle=rad; g.fillRect(0,0,128,128);
-  POOL_TEX=new THREE.CanvasTexture(c);
-  POOL_TEX.needsUpdate=true;
-  return POOL_TEX;
-}
 function buildStreetLights(T,TH){
   const grp=new THREE.Group();
   const every=21;                                   // metres between lamps
@@ -3653,17 +3922,8 @@ function buildStreetLights(T,TH){
     new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.8,metalness:0.3}),n);
   const heads=new THREE.InstancedMesh(headG,
     new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false,fog:true}),n);
-  /* a flat square carrying the glow, laid on the road under each head */
-  const poolG=new THREE.PlaneGeometry(1,1);
-  poolG.rotateX(-Math.PI/2);
-  const pools=new THREE.InstancedMesh(poolG,new THREE.MeshBasicMaterial({
-    map:poolTexture(), color:TH.windows, transparent:true, opacity:0.62,
-    blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false,
-    fog:true, side:THREE.DoubleSide}),n);
-  pools.renderOrder=2;
   const m=new THREE.Matrix4(), q=new THREE.Quaternion(), up=new THREE.Vector3(0,1,0);
   const pos=new THREE.Vector3(), one=new THREE.Vector3(1,1,1);
-  const nrm=new THREE.Vector3(), pp=new THREE.Vector3();
   for(let i=0;i<n;i++){
     const s=i*T.len/n;
     const u=s/(T.len/T.N); const j=Math.floor(u)%T.N, t=u-Math.floor(u);
@@ -3676,24 +3936,96 @@ function buildStreetLights(T,TH){
     q.setFromAxisAngle(up,Math.atan2(-rx*side,-rz*side));
     m.compose(pos,q,one);
     poles.setMatrixAt(i,m); heads.setMatrixAt(i,m);
-    /* The pool sits under the head, out over the road, and is tilted to lie
-       along the surface — the road banks, and a patch of light that ignored
-       the banking would sink into it on one side and float on the other. */
-    const px=x+rx*(off-4.2)*side, pz=z+rz*(off-4.2)*side;
-    const py=heightAt(T,px,pz);
-    const ex=heightAt(T,px+rx*3,pz+rz*3)-heightAt(T,px-rx*3,pz-rz*3);
-    const fy=heightAt(T,px+rz*3,pz-rx*3)-heightAt(T,px-rz*3,pz+rx*3);
-    nrm.set(-ex/6*rx-fy/6*rz,1,-ex/6*rz+fy/6*rx).normalize();
-    q.setFromUnitVectors(up,nrm);
-    pp.set(px,py+0.10,pz);
-    m.compose(pp,q,new THREE.Vector3(17,1,13));
-    pools.setMatrixAt(i,m);
   }
   poles.instanceMatrix.needsUpdate=true; heads.instanceMatrix.needsUpdate=true;
-  pools.instanceMatrix.needsUpdate=true;
-  fitInstancedBounds(poles); fitInstancedBounds(heads); fitInstancedBounds(pools);
-  grp.add(poles); grp.add(heads); grp.add(pools);
+  fitInstancedBounds(poles); fitInstancedBounds(heads);
+  grp.add(poles); grp.add(heads);
+  grp.add(buildRoadGlow(T,TH,n,every,off));
   return grp;
+}
+
+/* The light the lamps put on the road, as one ribbon laid over the whole
+   circuit rather than a patch under each head.
+
+   Patches were the first go and they were wrong in the way that matters: a
+   floodlit circuit is lit everywhere, and what you got was bright rings with
+   black between them, so the track disappeared between lamps and came back.
+   This is built on the road's own stations, which is what makes it sit
+   exactly on the surface however the road banks and climbs — the patches had
+   to be tilted to guess at the camber, and this does not have to guess.
+
+   It brightens under each lamp and toward the side that lamp is on, but it
+   never falls to nothing: there is a floor under the whole thing, so the
+   circuit reads as lit all the way round and the lamps are what make it
+   uneven rather than what make it visible. */
+function buildRoadGlow(T,TH,lamps,every,off){
+  const N=T.N, hw=T.halfW;
+  const O =[-(hw+7.5),-(hw+3.0),-(hw+1.2),-hw*0.55,0,hw*0.55,hw+1.2,hw+3.0,hw+7.5];
+  const DY=[-0.86,-0.30,0.02,0,0,0,0.02,-0.30,-0.86];   // as the road's own verge falls
+  const EDGE=[0,0.45,0.96,1,1,1,0.96,0.45,0];           // and fades out over it
+  const M=O.length, ST=M-1;
+  const rings=N+1, perRing=ST*2;
+  const pos=new Float32Array(rings*perRing*3), col=new Float32Array(rings*perRing*3);
+  const idx=new Uint32Array(N*ST*6);
+  /* Not the lamp's own colour at full strength: sodium added to tarmac at
+     any strength turns it sand-coloured, and the first go at this bleached
+     the road to beige and blew the white lines out. Half the tint, half the
+     strength — enough to read as lit asphalt at night rather than as
+     daylight with the sky turned off. */
+  const lit=SRGB(TH.windows).lerp(new THREE.Color(0.70,0.75,0.86),0.55);
+  const FLOOR=0.28;              // what the whole circuit gets, lamp or no lamp
+  const PEAK =0.44;              // and what standing under one adds
+  const REACH=13.0;              // how far along the road a lamp throws
+  let vi=0;
+  for(let r=0;r<rings;r++){
+    const i=r%N;
+    const s=(r===N?T.len:T.S[i]);
+    const sinB=Math.sin(T.B[i]), cosB=Math.cos(T.B[i]);
+    /* the two or three lamps near enough to matter, rather than all of them */
+    const near=[];
+    const c0=Math.round(s/every);
+    for(let d=-2;d<=2;d++){
+      const li=((c0+d)%lamps+lamps)%lamps;
+      let ds=li*(T.len/lamps)-s;
+      if(ds> T.len/2)ds-=T.len; if(ds<-T.len/2)ds+=T.len;
+      if(Math.abs(ds)<REACH*2.2) near.push({ds,side:(li%2)?1:-1});
+    }
+    for(let k=0;k<ST;k++){
+      for(let e=0;e<2;e++){
+        const m=k+e, o=O[m];
+        let b=FLOOR;
+        for(const L of near){
+          /* brightest under the head, and biased to the side it hangs over */
+          const along=Math.exp(-(L.ds*L.ds)/(REACH*REACH));
+          const lean =1+0.55*L.side*clamp(o/Math.max(1,hw),-1,1);
+          b+=PEAK*along*lean;
+        }
+        b=Math.min(1.35,b)*EDGE[m];
+        pos[vi*3]  =T.X[i]+T.RX[i]*o;
+        pos[vi*3+1]=T.Y[i]+sinB*o+(DY[m]+0.055)*cosB;
+        pos[vi*3+2]=T.Z[i]+T.RZ[i]*o;
+        col[vi*3]=lit.r*b; col[vi*3+1]=lit.g*b; col[vi*3+2]=lit.b*b;
+        vi++;
+      }
+    }
+  }
+  let f=0;
+  for(let r=0;r<N;r++)for(let k=0;k<ST;k++){
+    const a=r*perRing+k*2, b2=a+1, cI=(r+1)*perRing+k*2, d=cI+1;
+    idx[f++]=a; idx[f++]=b2; idx[f++]=cI;
+    idx[f++]=b2; idx[f++]=d;  idx[f++]=cI;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  g.setAttribute("color",new THREE.BufferAttribute(col,3));
+  g.setIndex(new THREE.BufferAttribute(idx,1));
+  const mesh=new THREE.Mesh(g,new THREE.MeshBasicMaterial({
+    vertexColors:true, transparent:true, opacity:0.30,
+    blending:THREE.AdditiveBlending, depthWrite:false, toneMapped:false,
+    fog:true, side:THREE.DoubleSide}));
+  mesh.renderOrder=2;
+  mesh.frustumCulled=false;
+  return mesh;
 }
 function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
 
