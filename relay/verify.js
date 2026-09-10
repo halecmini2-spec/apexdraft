@@ -22,7 +22,7 @@ const PERF = {
      other, so the server has to know what they can do */
   bike:    { power: 1.30, top: 1.22, grip: 1.26 },
   trike:   { power: 1.12, top: 1.04, grip: 1.08 },
-  v12:     { power: 0.94, top: 1.52, grip: 1.22 },
+  v12:     { power: 1.04, top: 1.62, grip: 1.24 },
 };
 const TOP = 64;          // m/s on tarmac, GT
 const GRIP = 21.4;       // m/s^2 of lateral grip, GT, at speed

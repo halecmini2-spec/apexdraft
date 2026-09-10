@@ -229,7 +229,8 @@ server side to it; but the garage, the pause-menu switcher and the saved
 choice all check, so signing out of that account puts you back in the GT
 rather than leaving you in something you can no longer pick.
 
-- **Supervikr X**, a litre superbike, with a rider on it. 280+ km/h, 165 kg,
+- **Superbike X**, a litre superbike, with a rider on it, drawn at twice
+  its own size so it is not lost behind a car. 280+ km/h, 165 kg,
   and the only thing here with one wheel behind the other. It has no track
   to roll on, so it cannot lean on its springs the way a car does — it lays
   over into a corner instead, up to thirty-five degrees, by as much as the
@@ -243,9 +244,22 @@ rather than leaving you in something you can no longer pick.
   here off the line.
 - **Rocket Trike**, a blown V8 in a tube frame. 240+ km/h, 210 kg, one narrow
   wheel out front on a long raked fork and two enormous slicks at the back.
-  There is no bodywork: the frame is the shape of it. The twitchiest thing
-  in the garage by some way.
-- **V12 Monster**, mid-engined and the fastest thing here at 350+ km/h. Also
+  There is no bodywork: the frame is the shape of it. On the throttle it
+  burns out of all eleven pipes — the eight zoomies and three out the back —
+  each with a length and a flicker of its own so they do not pulse together
+  like a string of lights, and out altogether the moment you lift.
+
+  It is also the one thing here that will turn itself over. Three wheels, a
+  narrow front and the whole engine up where a passenger would be: lean on
+  it hard enough and the inside wheels come up. That is measured against how
+  hard it is actually cornering rather than against the grip available — a
+  car pulling that much has lifted a wheel whether or not there was more
+  grip to be had — and past the tipping angle the roll the crashes already
+  use takes over and it goes the rest of the way itself. In testing a full
+  lock held through a slow corner put it on its roof; anything less leaned
+  hard and stayed down. It is the player's trike that does this; the
+  machines drive theirs flat.
+- **V12 Monster**, mid-engined and the fastest thing here at 370+ km/h. Also
   the heaviest at 1,450 kg, which is what makes it the one that will not be
   shoved about — and the slowest of the three to get going.
 

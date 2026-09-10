@@ -1911,9 +1911,9 @@ body.admining #lobbybar{display:none}
         <button class="gar-card" data-car="formula"><canvas width="360" height="220"></canvas><b>Formula</b><span>The fastest thing here, and the twitchiest.</span></button>
         <button class="gar-card" data-car="yaris"><canvas width="360" height="220"></canvas><b>Yaris</b><span>Soft, forgiving, never quite settled.</span></button>
         <button class="gar-card" data-car="kart"><canvas width="360" height="220"></canvas><b>Kart</b><span>No top end, enormous grip.</span></button>
-        <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Supervikr X</b><span>280+ km/h, 2.3 s, 165 kg. Leans. Challenging.</span></button>
+        <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Superbike X</b><span>280+ km/h, 2.3 s, 165 kg. Leans. Challenging.</span></button>
         <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 2.8 s, 210 kg. Three wheels, very twitchy.</span></button>
-        <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span>350+ km/h, 3.1 s, 1,450 kg. Heavy, stable, fastest here.</span></button>
+        <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span>370+ km/h, 1,450 kg. Heavy, stable, and the fastest thing here.</span></button>
       </div>
       <div class="gar-colours">
         <span class="k">Colour</span>
@@ -2012,7 +2012,7 @@ body.admining #lobbybar{display:none}
             <button class="chip" data-car="formula">Formula</button>
             <button class="chip" data-car="yaris">Yaris</button>
             <button class="chip" data-car="kart">Kart</button>
-            <button class="chip test" data-car="bike">Supervikr X</button>
+            <button class="chip test" data-car="bike">Superbike X</button>
             <button class="chip test" data-car="trike">Rocket Trike</button>
             <button class="chip test" data-car="v12">V12 Monster</button>
           </div>
@@ -3577,7 +3577,7 @@ const CAR_MODELS=[
      the same gate the AI opponents sit behind. Everything else about them
      is ordinary: they are chosen in the garage, they set lap records of
      their own, and the relay checks their laps like any other. */
-  {id:"bike",   label:"Supervikr X", test:true},
+  {id:"bike",   label:"Superbike X", test:true},
   {id:"trike",  label:"Rocket Trike",test:true},
   {id:"v12",    label:"V12 Monster", test:true}
 ];
@@ -3606,7 +3606,7 @@ const CAR_PERF={
      by the standing hundred, and the handling words decide the rest. */
   bike:   {power:1.30, top:1.22, grip:1.26, turnin:1.86, front:1.46},  // 280+, 2.3 s, challenging
   trike:  {power:1.12, top:1.04, grip:1.08, turnin:2.10, front:1.56},  // 240+, 2.8 s, very twitchy
-  v12:    {power:0.94, top:1.52, grip:1.22, turnin:1.30, front:1.28}   // 350+, 3.1 s, heavy but stable
+  v12:    {power:1.04, top:1.62, grip:1.24, turnin:1.30, front:1.28}   // 370+, heavy but stable
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -4818,7 +4818,9 @@ function bodySuperbike(b,M){
   }
 
   const tailMats=addLamps(b,null,{w:0.068,h:0.030,y:0.852,z:-0.632,x:[0]});
-  return {tailMats,lean:0.62,
+  /* Twice the size it is drawn at: a bike among cars was small enough to
+     lose behind one, and this is a game before it is a scale drawing. */
+  return {tailMats,lean:0.62,scale:2.0,
     wheels:{race:true,front:1,
             r:FR,tw:0.150, rR:RR,twR:0.220,
             pos:[[0,FZ],[0,RZ]]}};
@@ -4894,10 +4896,33 @@ function bodyTrike(b,M){
     r.rotation.x=Math.PI/2; r.position.set(s*0.095,1.390,-0.080); b.add(r);
   }
   /* zoomie headers: four a side, up and out, the way the picture has them */
+  const flames=[];
+  /* A flame is two cones, one inside the other: a short white heart and a
+     longer orange body around it, both see-through and neither writing to
+     the depth buffer, so they read as light rather than as a plastic spike
+     and never cut a hard edge into whatever is behind. */
+  const flameAt=(x,y,z,ax,ay)=>{
+    const g=new THREE.Group();
+    const body=new THREE.Mesh(new THREE.ConeGeometry(0.052,0.560,10,1,true),
+      new THREE.MeshBasicMaterial({color:SRGB(0xFF4A05),transparent:true,opacity:0.86,
+        depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+    body.position.y=-0.280; body.rotation.x=Math.PI;      // tip pointing away
+    const heart=new THREE.Mesh(new THREE.ConeGeometry(0.026,0.250,8,1,true),
+      new THREE.MeshBasicMaterial({color:SRGB(0xFFF0C4),transparent:true,opacity:0.90,
+        depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide}));
+    heart.position.y=-0.125; heart.rotation.x=Math.PI;
+    g.add(body); g.add(heart);
+    g.position.set(x,y,z); g.rotation.set(ax,0,ay);
+    g.visible=false; g.userData.parts=[body,heart];
+    b.add(g); flames.push(g);
+    return g;
+  };
   for(const s of [-1,1]) for(let i=0;i<4;i++){
     const z=0.110-i*0.130;
     T([s*0.280,0.760,z],[s*0.470,0.900,z+0.050],0.032,chromeM,8);
     T([s*0.470,0.900,z+0.050],[s*0.520,1.080,z+0.130],0.032,chromeM,8);
+    /* out of the end of each pipe, along the way the pipe is pointing */
+    flameAt(s*0.545,1.145,z+0.170,-0.42,s*0.26);
   }
   /* the bellhousing and the driveshaft back to the diff */
   const bell=new THREE.Mesh(new THREE.CylinderGeometry(0.190,0.150,0.220,14),engM);
@@ -4939,12 +4964,23 @@ function bodyTrike(b,M){
     /* stays back down to the frame, so it is holding on to something */
     tubeTo(b,[s*0.300,1.400,-0.560],[s*0.300,0.860,-0.250],0.020,frameM,6);
   }
+  /* and three more straight out the back, which is the end of it anybody
+     racing behind one is actually looking at */
+  for(const x of [-0.230,0,0.230]){
+    const p=new THREE.Mesh(new THREE.CylinderGeometry(0.070,0.070,0.180,12),chromeM);
+    p.rotation.x=Math.PI/2; p.position.set(x,0.880,-0.640); p.castShadow=true; b.add(p);
+    flameAt(x,0.880,-0.760,Math.PI/2,0);
+  }
   /* and the little splitter over the front wheel */
   const spl=new THREE.Mesh(lens(0.300,0.170,0.022),frameM);
   spl.position.set(0,1.150,0.905); spl.rotation.x=1.30; b.add(spl);
 
   const tailMats=addLamps(b,null,{w:0.078,h:0.044,y:1.180,z:-0.470,x:[-0.250,0.250]});
   return {tailMats,
+    flames,
+    /* Three wheels and the weight up where a passenger would be: lean on it
+       hard enough and it will go over. Nothing else here does that. */
+    flip:4.3,
     /* one at the front, two at the back, and only the front one steers */
     wheels:{race:true,front:1,
             r:FR,tw:0.190, rR:RR,twR:0.560,
@@ -5066,13 +5102,43 @@ function buildCar(bodyColor,kind){
   g.userData.wheels=buildWheels(g,M,spec.wheels);
   g.userData.tailMats=spec.tailMats;
   g.userData.bop=spec.bop||null;
+  /* Some of these are drawn at a size that suits the modelling and wanted
+     at another on the road. Scaling the whole group takes the wheels and
+     their spacing with it, and the hitbox is measured off the model, so
+     the car is bigger to hit as well as to look at. */
+  if(spec.scale&&spec.scale!==1) g.scale.setScalar(spec.scale);
   /* how far this one lays over in a corner; nothing but the bike does */
   g.userData.lean=spec.lean||0;
+  g.userData.flames=spec.flames||null;   // lit by the throttle, if it has any
+  g.userData.flip=spec.flip||0;          // and how near the limit it goes over
   /* wheelSpin is integrated against a 0.36 m reference, so a car on smaller
      wheels has to turn them faster to look like it is rolling, not skating */
-  g.userData.spin=0.36/spec.wheels.r;
+  g.userData.spin=0.36/(spec.wheels.r*(spec.scale||1));   // a bigger wheel turns slower
   return g;
 }
+/* Flame out of the pipes, driven by the throttle. Each one has a length of
+   its own and a flicker of its own, so eleven pipes do not pulse together
+   like a string of lights; off the throttle they go out altogether rather
+   than shrinking to a stub. It is drawn, not simulated — there is nothing
+   here that touches the car. */
+function flameTick(g,gas,t){
+  const F=g&&g.userData&&g.userData.flames;
+  if(!F)return;
+  const on=clamp(gas,0,1);
+  for(let i=0;i<F.length;i++){
+    const f=F[i];
+    if(on<=0.02){ if(f.visible)f.visible=false; continue; }
+    f.visible=true;
+    /* each pipe on its own beat, and never quite the same length twice */
+    const beat=0.62+0.38*Math.sin(t*31+i*1.9)+0.16*Math.sin(t*79+i*4.7);
+    const len=on*(0.55+0.75*clamp(beat,0,1.4));
+    f.scale.set(0.7+0.5*on,len,0.7+0.5*on);
+    const p=f.userData.parts;
+    p[0].material.opacity=0.30+0.50*on*clamp(beat,0,1);
+    p[1].material.opacity=0.45+0.55*on;
+  }
+}
+
 /* =====================================================================
    3. THE GAME
    ===================================================================== */
@@ -5085,7 +5151,7 @@ const G={
 const CAR={
   x:0,z:0,y:0,vx:0,vz:0,vy:0,yaw:0,yawRate:0,steer:0,ax:0,ay:0,drift:0,
   hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,holdT:0,holdDir:0,slide:0,lean:0,
-  spinV:0, aRoll:0, aRollV:0, aPitch:0, aPitchV:0,
+  spinV:0, aRoll:0, aRollV:0, aPitch:0, aPitchV:0, gas:0,
   grounded:true,vyS:0,prevSurf:0,
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
   sectors:[null,null,null], bestSectors:[null,null,null], secStart:0, secIdx:0,
@@ -5626,6 +5692,7 @@ function step(dt){
      MINUS u*r: a right-hand turn (negative yaw rate) accelerates the car to
      the right, and the body rolls the other way, onto its outside wheels. */
   CAR.ax=a; CAR.ay=-yawRate*vLong;
+  CAR.gas=gas;                      // what the exhaust is being fed
   CAR.slip=clamp(Math.abs(vLat)/8+CAR.drift*0.7,0,2);
 
   /* ---- recompose and move ---- */
@@ -5770,6 +5837,27 @@ function step(dt){
     CAR.aRollV+=(-40*CAR.aRoll-dampS*CAR.aRollV)*dt;
     CAR.aRoll+=CAR.aRollV*dt;
   }
+  /* Three wheels, a narrow front and the whole engine up where a passenger
+     would be: lean on one hard enough and the inside wheel comes off the
+     road. Nothing else here does this, and it is not a crash — it is the
+     car's own cornering doing it, so it builds as the corner is held and
+     stops the moment the load comes off. Past the tipping angle the roll
+     the crashes already use takes over and it goes the rest of the way by
+     itself, which is what makes it possible to put one on its roof in a
+     corner taken far too fast. */
+  const flipG=(G.car&&G.car.userData.flip)||0;
+  if(flipG>0&&CAR.grounded){
+    /* The lateral force at which the inside wheels start to come up, which
+       for a real vehicle is half its track over the height of its weight.
+       Measured against how hard it is actually cornering, not against the
+       grip available: a car that pulls this much has lifted a wheel whether
+       or not there was more grip to be had. Rolling away from the corner —
+       a right-hand turn throws the weight onto the left wheels, so the car
+       goes over to its left. */
+    const push=Math.abs(CAR.ay)-flipG*9.81;
+    if(push>0) CAR.aRollV=clamp(CAR.aRollV-Math.sign(CAR.ay)*push*6.0*dt,-ROLL_MAX,ROLL_MAX);
+  }
+
   /* A bike has no track to roll on: it corners by laying over until the
      lean cancels the sideways force, which is what a rider feels for and
      what makes one look right from behind. It is drawn, not driven — the
@@ -5958,6 +6046,7 @@ function updateCarMesh(){
   const w=c.userData.wheels;
   const st=-CAR.steer*0.44;      // +rotation.y turns the wheel left
   const spin=c.userData.spin||1; // smaller wheels have to turn faster
+  flameTick(c,CAR.gas||0,(G.bopT||0));
   const nF=c.userData.steerN==null?2:c.userData.steerN;
   for(let i=0;i<w.length;i++){
     w[i].rotation.order="YXZ";
@@ -8598,7 +8687,7 @@ function netHandle(m){
       const p=NET.peers.get(a[0]); if(!p)continue;
       p.buf.push({t:performance.now(),p:a.slice(1)});
       if(p.buf.length>4)p.buf.shift();
-      p.lap=a[9]|0; p.prog=+a[10]||0;
+      p.lap=a[9]|0; p.prog=+a[10]||0; p.gas=+a[11]||0;
     }
     return;
   }
@@ -8613,6 +8702,7 @@ function netHandle(m){
     if(p.buf.length>4)p.buf.shift();
     /* where they are in the race: laps done and how far round the next */
     if(m.p.length>9){ p.lap=m.p[8]|0; p.prog=+m.p[9]||0; }
+    if(m.p.length>10) p.gas=+m.p[10]||0;
     return;
   }
   /* Somebody out there went quicker. */
@@ -8675,7 +8765,8 @@ function aiNetState(){
     +((c.mesh&&c.mesh.rotation.x)||0).toFixed(3),
     +((c.mesh&&c.mesh.rotation.z)||0).toFixed(3),
     +(c.steer||0).toFixed(2), +(c.spin||0).toFixed(2),
-    c.laps|0, +(c.prog||0).toFixed(3)
+    c.laps|0, +(c.prog||0).toFixed(3),
+    +(c.gas||0).toFixed(2)
   ])});
 }
 function aiRaceStart(){
@@ -8906,9 +8997,10 @@ function aiTick(dt){
     else if(go){
       const want=Math.min(vAllow,vCap), t=Math.min(1,c.v/Math.max(1,vmax));
       const thrust=accel*(1-t*t*0.90)-c.v*c.v*0.00040-(SURF.road.drag0+c.v*SURF.road.dragV*3);
-      if(c.v<want-0.3) c.v=Math.min(want,c.v+Math.max(0,thrust)*dt);
-      else if(c.v>want+0.3) c.v=Math.max(want,c.v-brake*dt);
-    } else c.v=0;
+      if(c.v<want-0.3){ c.v=Math.min(want,c.v+Math.max(0,thrust)*dt); c.gas=1; }
+      else if(c.v>want+0.3){ c.v=Math.max(want,c.v-brake*dt); c.gas=0; }
+      else c.gas=0.55;              // holding a speed still takes some pedal
+    } else { c.v=0; c.gas=0; }
     c.v=Math.max(0,c.v);
     const dMax=T.halfW*0.86+(Math.abs(dAdd)?4:0);
     const dWant=clamp(dT,-dMax,dMax);
@@ -9072,6 +9164,7 @@ function aiPose(c){
   }else c.lean=0;
   m.rotation.x=ud.tPitch;
   m.rotation.z=ud.tRoll+(c.aRoll||0)+(c.lean||0);
+  flameTick(m,c.gas||0,(G.bopT||0)+(c.id?c.id.length*0.37:0));
   const w=m.userData.wheels, sp=m.userData.spin||1;
   if(w){ const st=-c.steer*0.44, nF=m.userData.steerN==null?2:m.userData.steerN;
     for(let i=0;i<w.length;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<nF?st:0; w[i].rotation.x=c.spin*sp; } }
@@ -9753,6 +9846,7 @@ function netUpdateCars(){
     p.mesh.rotation.y=A[3]+dy*u;
     p.mesh.rotation.x=lerp(A[4],B[4],u);
     p.mesh.rotation.z=lerp(A[5],B[5],u);
+    flameTick(p.mesh,p.gas||0,(G.bopT||0));
     const w=p.mesh.userData.wheels, sp=p.mesh.userData.spin||1;
     if(w){ const st=-lerp(A[6],B[6],u)*0.44;
       const nF=p.mesh.userData.steerN==null?2:p.mesh.userData.steerN;
@@ -9781,7 +9875,8 @@ function netTick(){
     +CAR.yaw.toFixed(3),
     +(c?c.rotation.x:0).toFixed(3), +(c?c.rotation.z:0).toFixed(3),
     +CAR.steer.toFixed(2), +CAR.wheelSpin.toFixed(2),
-    CAR.lapNo-1, +CAR.lastP.toFixed(3)
+    CAR.lapNo-1, +CAR.lastP.toFixed(3),
+    +(CAR.gas||0).toFixed(2)
   ]});
 }
 
