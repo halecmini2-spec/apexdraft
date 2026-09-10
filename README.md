@@ -175,6 +175,18 @@ to you and to the others. Below full strength each has a pace of its own and
 now and then lifts, wobbles or runs wide; the weaker, the more often and the
 worse.
 
+**Their wheels point where they are going.** The angle is taken from the
+turn the car has just made, which is the only thing that cannot disagree
+with it. It used to be built from the road curvature under the car plus the
+rate it was changing lane, and those two answer different questions — the
+road bends one way while the line across it goes the other, and on a
+straight into a corner the road says nothing at all — so about one frame in
+eight the wheels were pointed the wrong way. What is shown is not the rack
+angle, which at racing speed is a couple of degrees and reads as a car not
+turning at all, but the same thing the driver's own wheels show: how much of
+the tightest turn available to it, it is making. A hairpin is full lock and
+a fast sweep is a flick.
+
 **In a party, one machine runs them all.** A field simulated separately in
 each browser would be a different field on each screen within a corner, so
 the host runs them and everyone else is told where they are. Guests take

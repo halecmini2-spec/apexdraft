@@ -8939,6 +8939,7 @@ function aiTick(dt){
        for a frame. Built this way there is nothing for a shove to corrupt. */
     const dd=(c.d-dPrev)/Math.max(1e-3,dt);
     const vAx=p.tx*c.v+p.rx*dd, vAz=p.tz*c.v+p.rz*dd;
+    const yawWas=c.yaw;
     /* the nose follows the path it is actually taking, closely, so the car
        is always pointing where it is going */
     if(c.v>1.0){ let want=Math.atan2(vAx,vAz); let dy=want-c.yaw; while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU; c.yaw+=dy*Math.min(1,dt*16); }
@@ -8970,7 +8971,34 @@ function aiTick(dt){
     if(!isFinite(c.x)||!isFinite(c.z)||!isFinite(c.y)){
       const q=aiAt(T,c.s); c.x=q.x; c.z=q.z; c.y=heightAt(T,c.x,c.z); c.aRoll=0; c.aRollV=0;
     }
-    c.steer=clamp((c.d-dPrev)/Math.max(0.01,dt)*0.25+here.k*40,-1,1);
+    /* Where the front wheels point. Taken from the turn the car has just
+       made, which is the only thing that cannot disagree with it: built out
+       of the road's curvature and the rate it was changing lane, the two
+       terms answered different questions — the road bends one way while the
+       line across it goes the other, and on a straight into a corner the
+       road says nothing at all — and the wheels were pointed the wrong way
+       about one frame in eight. Steer is positive to the right and the yaw
+       rate is negative to the right, the same as the player's, and the
+       angle is what a rack of this wheelbase would need at this speed. */
+    let dyaw=c.yaw-yawWas; while(dyaw>Math.PI)dyaw-=TAU; while(dyaw<-Math.PI)dyaw+=TAU;
+    const yawRate=dyaw/Math.max(1e-3,dt);
+    /* Not the rack angle, which at racing speed is a couple of degrees and
+       reads as a car not turning at all, but the same thing the player's
+       wheels show: how much of the tightest turn available to it, it is
+       making. The tightest is the lesser of what the lock allows and what
+       the tyres will hold, so a hairpin is full lock and a fast sweep is a
+       flick, which is what it looks like from the outside. */
+    const tightest=Math.max(0.05,Math.min(Math.max(6,c.v)*DRIVE.maxSteer/DRIVE.wheelbase,
+                                          aLat/Math.max(6,c.v)));
+    /* The turn is smoothed before the wheel is pointed at it, not after.
+       The racing line is a list of samples and the car steps between them,
+       so the rate one frame to the next flickers either side of zero on a
+       straight; easing the wheel instead left it still pointing into the
+       last corner while the car had already picked up the next one, which
+       is the thing that looks wrong. Smooth the cause and the wheel can
+       follow it exactly. */
+    c.yawS=(c.yawS==null)?yawRate:c.yawS+(yawRate-c.yawS)*Math.min(1,dt*9);
+    c.steer=clamp(-c.yawS/tightest,-1,1);
     c.curv=here.k;
     c.spin+=c.v*dt/0.36;
   }
@@ -9727,7 +9755,8 @@ function netUpdateCars(){
     p.mesh.rotation.z=lerp(A[5],B[5],u);
     const w=p.mesh.userData.wheels, sp=p.mesh.userData.spin||1;
     if(w){ const st=-lerp(A[6],B[6],u)*0.44;
-      for(let i=0;i<4;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<2?st:0;
+      const nF=p.mesh.userData.steerN==null?2:p.mesh.userData.steerN;
+      for(let i=0;i<w.length;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<nF?st:0;
         w[i].rotation.x=lerp(A[7],B[7],u)*sp; } }
     /* Somebody else's Yaris has to squash too. It is a property of the car,
        not of who is driving it, and there is no point sending it — the shape
