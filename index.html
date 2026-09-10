@@ -3527,6 +3527,14 @@ const CAR_PERF={
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
+/* How far a car has to be raised so that nothing of it is under the road
+   once it is over on its side: the body turns about the contact patch, so
+   its lowest corner drops below the road unless it is lifted by this much.
+   Nothing here moves the car; it is only where the model is drawn. */
+function rollLift(kind,roll){
+  const H=hitbox(kind), s=Math.abs(Math.sin(roll)), c=Math.cos(roll);
+  return H.hw*s+Math.max(0,-H.hh*c);
+}
 /* ---- hitboxes ----
    Measured from the car that is actually drawn, so whatever you can see of
    it is what you can hit: the model is built once per kind, its bounding
@@ -4485,7 +4493,7 @@ const G={
 };
 const CAR={
   x:0,z:0,y:0,vx:0,vz:0,vy:0,yaw:0,yawRate:0,steer:0,ax:0,ay:0,drift:0,
-  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,air:false,holdT:0,holdDir:0,
+  hitCool:0,scrape:0,hitX:0,hitY:0,hitZ:0,holdT:0,holdDir:0,
   spinV:0, aRoll:0, aRollV:0, aPitch:0, aPitchV:0,
   grounded:true,vyS:0,prevSurf:0,
   lastP:0,lapDist:0,lapStart:0,lapNo:1,curMs:0,lastMs:null,bestMs:null,
@@ -4637,7 +4645,7 @@ function resetCar(toStart){
     CAR.x=T.X[i]; CAR.z=T.Z[i];
   }
   CAR.yaw=Math.atan2(T.TX[i],T.TZ[i]);
-  CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;CAR.air=false;
+  CAR.vx=0;CAR.vz=0;CAR.vy=0;CAR.steer=0;CAR.grounded=true;CAR.vyS=0;
   CAR.yawRate=0;CAR.ax=0;CAR.ay=0;CAR.drift=0;CAR.hitCool=0;CAR.scrape=0;
   CAR.brakeHold=0; CAR.hbF=0; CAR.handArm=0; CAR.holdT=0; CAR.holdDir=0;
   CAR.spinV=0; CAR.aRoll=0; CAR.aRollV=0; CAR.aPitch=0; CAR.aPitchV=0;
@@ -4762,9 +4770,9 @@ const SURF={
      150km/h flat out, and noticeably less grip to lean on. */
   runoff:{mu:0.71,grip:0.74,power:0.65,brake:0.79,drag0:1.95,dragV:0.036},
   grass :{mu:0.52,grip:0.55,power:0.60,brake:0.62,drag0:4.00,dragV:0.060},
-  /* in the air there is nothing to push against: no drive, no brakes and no
-     grip, so the car keeps whatever it left the ground with */
-  air   :{mu:0.02,grip:0.02,power:0.00,brake:0.00,drag0:0.05,dragV:0.006}
+  /* up on its side there are no tyres on the road: nothing to drive, steer
+     or brake with until it comes back down onto them */
+  rolled:{mu:0.06,grip:0.06,power:0.00,brake:0.05,drag0:2.20,dragV:0.030}
 };
 
 /* =====================================================================
@@ -4853,7 +4861,7 @@ function step(dt){
 
   const np=nearest(T,CAR.x,CAR.z,null,CAR.y);
   const ad=Math.abs(np.d);
-  const S = CAR.air ? SURF.air
+  const S = Math.abs(CAR.aRoll)>0.9 ? SURF.rolled
           : ad<T.halfW+0.5 ? SURF.road
           : ad<T.halfW+2.2 ? SURF.kerb
           : ad<T.halfW+7.8 ? SURF.runoff      // paved run-off, out to the barrier
@@ -5113,26 +5121,9 @@ function step(dt){
      deck when you were underneath it and on the road below when you were on
      top of it */
   const surfY=heightAt(T,CAR.x,CAR.z,np2,CAR.y);
-  if(CAR.air){
-    CAR.vy-=9.81*dt;
-    CAR.y+=CAR.vy*dt;
-    if(CAR.y<=surfY){
-      const land=Math.max(0,-CAR.vy);
-      CAR.y=surfY; CAR.vy=0; CAR.air=false;
-      /* the landing costs speed, the harder the more */
-      const k=clamp(land/14,0,1);
-      CAR.vx*=1-0.12*k; CAR.vz*=1-0.12*k;
-      /* A car that went over lands having finished the roll rather than
-         unwinding it; one that only leaned settles back level. */
-      CAR.aRoll-=TAU*Math.round(CAR.aRoll/TAU);
-      CAR.aRollV*=0.35; CAR.aPitchV*=0.35;
-      if(land>2.5&&CAR.hitCool<=0){ G.shake=Math.min(0.8,land/16); thud(land*1.6); CAR.hitCool=0.16; }
-    }
-  }else{
-    CAR.y=surfY;
-    CAR.vy=0;
-  }
-  CAR.grounded=!CAR.air;
+  CAR.y=surfY;
+  CAR.vy=0;
+  CAR.grounded=true;
   CAR.prevSurf=surfY;
   /* The floor, whatever the collisions did. A car below the surface is put
      back on it, an impossible number puts the car back on the track, and
@@ -5140,10 +5131,8 @@ function step(dt){
      ordinary driving; it is here so that no crash can lose a car. */
   if(!isFinite(CAR.x)||!isFinite(CAR.z)||!isFinite(CAR.y)||!isFinite(CAR.vx)||!isFinite(CAR.vz)){
     resetCar(false);
-  }else if(CAR.y<surfY-0.02){
-    CAR.y=surfY; if(CAR.vy<0)CAR.vy=0; CAR.air=false;
-  }else if(CAR.y>surfY+40){
-    CAR.y=surfY; CAR.vy=0; CAR.air=false;
+  }else if(CAR.y!==surfY){
+    CAR.y=surfY; CAR.vy=0;
   }
 
   /* A crash turns the car and throws it out of level. The spin bleeds away
@@ -5151,20 +5140,29 @@ function step(dt){
      ground, and is gathered back up on landing. */
   if(CAR.spinV){
     CAR.yaw+=CAR.spinV*dt;
-    CAR.spinV-=CAR.spinV*Math.min(1,dt*(CAR.air?0.7:2.6));
+    CAR.spinV-=CAR.spinV*Math.min(1,dt*2.6);
     if(Math.abs(CAR.spinV)<0.01)CAR.spinV=0;
   }
-  if(CAR.air){
-    /* nothing holding it level up here: thrown hard enough, it goes over */
-    CAR.aRoll+=CAR.aRollV*dt; CAR.aPitch+=CAR.aPitchV*dt;
-    CAR.aPitch=clamp(CAR.aPitch,-0.8,0.8);
+  /* The body on its springs, and what happens if something gets under it.
+     Up to a lean the springs give it straight back. Past that the car is up
+     on two wheels and its own weight decides: over onto its side and round
+     onto its roof, or back down the way it came. It is a rotation about the
+     car, not a jump — the wheels never leave the road. */
+  if(Math.abs(CAR.aRoll)>TIP_ANGLE){
+    CAR.aRollV+=(-2.0*Math.sin(2*CAR.aRoll)-1.0*CAR.aRollV)*dt;
+    CAR.aRoll+=CAR.aRollV*dt;
+    /* come to rest on its wheels or on its roof, whichever it reached */
+    if(Math.abs(CAR.aRollV)<0.12){
+      const rest=Math.round(CAR.aRoll/Math.PI)*Math.PI;
+      if(Math.abs(CAR.aRoll-rest)<0.10){ CAR.aRoll=rest-TAU*Math.round(rest/TAU); CAR.aRollV=0; }
+    }
   }else{
-    /* on the ground the springs take the lean and give it back */
-    CAR.aRollV+=(-64*CAR.aRoll-12*CAR.aRollV)*dt;
-    CAR.aPitchV+=(-64*CAR.aPitch-12*CAR.aPitchV)*dt;
-    CAR.aRoll+=CAR.aRollV*dt; CAR.aPitch+=CAR.aPitchV*dt;
-    CAR.aRoll=clamp(CAR.aRoll,-0.5,0.5); CAR.aPitch=clamp(CAR.aPitch,-0.35,0.35);
+    CAR.aRollV+=(-40*CAR.aRoll-5*CAR.aRollV)*dt;
+    CAR.aRoll+=CAR.aRollV*dt;
   }
+  CAR.aPitchV+=(-64*CAR.aPitch-12*CAR.aPitchV)*dt;
+  CAR.aPitch+=CAR.aPitchV*dt;
+  CAR.aPitch=clamp(CAR.aPitch,-0.35,0.35);
 
   /* kerb rumble */
   const onKerb = ad>T.halfW && ad<T.halfW+1.6 && Math.abs(T.K[np2.i])>1/300;
@@ -5324,13 +5322,18 @@ function updateCarMesh(){
      falling onto its outside springs. The terrain term is untouched: that is
      the car following the camber, which is what makes banking read. */
   const roll=Math.atan2(hL-hR,1.8)-clamp(CAR.ay*0.0011,-0.017,0.017);
-  c.position.set(CAR.x,CAR.y,CAR.z);   // wheel contact patch is the model's y=0
+  c.position.set(CAR.x,CAR.y+rollLift(ED.opts.car,CAR.aRoll),CAR.z);   // wheel contact patch is the model's y=0
   c.rotation.order="YXZ";
   c.rotation.y=CAR.yaw;
   /* eased in more slowly too, so the body settles onto an attitude instead
      of chasing every bump the wheels find */
-  c.rotation.x=lerp(c.rotation.x,pitch,0.14)+CAR.aPitch;
-  c.rotation.z=lerp(c.rotation.z,roll,0.14)+CAR.aRoll;
+  /* The terrain attitude is eased on its own and the crash attitude added
+     on top when the value is written. Easing the total instead fed the
+     crash angle back into itself every frame and multiplied it. */
+  const ud=c.userData;
+  ud.tPitch=lerp(ud.tPitch||0,pitch,0.14); ud.tRoll=lerp(ud.tRoll||0,roll,0.14);
+  c.rotation.x=ud.tPitch+CAR.aPitch;
+  c.rotation.z=ud.tRoll+CAR.aRoll;
   const w=c.userData.wheels;
   const st=-CAR.steer*0.44;      // +rotation.y turns the wheel left
   const spin=c.userData.spin||1; // smaller wheels have to turn faster
@@ -8007,7 +8010,7 @@ function aiSpawn(){
       wander:(Math.random()-0.5)*1.4*(1.2-k),
       gridD:(col?1:-1)*T.halfW*0.44, held:0,
       mistake:null,next:(12+90*k*k)*(0.5+Math.random()),mistakes:0,
-      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,vy:0,air:false,aRoll:0,aRollV:0,mesh:null};
+      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,aRoll:0,aRollV:0,mesh:null};
     const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
     car.mesh=buildCar(car.colour,car.kind); car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
     car.mesh.position.set(car.x,car.y,car.z); car.mesh.rotation.order="YXZ"; car.mesh.rotation.y=car.yaw;
@@ -8017,15 +8020,14 @@ function aiSpawn(){
 }
 const aiLowBoost=(v)=>1+DRIVE.lowGrip*clamp(1-Math.max(v,4)/DRIVE.lowUntil,0,1);
 /* an open-wheeled car put over a wheel goes up, and comes down on gravity */
-/* The other side of the same rule: their wheel climbs ours. */
-function aiClimb(c,ov,m,myKind,myFx,myFz){
-  if(c.air||!openWheel(myKind)||m.lat<0.55||m.close<5)return;
+/* The other side of the same rule: their wheel is the one that climbs. */
+function aiClimbTip(c,ov,m,myKind,myFx,myFz){
+  if(!openWheel(myKind)||!openWheel(c.kind)||m.lat<0.6||m.close<TIP_LEAN)return;
   const cfx=Math.sin(c.yaw), cfz=Math.cos(c.yaw);
   const armThem=(ov.cx-c.x)*cfx+(ov.cz-c.z)*cfz;
   const armMe=(ov.cx-CAR.x)*myFx+(ov.cz-CAR.z)*myFz;
   if(armThem-armMe<CLIMB_LEAD)return;
-  c.air=true; c.vy=Math.min(4.0,m.close*0.20);
-  c.aRollV=clamp(-m.latSigned*m.close*TIP_PER,-ROLL_MAX,ROLL_MAX);
+  c.aRollV=clamp(c.aRollV-m.latSigned*tipRate(m.close),-ROLL_MAX,ROLL_MAX);
 }
 function aiTick(dt){
   if(!AI.on||!G.T)return;
@@ -8098,7 +8100,7 @@ function aiTick(dt){
     }
     /* the same thrust curve and drag as the player: full shove off the
        line, tailing off with speed, air and rolling resistance against it */
-    if(c.air){ /* nothing to push against */ }
+    if(Math.abs(c.aRoll)>0.9){ /* up on its side: no tyres on the road */ c.v*=Math.max(0,1-1.6*dt); }
     else if(go){
       const want=Math.min(vAllow,vCap), t=Math.min(1,c.v/Math.max(1,vmax));
       const thrust=accel*(1-t*t*0.90)-c.v*c.v*0.00040-(SURF.road.drag0+c.v*SURF.road.dragV*3);
@@ -8128,20 +8130,30 @@ function aiTick(dt){
     c.vx=(nx-c.x)/Math.max(1e-3,dt); c.vz=(nz-c.z)/Math.max(1e-3,dt);
     c.x=nx; c.z=nz;
     const yHint=c.y, ground=heightAt(T,c.x,c.z,null,yHint);
-    if(c.air){
-      c.vy-=9.81*dt; c.y+=c.vy*dt;
+    c.y=ground;
+    /* the same springs, and the same way over, as the player's car */
+    if(Math.abs(c.aRoll)>TIP_ANGLE){
+      c.aRollV+=(-2.0*Math.sin(2*c.aRoll)-1.0*c.aRollV)*dt;
       c.aRoll+=c.aRollV*dt;
-      if(c.y<=ground){ c.y=ground; c.vy=0; c.air=false; c.v*=0.94;
-        c.aRoll-=TAU*Math.round(c.aRoll/TAU); c.aRollV*=0.35; }
+      if(Math.abs(c.aRollV)<0.12){
+        const rest=Math.round(c.aRoll/Math.PI)*Math.PI;
+        if(Math.abs(c.aRoll-rest)<0.10){ c.aRoll=rest-TAU*Math.round(rest/TAU); c.aRollV=0; }
+      }
     }else{
-      c.y=ground;
-      c.aRollV+=(-64*c.aRoll-12*c.aRollV)*dt; c.aRoll+=c.aRollV*dt;
-      c.aRoll=clamp(c.aRoll,-0.5,0.5);
+      c.aRollV+=(-40*c.aRoll-5*c.aRollV)*dt; c.aRoll+=c.aRollV*dt;
     }
+    /* A machine on its roof has nobody to press the button, so after a few
+       seconds of lying still it puts itself back on its wheels and carries
+       on. The player is left alone: rolling the car is theirs to undo. */
+    if(Math.abs(c.aRoll)>1.4){
+      c.v=Math.max(0,c.v-14*dt);              // on its roof there is nothing to drive on
+      c.rollT=(c.rollT||0)+dt;
+      if(c.rollT>2.5&&c.v<6){ c.aRoll=0; c.aRollV=0; c.rollT=0; }
+    }else c.rollT=0;
     /* the same floor as the player's: no crash may lose a car under the map */
     if(!isFinite(c.x)||!isFinite(c.z)||!isFinite(c.y)){
-      const q=aiAt(T,c.s); c.x=q.x; c.z=q.z; c.y=heightAt(T,c.x,c.z); c.vy=0; c.air=false; c.aRoll=0;
-    }else if(c.y<ground){ c.y=ground; if(c.vy<0)c.vy=0; c.air=false; }
+      const q=aiAt(T,c.s); c.x=q.x; c.z=q.z; c.y=heightAt(T,c.x,c.z); c.aRoll=0; c.aRollV=0;
+    }
     c.steer=clamp((c.d-dPrev)/Math.max(0.01,dt)*0.25+here.k*40,-1,1);
     c.spin+=c.v*dt/0.36;
   }
@@ -8168,14 +8180,13 @@ function aiTick(dt){
       const rax=-Math.cos(a.yaw), raz=Math.sin(a.yaw);
       const lat=Math.abs(ov.nx*rax+ov.nz*raz);
       /* wheel over wheel: whichever met the other further forward on itself
-         is the one climbing, and only if the other has a wheel to climb */
+         is the one that climbs, and only if both have a wheel to catch */
       const rSide=ov.nx*rax+ov.nz*raz;
       const armA=(ov.cx-a.x)*Math.sin(a.yaw)+(ov.cz-a.z)*Math.cos(a.yaw);
       const armB=(ov.cx-b.x)*Math.sin(b.yaw)+(ov.cz-b.z)*Math.cos(b.yaw);
       const up=armA>armB?a:b, under=armA>armB?b:a;
-      if(lat>0.55&&closing>5&&Math.abs(armA-armB)>=CLIMB_LEAD&&openWheel(under.kind)&&!up.air){
-        up.air=true; up.vy=Math.min(4.0,closing*0.20);
-        up.aRollV=clamp((up===a?rSide:-rSide)*closing*TIP_PER,-ROLL_MAX,ROLL_MAX);
+      if(lat>0.6&&closing>TIP_LEAN&&Math.abs(armA-armB)>=CLIMB_LEAD&&openWheel(under.kind)&&openWheel(up.kind)){
+        up.aRollV=clamp(up.aRollV+(up===a?rSide:-rSide)*tipRate(closing),-ROLL_MAX,ROLL_MAX);
       }
     }
   }
@@ -8196,10 +8207,13 @@ function aiPose(c){
   const fx=Math.sin(c.yaw), fz=Math.cos(c.yaw), rx=-Math.cos(c.yaw), rz=Math.sin(c.yaw);
   const hF=heightAt(T,c.x+fx*1.5,c.z+fz*1.5,null,c.y), hB=heightAt(T,c.x-fx*1.5,c.z-fz*1.5,null,c.y);
   const hR=heightAt(T,c.x+rx*0.9,c.z+rz*0.9,null,c.y), hL=heightAt(T,c.x-rx*0.9,c.z-rz*0.9,null,c.y);
-  m.position.set(c.x,c.y,c.z);
+  m.position.set(c.x,c.y+rollLift(c.kind,c.aRoll||0),c.z);
   m.rotation.order="YXZ"; m.rotation.y=c.yaw;
-  m.rotation.x=lerp(m.rotation.x,-Math.atan2(hF-hB,3.0),0.14);
-  m.rotation.z=lerp(m.rotation.z,Math.atan2(hL-hR,1.8),0.14)+(c.aRoll||0);
+  const ud=m.userData;
+  ud.tPitch=lerp(ud.tPitch||0,-Math.atan2(hF-hB,3.0),0.14);
+  ud.tRoll=lerp(ud.tRoll||0,Math.atan2(hL-hR,1.8),0.14);
+  m.rotation.x=ud.tPitch;
+  m.rotation.z=ud.tRoll+(c.aRoll||0);
   const w=m.userData.wheels, sp=m.userData.spin||1;
   if(w){ const st=-c.steer*0.44; for(let i=0;i<4;i++){ w[i].rotation.order="YXZ"; w[i].rotation.y=i<2?st:0; w[i].rotation.x=c.spin*sp; } }
   const bp=m.userData.bop, bd=m.userData.body;
@@ -8549,13 +8563,20 @@ function bumpReady(o){ const t=performance.now()/1000; if(o.bumpT&&t-o.bumpT<BUM
    changed before. */
 const SPIN_PER=0.060;           // rad/s per unit of turning impulse
 const SPIN_MAX=3.0;
-const ROLL_MAX=6.0;             // rad/s of body roll: enough to go over, not to windmill
-/* How hard a car is tipped as its wheel rides over another. A glancing one
-   leans and settles; a heavy one puts the car past the point of no return
-   and it goes over. Nothing else in the game can do this. */
-const TIP_PER=0.18;
-/* how much further forward the climbing car has to have met the other */
-const CLIMB_LEAD=0.35;
+const ROLL_MAX=6.0;             // rad/s of body roll
+/* Past this the car is up on two wheels and the springs cannot bring it
+   back on their own. */
+const TIP_ANGLE=0.30;
+/* Only one tyre riding over another can get a car up on its side, so it
+   takes two open wheels, a side-to-side contact, one car meeting the other
+   well forward of where it was met itself, and a great deal of closing
+   speed. Under that the car leans and the springs give it back; over it,
+   the car goes over. Only the climbing car — never both of them, and never
+   the one being climbed. Nothing else in the game tips a car, and nothing
+   at all leaves the ground. */
+const TIP_LEAN=8;               // m/s of closing before a wheel lifts it at all
+const CLIMB_LEAD=0.35;          // how much further forward the climbing wheel must be
+const tipRate=(close)=>clamp((close-TIP_LEAN)*0.30,0,ROLL_MAX);
 /* nothing much below walking pace, all of it by 8 m/s into the contact */
 const crashScale=(close)=>clamp((close-1.5)/6.5,0,1);
 /* The turning a blow gives: the moment of the impulse about the middle of
@@ -8578,16 +8599,16 @@ function crashLean(sideImp,scale){
    the one riding over the other's rear. The car being climbed stays down.
    A crash into a flank, a nose into a gearbox or a car into a barrier does
    not lift anything. */
-function climbLift(ov,close,lat,myFx,myFz,oX,oZ,oFx,oFz,oKind){
-  if(!openWheel(oKind))return 0;
-  if(lat<0.55||close<5)return 0;
+function climbTip(ov,close,lat,myFx,myFz,oX,oZ,oFx,oFz,oKind,myKind){
+  if(!openWheel(oKind)||!openWheel(myKind))return 0;   // two exposed wheels, or nothing
+  if(lat<0.6||close<TIP_LEAN)return 0;
   const armMe=(ov.cx-CAR.x)*myFx+(ov.cz-CAR.z)*myFz;
   const armThem=(ov.cx-oX)*oFx+(ov.cz-oZ)*oFz;
-  /* Level with each other it is a wheel rub and neither goes anywhere. One
-     car has to have met the other well forward of where it was met itself
-     — its front tyre against the other car's rear — before anything climbs. */
+  /* Level with each other it is a wheel rub and neither goes anywhere: one
+     car has to have met the other well forward of where it was met itself,
+     its front tyre against the other's rear. */
   if(armMe-armThem<CLIMB_LEAD)return 0;
-  return Math.min(4.0,close*0.20);
+  return tipRate(close);
 }
 function netCollide(){
   const myKind=ED.opts.car||"gt", myM=carMass(myKind);
@@ -8638,10 +8659,10 @@ function netCollide(){
     /* The physics run several times per drawn frame while the machines move
        once, so their world velocity has to be brought up to date here. */
     c.vx=cfx*c.v; c.vz=cfz*c.v;
-    /* one of the two may get a wheel up, never both */
-    const mine=climbLift(ov,m.close,m.lat,fx,fz,c.x,c.z,cfx,cfz,c.kind);
-    if(mine>0&&!CAR.air){ CAR.air=true; CAR.vy=mine; CAR.aRollV=clamp(m.latSigned*m.close*TIP_PER,-ROLL_MAX,ROLL_MAX); }
-    else aiClimb(c,ov,m,myKind,fx,fz);
+    /* one of the two may get up on its side; never both */
+    const mine=climbTip(ov,m.close,m.lat,fx,fz,c.x,c.z,cfx,cfz,c.kind,myKind);
+    if(mine>0) CAR.aRollV=clamp(CAR.aRollV+m.latSigned*mine,-ROLL_MAX,ROLL_MAX);
+    else aiClimbTip(c,ov,m,myKind,fx,fz);
   }
   if(NET.status!=="in")return;
   for(const p of NET.peers.values()){
@@ -8668,8 +8689,8 @@ function netCollide(){
     if(!m)continue;
     takeIt(ov,m);
     const ofx=Math.sin(p.mesh.rotation.y), ofz=Math.cos(p.mesh.rotation.y);
-    const mine=climbLift(ov,m.close,m.lat,fx,fz,mesh.x,mesh.z,ofx,ofz,oKind);
-    if(mine>0&&!CAR.air){ CAR.air=true; CAR.vy=mine; CAR.aRollV=clamp(m.latSigned*m.close*TIP_PER,-ROLL_MAX,ROLL_MAX); }
+    const mine=climbTip(ov,m.close,m.lat,fx,fz,mesh.x,mesh.z,ofx,ofz,oKind,myKind);
+    if(mine>0) CAR.aRollV=clamp(CAR.aRollV+m.latSigned*mine,-ROLL_MAX,ROLL_MAX);
   }
 
 }
@@ -8847,7 +8868,8 @@ function netUpdateCars(){
       if(k<0.02){ p.px=0; p.pz=0; }
       else { gx+=p.px*k; gz+=p.pz*k; }
     }
-    p.mesh.position.set(gx, G.T?heightAt(G.T,gx,gz,null,gh):gh, gz);
+    const proll=lerp(A[5],B[5],u);
+    p.mesh.position.set(gx, (G.T?heightAt(G.T,gx,gz,null,gh):gh)+rollLift(p.car||"gt",proll), gz);
     let dy=B[3]-A[3];
     while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU;   // never spin the long way
     p.mesh.rotation.order="YXZ";

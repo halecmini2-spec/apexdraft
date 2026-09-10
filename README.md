@@ -91,11 +91,17 @@ lead back.
   itself goes up — its front tyre is the one riding over the other's rear;
   the car being climbed stays down, and two cars level with each other just
   rub. Nothing else lifts anything: not a barrier, not a nose into a flank.
-- **A car can be put over, but it takes a real one.** The tipped car leans
-  on its springs and settles; a heavy enough blow puts it past that and it
-  goes over, landing the roll rather than unwinding it. An extreme side
-  impact between two Formulas gets a car to about sixty degrees and back
-  down on its wheels.
+- **A car can be put over, but it takes a real one.** Nothing throws a car
+  into the air — no crash, no barrier, no landing; the wheels are on the
+  road unless another tyre is lifting one side of you. Two Formulas closing
+  side to side at 17 m/s across gets a car to about forty degrees and back
+  down on its springs. Past twenty across it goes over, and a car that goes
+  over stays over: its roof is held clear of the road, there is next to
+  nothing to steer or drive with while it is there, and getting back on
+  your wheels is your own job. Nothing resets you for you. The machines
+  are the exception, because there is nobody at the wheel to do it: one on
+  its roof slides to a stop and puts itself back on its wheels a few
+  seconds later, rather than sitting out the rest of the race.
 - **Nothing is ever lost under the map.** Whatever a crash does, a car
   below the surface is put back on it and an impossible number puts the car
   back on the track. It is a floor under the physics, not part of them.
