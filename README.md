@@ -49,6 +49,14 @@ lead back.
   track, and there is a toggle in the pause menu. iPhone Safari has no
   Fullscreen API at all, so there the route is Add to Home Screen: the page
   is set up to launch standalone, with no browser around it.
+- **The gears are the car's own.** There used to be one fixed ladder for
+  everything, topping out at 250 km/h — so a kart spent its life in second
+  and the V12 sat against the limiter for a third of every straight. Each
+  car has its own number of ratios now, spread over the speed it can
+  actually reach, and the last change lands at 84 per cent of it: top gear
+  is for the last stretch before the top speed rather than most of the road.
+  A kart has no gearbox, so it has none here either — one gear, and the note
+  simply rises with the road speed all the way to the end of it.
 - **Every car sounds like what it is.** What tells one engine from another
   is not the pitch but which harmonics are in it: a big twelve fires six
   times a crank revolution against a V8's four, so it sings well above a
@@ -196,6 +204,13 @@ the one place with no opponents and never will have: it is a single timed
 lap against a board, and a field of cars to trip over is not what that is —
 so on the daily, **Drive it** goes straight to the garage as it always did.
 
+**Run it again.** Double-tapping R restarts a race — you back on your grid
+slot with the lights, the field back on theirs, the clock and the finishing
+order cleared. The whole field restarts with you, which is the point:
+restarting a race you have just lost to a car that is still circulating is
+not a restart. The pause menu says Restart the race instead of Back to the
+start while there is one on, and the sheet at the end offers Race again.
+
 They race with the grid, the lights, the running order and the finishing
 order of a party race. They are not driven through
 the car model: each runs a racing line — the least-curvature path the road
@@ -282,18 +297,19 @@ rather than leaving you in something you can no longer pick.
   each with a length and a flicker of its own so they do not pulse together
   like a string of lights, and out altogether the moment you lift.
 
-  It is also the one thing here that will turn itself over. Three wheels, a
-  narrow front and the whole engine up where a passenger would be: lean on
-  it hard enough and the inside wheels come up. That is measured against how
-  hard it is actually cornering rather than against the grip available — a
-  car pulling that much has lifted a wheel whether or not there was more
-  grip to be had — and past the tipping angle the roll the crashes already
-  use takes over and it goes the rest of the way itself. In testing a full
-  lock held through a slow corner put it on its roof; anything less leaned
-  hard and stayed down. It is the player's trike that does this; the
-  machines drive theirs flat.
+  It is also the one thing here that will turn itself over — but only when
+  something puts it over, never because it turned. Cornering load was tried
+  and it does not work: the load in a hard corner is not a plateau but a row
+  of spikes, a full-lock turn spending five per cent of itself above five g
+  and most of itself far below, so any rule strict enough to ignore ordinary
+  cornering ignores everything and any rule loose enough to fire went over
+  in three of seven ordinary turns. What tips one is a blow, so a blow is
+  what does it: this car takes three times the roll out of an impact that
+  anything else does. Into the armco at forty-five degrees and 180 km/h it
+  goes over, where a GT taking the same hit leans five degrees; holding full
+  lock at any speed leans it and nothing more.
 - **V12 Monster**, mid-engined and the fastest thing here at 360 km/h. Also
-  the heaviest at 1,450 kg, which is what makes it the one that will not be
+  the heaviest at 1,450 kg — the card says so in the largest type on it, which is what makes it the one that will not be
   shoved about — and the slowest of the three to get going.
 
 Everything else about them is ordinary. They are chosen in the garage like
