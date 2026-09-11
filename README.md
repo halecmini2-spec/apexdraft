@@ -215,28 +215,33 @@ lead back.
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
 
-### The kit
+### Customisation
 
 Being tried out on the same one account as the shop, and nobody else has it,
 sees it, or is sent it — none of it goes over the network, so other people
 in a party see an ordinary car.
 
-Five things go on the car, chosen from a drawer in the garage, and each item
+Four things go on the car, chosen from a drawer in the garage, and each item
 has a rarity of its own and wears it the way the cars do:
 
 - **Paint** — Candy Apple and Matte Military (Rare), Midnight Flake (Epic),
-  Gold Leaf and Holographic (Legendary), Prismatic Chrome (Mythic). The last
-  two travel: the hue moves and the sheen breathes with it. Holographic runs
-  through vivid colour, Prismatic Chrome through the same range held at a low
-  saturation, which is chrome with a rainbow in it rather than a car painted
-  rainbow. Pinning it to one pale tint and shifting only what it gave off
-  made it a white car with a faint hum on it.
+  Gold Leaf and Holographic (Legendary), Prismatic Chrome (Mythic).
+
+  The top three are not finishes, they are a shader. A finish is two numbers
+  — how metal, how smooth — and done that way the good ones came out white,
+  because at high metalness the base colour only tints a reflection and a
+  bright sky washes it out. A rainbow you cannot see is not a rainbow. So the
+  colour is decided per pixel from the angle that pixel is seen at, which is
+  what iridescence physically is: the band sweeps across the bodywork as the
+  car turns and sits in the curve of a wing the way it does on a real one.
+  **Holographic** gets wide soft bands on satin; **Prismatic Chrome** gets
+  tight hard-edged ones at full saturation on a mirror, so the Mythic is the
+  louder of the two. **Midnight Flake** uses the same shader at a twentieth
+  of the strength and adds nothing to the colour at all — on a near-black car
+  the light it gives off is the only thing there is to see, and two goes at
+  it turned midnight into neon before that was understood.
 - **Rims** — Bronze (Rare), Carbon and Chrome (Epic), Gold (Legendary), Neon
   (Mythic, which lights).
-- **Smoke** — a gentle trail out of the pipe, in white, blue, purple or gold.
-  Spawned behind the car and left in the world rather than carried with it,
-  because smoke that follows the car is a scarf. The pipe's position is
-  measured off the model, since a kart's is a metre back and the V12's three.
 - **Underglow** — Ice Blue, Violet, Toxic Green, Ember Red, and a Rainbow
   that cycles. A picture of a glow laid flat under the sills and carried by
   the car, so it banks and pitches with it; a real light under every car
@@ -244,6 +249,13 @@ has a rarity of its own and wears it the way the cars do:
 - **Horn** — Classic, Air, Truck, La Cucaracha and Train, on **H** and on a
   button that appears on a phone only when there is a horn to sound. Each is
   two or three notes held together, which is what a horn is.
+
+Each of those paints carries a cache key of its own. Three keeps compiled
+shaders in a cache keyed by what it knows about a material, and it knows
+nothing about source injected into one — so two paints built the same way
+with different numbers in them were handed the same compiled shader, and the
+second silently rendered as the first. It is the sort of fault that makes you
+tune the wrong thing for an hour.
 
 **Titles** go with the name rather than with the car, so they are chosen on
 the account page: Track Day Hero and Backmarker (Rare), Apex Hunter (Epic),

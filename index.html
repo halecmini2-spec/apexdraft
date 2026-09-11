@@ -2175,7 +2175,7 @@ body.daily .gar-arrow{display:none}
       <!-- Shown to the account trying the kit out and to nobody else. -->
       <div class="gar-kit" id="garKit" hidden>
         <button class="kit-head" id="kitHead" aria-expanded="false">
-          <span>Kit</span><i id="kitWorn">Nothing on</i><em>▾</em>
+          <span>Customisation</span><i id="kitWorn">Nothing on</i><em>▾</em>
         </button>
         <div class="kit-body" id="kitBody" hidden></div>
       </div>
@@ -4153,7 +4153,7 @@ function buildSmoke(){
   tex.encoding=THREE.sRGBEncoding;
   const grp=new THREE.Group();
   const pool=[];
-  for(let i=0;i<56;i++){
+  for(let i=0;i<26;i++){
     const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,
       opacity:0,depthWrite:false}));
     s.visible=false; grp.add(s); pool.push({s,life:0,vy:0});
@@ -4170,18 +4170,6 @@ function puffSmoke(x,y,z,strength){
   p.s.position.set(x+(Math.random()-.5)*0.7,y+0.25,z+(Math.random()-.5)*0.7);
   p.s.scale.setScalar(0.72+Math.random()*0.42);
   p.s.material.opacity=0.12*strength;
-}
-/* Out of the pipe: slower than tyre smoke, spreads more, and keeps its
-   colour instead of being handed white. */
-function puffExhaust(x,y,z,colour,strength){
-  const d=G.smoke.userData, p=d.pool[d.next];
-  d.next=(d.next+1)%d.pool.length;
-  p.life=1; p.vy=0.34+Math.random()*0.30; p.grav=0;
-  p.s.visible=true;
-  p.s.material.color.copy(SRGB(colour));
-  p.s.position.set(x+(Math.random()-.5)*0.32,y,z+(Math.random()-.5)*0.32);
-  p.s.scale.setScalar(0.30+Math.random()*0.18);
-  p.s.material.opacity=0.34*strength;
 }
 /* steel on steel — short-lived, gravity-fed, and they die fast */
 function puffSpark(x,y,z,strength){
@@ -4303,12 +4291,27 @@ const KITS={
   paint:{label:"Paint", none:"Standard", items:[
     {id:"candy", label:"Candy Apple",      rarity:"rare",      metal:0.72,rough:0.09,env:1.7,clear:0.55},
     {id:"matte", label:"Matte Military",   rarity:"rare",      metal:0.00,rough:0.88,env:0.25},
-    {id:"flake", label:"Midnight Flake",   rarity:"epic",      metal:0.92,rough:0.20,env:1.9,tint:0x0B1020,spark:0.5},
+    {id:"flake", label:"Midnight Flake",   rarity:"epic",      metal:0.92,rough:0.20,env:1.9,tint:0x0B1020,
+      /* This one must not touch the colour at all. At nine-tenths metal the
+         base colour is also what the bodywork reflects with, so mixing even
+         a tenth of a bright hue into a black car lifts its reflections off
+         the scale — two goes at midnight came out as neon. The flake is
+         therefore only what it gives off: tight stepped bands, faint, which
+         on a near-black car is the one thing you can see and is exactly
+         what flake in a lacquer looks like. */
+      iri:{bands:20.0, speed:0.03, mix:0.00, glow:0.075, sat:0.95, hard:true}},
     {id:"gold",  label:"Gold Leaf",        rarity:"legendary", metal:1.00,rough:0.17,env:2.1,tint:0xC9A227},
-    {id:"holo",  label:"Holographic",      rarity:"legendary", metal:0.86,rough:0.13,env:1.9,
-      shift:0.22,sat:0.72,lit:0.52,glowAmt:0.34},
-    {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.035,env:2.5,
-      shift:0.50,sat:0.30,lit:0.74,glowAmt:0.40}
+    /* The two that are worth what they cost. Everything above is a finish —
+       a number for how metal it is and a number for how smooth. These two
+       are a shader: the colour is decided per pixel by the angle that pixel
+       is seen at, which is what iridescence physically is, and it travels
+       with time on top. Done as a finish they came out white, because at
+       high metalness the base colour only tints a reflection and a bright
+       sky washes it out — a rainbow you cannot see is not a rainbow. */
+    {id:"holo",  label:"Holographic",      rarity:"legendary", metal:0.55,rough:0.18,env:1.5,
+      iri:{bands:2.6, speed:0.16, mix:0.92, glow:0.34, sat:1.0}},
+    {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.02,env:2.4,
+      iri:{bands:7.0, speed:0.30, mix:1.00, glow:0.58, sat:1.00, hard:true}}
   ]},
   rims:{label:"Rims", none:"Standard", items:[
     {id:"bronze", label:"Bronze Rims", rarity:"rare",      rim:0x8C6239,metal:0.85,rough:0.34},
@@ -4316,12 +4319,6 @@ const KITS={
     {id:"chrome", label:"Chrome Rims", rarity:"epic",      rim:0xD8DEE3,metal:1.00,rough:0.06},
     {id:"gold",   label:"Gold Rims",   rarity:"legendary", rim:0xD4A72C,metal:1.00,rough:0.16},
     {id:"neon",   label:"Neon Rims",   rarity:"mythic",    rim:0x1A1F24,metal:0.60,rough:0.35,emit:0x28E0FF}
-  ]},
-  smoke:{label:"Smoke", none:"None", items:[
-    {id:"white",  label:"White Smoke",  rarity:"rare",      colour:0xE8EEEC},
-    {id:"blue",   label:"Blue Smoke",   rarity:"epic",      colour:0x3FA9FF},
-    {id:"purple", label:"Purple Smoke", rarity:"legendary", colour:0xA868FF},
-    {id:"gold",   label:"Gold Smoke",   rarity:"mythic",    colour:0xE8B32A}
   ]},
   glow:{label:"Underglow", none:"None", items:[
     {id:"ice",    label:"Ice Blue",    rarity:"rare",      colour:0x63D6FF},
@@ -4342,9 +4339,9 @@ const KITS={
       notes:[[110,0,1.5],[147,0,1.5],[185,0,1.5],[220,0,1.5]]}
   ]}
 };
-const KIT_SLOTS=["title","paint","rims","smoke","glow","horn"];
+const KIT_SLOTS=["title","paint","rims","glow","horn"];
 /* the ones that are the car, which are the ones the garage offers */
-const KIT_CAR_SLOTS=["paint","rims","smoke","glow","horn"];
+const KIT_CAR_SLOTS=["paint","rims","glow","horn"];
 const kitItem=(slot,id)=>{ const g=KITS[slot]; return (g&&id&&g.items.find(i=>i.id===id))||null; };
 /* What this driver is wearing — nothing at all unless the account that is
    trying it out is signed in, so it cannot leak onto anybody else's car by
@@ -4486,10 +4483,7 @@ function carMats(bodyColor,kit){
        gold leaf is gold whichever swatch is lit, and chrome is chrome. The
        ones that are a finish keep the colour that was chosen. */
     if(p.tint!=null) m.color.copy(SRGB(p.tint));
-    /* one from the middle of its range, so the picture in the garage shows
-       what it is rather than whichever swatch happened to be lit */
-    if(p.shift) m.color.setHSL(0.58,p.sat!=null?p.sat:0.55,p.lit!=null?p.lit:0.55);
-    if(p.glowAmt) m.emissive=SRGB(0x101010);
+    if(p.iri) iridescent(m,p.iri);
     M.kitPaint=m; M.kitPaintSpec=p;
   }
   if(kit&&kit.rims){
@@ -4559,40 +4553,45 @@ function glowTick(t){
   m.material.opacity=0.72+0.16*Math.sin(t*2.4);
 }
 
-/* ---- the trail out of the pipe ----
-   Spawned behind the car and left in the world rather than carried with it,
-   because smoke that follows the car is a scarf. Gentle: one puff every
-   eighth of a second, drifting up and spreading, and only when the engine
-   is actually doing something. */
-function smokeTick(dt,t){
-  const it=(myKit()&&myKit().smoke)||null;
-  if(!it||!G.smoke||!G.car||CAR.state!=="run"){ SMK.t=0; return; }
-  const sp=Math.hypot(CAR.vx,CAR.vz);
-  SMK.t+=dt;
-  const every=0.085+0.10*(1-Math.min(1,sp/40));
-  if(SMK.t<every)return;
-  SMK.t=0;
-  const back=(G.car.userData.tailZ||2.0);
-  const x=CAR.x-Math.sin(CAR.yaw)*back, z=CAR.z-Math.cos(CAR.yaw)*back;
-  puffExhaust(x,CAR.y+0.32,z,it.colour,0.35+0.5*Math.min(1,(CAR.gas||0)+sp/70));
+/* An iridescent finish, done where iridescence happens: in the shading of
+   each pixel, from the angle that pixel is seen at. The band of colour
+   therefore sweeps across the bodywork as the car turns, and sits in the
+   curve of a wing the way it does on a real one, which no amount of
+   changing one colour for the whole car can imitate. */
+function iridescent(mat,I){
+  const u={value:0};
+  mat.userData.iriTime=u;
+  /* Three keeps compiled programs in a cache keyed by what it knows about
+     the material, and it knows nothing about source injected here — so two
+     paints built the same way but with different numbers in them are handed
+     the same compiled shader, and the second one silently renders as the
+     first. This is what tells them apart. */
+  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,I.sat||1,I.hard?1:0].join(",");
+  mat.onBeforeCompile=sh=>{
+    sh.uniforms.iriTime=u;
+    sh.fragmentShader=
+      "uniform float iriTime;\n"+
+      "vec3 iriHue(float h){ return clamp(abs(mod(h*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0,0.0,1.0); }\n"+
+      sh.fragmentShader.replace("#include <emissivemap_fragment>",
+        "#include <emissivemap_fragment>\n"+
+        /* how square-on this pixel is to the eye: 0 face-on, 1 at the edge.
+           vViewPosition and normal are both to hand by this point in the
+           standard shader, which is why the hook is here and not earlier. */
+        "float iriF = 1.0 - clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0);\n"+
+        "float iriH = fract(iriF * "+I.bands.toFixed(2)+" + iriTime * "+I.speed.toFixed(3)+");\n"+
+        (I.hard?"iriH = floor(iriH*7.0)/7.0 + 0.07;\n":"")+
+        "vec3 iriC = mix(vec3(1.0), iriHue(iriH), "+(I.sat||1).toFixed(2)+");\n"+
+        "diffuseColor.rgb = mix(diffuseColor.rgb, iriC, "+I.mix.toFixed(2)+");\n"+
+        "totalEmissiveRadiance += iriC * "+I.glow.toFixed(2)+" * (0.35 + 0.65*iriF);\n");
+  };
+  mat.needsUpdate=true;
 }
-const SMK={t:0};
-
-/* The two paints that are never one colour for long. Walked every frame the
-   car is on screen; the hue travels and the sheen breathes with it, which is
-   what makes chrome look like chrome rather than like grey. */
+/* the clock the two of them run on */
 function kitPaintTick(t){
-  for(const g of [G.car]){
-    if(!g||!g.userData||!g.userData.kitPaint)continue;
-    const m=g.userData.kitPaint, p=g.userData.kitPaintSpec;
-    if(!p||!p.shift)continue;
-    const h=(t*p.shift)%1;
-    if(p.glowAmt){
-      m.emissive.setHSL(h,0.85,0.5*p.glowAmt);
-      m.emissiveIntensity=0.55+0.25*Math.sin(t*2.1);
-    }
-    m.color.setHSL(h,p.sat!=null?p.sat:0.55,p.lit!=null?p.lit:0.55);
-  }
+  const g=G.car;
+  if(!g||!g.userData)return;
+  const m=g.userData.kitPaint;
+  if(m&&m.userData&&m.userData.iriTime) m.userData.iriTime.value=t;
 }
 
 /* ---- shaped parts ----
@@ -7521,7 +7520,6 @@ function frame(now){
   updateCarMesh();
   kitPaintTick(G.bopT||0);
   glowTick(G.bopT||0);
-  smokeTick(dt,G.bopT||0);
   if(CAR.state==="run")ghostRecord();               // the lap's trace, the evidence it was driven
   if(DAILY.on)ghostUpdate();
   netTick(); netUpdateCars();
