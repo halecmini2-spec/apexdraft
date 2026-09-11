@@ -222,10 +222,22 @@ sees it, or is sent it — none of it goes over the network, so other people
 in a party see an ordinary car.
 
 Four things go on the car, chosen from a drawer in the garage, and each item
-has a rarity of its own and wears it the way the cars do:
+has a rarity of its own and wears it the way the cars do. The drawer opens
+when you press it and then shows one part at a time — Paint, Rims, Underglow
+or Horn — because four rows of chips open at once is most of a phone screen
+and the garage has to fit on one without scrolling. On a short screen the car
+cards shrink to make room: a smaller picture of a car is still plainly that
+car, where a Drive button below the fold is not a button at all.
 
-- **Paint** — Candy Apple and Matte Military (Rare), Midnight Flake (Epic),
-  Gold Leaf and Holographic (Legendary), Prismatic Chrome (Mythic).
+- **Paint** — the six plain colours (Rare), then Candy Apple and Matte
+  Military (Rare), Midnight Flake (Epic), Gold Leaf and Holographic
+  (Legendary), Prismatic Chrome (Mythic). The plain colours are paints too,
+  and the commonest ones there are; having them on a swatch strip of their
+  own and the interesting ones in a drawer said they were different kinds of
+  thing, which they are not. Choosing one takes off whatever finish was on,
+  because a colour and a finish are the same slot — a car cannot be both
+  candy red and prismatic chrome. For everybody else the swatch strip is
+  exactly where it was.
 
   The top three are not finishes, they are a shader. A finish is two numbers
   — how metal, how smooth — and done that way the good ones came out white,

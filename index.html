@@ -659,8 +659,17 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .kit-head em{font-style:normal;color:var(--faint)}
 .kit-head[aria-expanded="true"] em{transform:rotate(180deg);display:inline-block}
 .kit-body{padding:0 12px 10px;display:flex;flex-direction:column;gap:7px}
+.kit-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.kit-tab{background:none;border:1px solid var(--line);border-radius:2px;cursor:pointer;
+  padding:4px 11px;font-family:inherit;font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--faint)}
+.kit-tab:hover{border-color:var(--faint);color:var(--dim)}
+.kit-tab[aria-pressed="true"]{border-color:var(--amber);color:var(--amber);background:var(--amber-glow)}
 .kit-row{display:flex;align-items:center;gap:9px;min-width:0}
 .kit-row .k{flex:0 0 74px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+/* the dab of colour on a plain paint */
+.kit-chip .dot{width:9px;height:9px;border-radius:50%;display:block;margin-bottom:2px;
+  border:1px solid rgba(255,255,255,.25)}
 .kit-chips{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;
   scrollbar-width:none;-ms-overflow-style:none}
 .kit-chips::-webkit-scrollbar{display:none}
@@ -683,6 +692,7 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
   .kit-row .k{flex-basis:58px;font-size:9px}
   .kit-chip span{font-size:10.5px}
   .kit-body{gap:5px;padding-bottom:8px}
+  .kit-tab{padding:3px 8px;font-size:9.5px;letter-spacing:.08em}
 }
 /* ---- the shop ---- */
 #shop{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
@@ -1265,6 +1275,21 @@ body.daily .gar-arrow{display:none}
 /* The very shortest screens there are — an old phone on its side, with
    three hundred and twenty pixels to work with. A few points off everything
    rather than anything taken away. */
+/* short screens: the cars shrink so the drawer and the button both fit */
+@media (max-height:460px){
+  .gar-card{flex-basis:clamp(104px,26vw,132px)}
+  .gar-card canvas{margin-bottom:2px}
+  .gar-card b{font-size:10.5px;letter-spacing:.03em}
+  .gar-card .rar{font-size:7.5px;letter-spacing:.1em;margin-bottom:1px}
+  .gar-card span{font-size:9.5px;-webkit-line-clamp:2}
+  .gar-card span i{display:none}
+  .kit-head{padding:6px 10px;font-size:10px}
+  .kit-body{padding:0 10px 7px;gap:5px}
+  .kit-chip{padding:3px 8px 4px}
+  .kit-chip span{font-size:10px}
+  .kit-chip em{font-size:7px}
+  .kit-tab{padding:3px 9px;font-size:9.5px}
+}
 @media (max-height:400px){
   .rs-wrap .auth-brand,.gar-wrap .auth-brand{font-size:15px}
   .rs-body .grp .chip{min-height:24px;padding:2px 7px;font-size:10.5px}
@@ -2161,7 +2186,7 @@ body.daily .gar-arrow{display:none}
         </div>
         <button class="gar-arrow" id="garNext" aria-label="The car after this one">›</button>
       </div>
-      <div class="gar-colours">
+      <div class="gar-colours" id="garColours">
         <span class="k">Colour</span>
         <div class="swatches" id="colors">
           <button class="sw" data-color="#E2482B" style="background:#E2482B" aria-pressed="true" title="Rosso"></button>
@@ -2177,7 +2202,10 @@ body.daily .gar-arrow{display:none}
         <button class="kit-head" id="kitHead" aria-expanded="false">
           <span>Customisation</span><i id="kitWorn">Nothing on</i><em>▾</em>
         </button>
-        <div class="kit-body" id="kitBody" hidden></div>
+        <div class="kit-body" id="kitBody" hidden>
+        <div class="kit-tabs" id="kitTabs"></div>
+        <div class="kit-chips" id="kitItems"></div>
+      </div>
       </div>
       <button class="go gar-go" id="garDrive">Drive it</button>
     </div>
@@ -4288,7 +4316,19 @@ const KITS={
      colour chosen on the swatches, which only the ones that are a material
      rather than a colour do; shift is how fast the hue travels, for the two
      that are never one colour for long */
+  /* The six plain colours are paints too, and the commonest ones there are.
+     Having them on a swatch strip of their own and the interesting ones in
+     a drawer said they were different kinds of thing, which they are not —
+     they are all what the car is painted. Choosing one of these takes off
+     whatever finish was on, because a colour and a finish are the same
+     slot: you cannot have the car both candy red and prismatic chrome. */
   paint:{label:"Paint", none:"Standard", items:[
+    {id:"c-red",   label:"Rosso",  rarity:"rare", std:"#E2482B"},
+    {id:"c-yellow",label:"Giallo", rarity:"rare", std:"#F2C230"},
+    {id:"c-blue",  label:"Blu",    rarity:"rare", std:"#2E7BE8"},
+    {id:"c-white", label:"Bianco", rarity:"rare", std:"#E8EDEC"},
+    {id:"c-black", label:"Nero",   rarity:"rare", std:"#1B2427"},
+    {id:"c-green", label:"Verde",  rarity:"rare", std:"#2ED47A"},
     {id:"candy", label:"Candy Apple",      rarity:"rare",      metal:0.72,rough:0.09,env:1.7,clear:0.55},
     {id:"matte", label:"Matte Military",   rarity:"rare",      metal:0.00,rough:0.88,env:0.25},
     {id:"flake", label:"Midnight Flake",   rarity:"epic",      metal:0.92,rough:0.20,env:1.9,tint:0x0B1020,
@@ -8416,6 +8456,19 @@ function showRaceSet(on){
    paint you have to leave the session to see. */
 function kitSet(slot,id){
   ED.opts.kit=ED.opts.kit||{};
+  const it=kitItem(slot,id);
+  if(it&&it.std){
+    /* a plain colour: the car is painted it, and any finish comes off */
+    ED.opts.color=it.std; ED.opts.kit.paint=null;
+    store.set("ad.opts",ED.opts);
+    pressGroup($("colors"),"color",ED.opts.color);
+    kitUI(); GAR.cache={}; garPictures();
+    if(G.car&&document.body.classList.contains("driving")){
+      if(G.T)G.T.opts.color=ED.opts.color;
+      rebuildPlayerCar();
+    }
+    return;
+  }
   ED.opts.kit[slot]=(ED.opts.kit[slot]===id)?null:id;   // pressing it again takes it off
   store.set("ad.opts",ED.opts);
   kitUI();
@@ -8428,40 +8481,65 @@ function kitSet(slot,id){
   if(slot==="glow") glowApply();
   if(slot==="horn"){ const it=kitItem("horn",ED.opts.kit[slot]); if(it)hornPlay(it); }
 }
+/* One part of the car at a time. Four rows of chips all open at once is
+   most of a phone screen, and the garage has to fit on one without
+   scrolling — so you open the drawer, pick the part, and see only that
+   part's items. */
+let KIT_TAB="paint";
+function kitTab(slot){ KIT_TAB=slot; kitUI(); }
+function kitChip(slot,it){
+  const b=document.createElement("button");
+  b.className="kit-chip"; b.dataset.slot=slot; b.dataset.item=it.id;
+  const R=RARITY[it.rarity];
+  if(R){ b.style.setProperty("--rar",R.colour);
+         b.style.setProperty("--rarDim",R.dim);
+         b.style.setProperty("--rarGlow",R.glow); }
+  b.innerHTML='<em></em><span></span>';
+  b.querySelector("em").textContent=R?R.label:"";
+  b.querySelector("span").textContent=it.label;
+  /* a plain colour shows the colour it is, which says more than its name */
+  if(it.std){ const d=document.createElement("i"); d.className="dot";
+              d.style.background=it.std; b.insertBefore(d,b.firstChild); }
+  b.addEventListener("click",()=>kitSet(slot,it.id));
+  return b;
+}
 function kitBuild(){
-  const body=$("kitBody"); if(!body||body.dataset.built)return;
-  body.dataset.built="1";
+  const tabs=$("kitTabs"); if(!tabs||tabs.dataset.built)return;
+  tabs.dataset.built="1";
   for(const slot of KIT_CAR_SLOTS){
-    const g=KITS[slot];
-    const row=document.createElement("div"); row.className="kit-row";
-    const k=document.createElement("span"); k.className="k"; k.textContent=g.label;
-    row.appendChild(k);
-    const wrap=document.createElement("div"); wrap.className="kit-chips";
-    for(const it of g.items){
-      const b=document.createElement("button");
-      b.className="kit-chip"; b.dataset.slot=slot; b.dataset.item=it.id;
-      const R=RARITY[it.rarity];
-      if(R){ b.style.setProperty("--rar",R.colour);
-             b.style.setProperty("--rarDim",R.dim);
-             b.style.setProperty("--rarGlow",R.glow); }
-      b.innerHTML='<em></em><span></span>';
-      b.querySelector("em").textContent=R?R.label:"";
-      b.querySelector("span").textContent=it.label;
-      b.addEventListener("click",()=>kitSet(slot,it.id));
-      wrap.appendChild(b);
-    }
-    row.appendChild(wrap);
-    body.appendChild(row);
+    const b=document.createElement("button");
+    b.className="kit-tab"; b.dataset.slot=slot;
+    b.textContent=KITS[slot].label;
+    b.addEventListener("click",()=>kitTab(slot));
+    tabs.appendChild(b);
   }
+}
+/* the chips for whichever part is open */
+function kitItems(){
+  const box=$("kitItems"); if(!box)return;
+  if(box.dataset.slot===KIT_TAB)return;         // already showing these
+  box.dataset.slot=KIT_TAB;
+  box.textContent="";
+  for(const it of KITS[KIT_TAB].items) box.appendChild(kitChip(KIT_TAB,it));
 }
 function kitUI(){
   const on=isTester(), box=$("garKit");
   if(box)box.hidden=!on;
+  /* the swatch strip is the plain colours, and for this account they are in
+     the drawer with everything else */
+  const sw=$("garColours"); if(sw)sw.hidden=on;
   if(!on){ hornUI(); titleUI(); return; }
-  kitBuild();
+  kitBuild(); kitItems();
   const k=(ED.opts&&ED.opts.kit)||{};
-  for(const b of document.querySelectorAll("#kitBody .kit-chip"))
-    b.setAttribute("aria-pressed",String(k[b.dataset.slot]===b.dataset.item));
+  for(const b of document.querySelectorAll("#kitTabs .kit-tab"))
+    b.setAttribute("aria-pressed",String(b.dataset.slot===KIT_TAB));
+  for(const b of document.querySelectorAll("#kitItems .kit-chip")){
+    const it=kitItem(b.dataset.slot,b.dataset.item);
+    /* a plain colour is on when no finish is and the car is that colour */
+    const lit=(it&&it.std)? (!k.paint&&ED.opts.color===it.std)
+                          : (k[b.dataset.slot]===b.dataset.item);
+    b.setAttribute("aria-pressed",String(lit));
+  }
   const worn=KIT_CAR_SLOTS.map(sl=>kitItem(sl,k[sl])).filter(Boolean);
   hornUI();
   $("kitWorn").textContent=worn.length
@@ -8543,7 +8621,10 @@ function showGarage(on){
     const dm=CAR_MODELS.find(x=>x.id===dailyCar());
     $("garSub").textContent=DAILY.on
       ? ("Today's daily is the "+(dm?dm.label:"GT")+", for everyone — pick a colour and go.")
-      : NET.status==="in"?"Everyone sees the car you pick.":"Pick a car and a colour, then drive.";
+      : NET.status==="in"?"Everyone sees the car you pick."
+      /* for the account with the drawer the colour is in it, with the rest */
+      : isTester()?"Pick a car, then make it yours."
+      :"Pick a car and a colour, then drive.";
     dailyLock();
     requestAnimationFrame(()=>{ garPictures(); garCentre(false); });
   } else fitPad();
