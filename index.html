@@ -649,6 +649,41 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dy-map canvas{width:100%;height:auto;aspect-ratio:3/2;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:2px}
 .dy-facts{font-size:11.5px;color:var(--faint);margin-top:6px;letter-spacing:.03em}
 .dy-side{display:flex;flex-direction:column;gap:10px}
+/* ---- the kit drawer ---- */
+.gar-kit{margin:10px 0 0;border:1px solid var(--line);border-radius:3px;background:var(--panel2)}
+.kit-head{width:100%;display:flex;align-items:center;gap:10px;background:none;border:0;cursor:pointer;
+  padding:9px 12px;color:var(--dim);font-family:inherit;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+.kit-head span{font-weight:700;color:var(--ink)}
+.kit-head i{font-style:normal;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  letter-spacing:.02em;text-transform:none;font-size:11.5px;color:var(--faint)}
+.kit-head em{font-style:normal;color:var(--faint)}
+.kit-head[aria-expanded="true"] em{transform:rotate(180deg);display:inline-block}
+.kit-body{padding:0 12px 10px;display:flex;flex-direction:column;gap:7px}
+.kit-row{display:flex;align-items:center;gap:9px;min-width:0}
+.kit-row .k{flex:0 0 74px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.kit-chips{flex:1;min-width:0;display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;
+  scrollbar-width:none;-ms-overflow-style:none}
+.kit-chips::-webkit-scrollbar{display:none}
+/* the same edge the cars wear, for the same reason */
+.kit-chip{flex:0 0 auto;background:var(--panel);border:1px solid var(--rarDim,var(--line));border-radius:2px;
+  padding:4px 9px 5px;cursor:pointer;text-align:left;color:var(--dim);font-family:inherit;
+  display:flex;flex-direction:column;gap:1px;line-height:1.15}
+.kit-chip em{font-style:normal;font-size:7.5px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:700;color:var(--rar,var(--faint))}
+.kit-chip span{font-size:11.5px;letter-spacing:.02em;white-space:nowrap}
+.kit-chip:hover{border-color:var(--rar,var(--faint))}
+.kit-chip[aria-pressed="true"]{border-color:var(--rar,var(--amber));background:var(--rarGlow,var(--amber-glow));
+  box-shadow:inset 0 0 0 1px var(--rar,var(--amber))}
+.kit-chip[aria-pressed="true"] span{color:var(--rar,var(--ink))}
+.acct-titles{margin:10px 0 12px;display:flex;align-items:center;gap:9px;min-width:0}
+.acct-titles .k{flex:0 0 auto;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+.acct-title{display:block;font-style:normal;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:700;margin-top:2px}
+@media (max-width:760px){
+  .kit-row .k{flex-basis:58px;font-size:9px}
+  .kit-chip span{font-size:10.5px}
+  .kit-body{gap:5px;padding-bottom:8px}
+}
 /* ---- the shop ---- */
 #shop{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .sh-note{margin:10px 0 0;font-size:12px;line-height:1.55;color:var(--faint);max-width:70ch}
@@ -850,6 +885,10 @@ body.aiok .chips .chip.test{display:inline-flex}
 #tBrake{right:calc(130px + var(--sar));font-size:13px} #tGas{right:calc(20px + var(--sar));font-size:13px}
 #tMenu{left:50%;transform:translateX(-50%);top:calc(10px + var(--sat));width:52px;height:34px;
   border-radius:8px;font-size:15px}
+/* above the brake, out of the way of the thumbs that are busy */
+#tHorn{right:calc(134px + var(--sar));bottom:calc(132px + var(--sab));width:62px;height:44px;
+  border-radius:10px;font-size:11px;letter-spacing:.1em}
+@media (max-height:430px){ #tHorn{bottom:calc(108px + var(--sab));width:56px;height:38px} }
 body.touchmode .touch{display:block}
 body.touchmode .keys{display:none}
 /* clear the bottom of the screen for thumbs — HUD moves to the top */
@@ -1794,6 +1833,7 @@ body.daily .gar-arrow{display:none}
         <div class="notice" id="hmNotice" hidden><i>!</i><div><b>A message about your account</b><span id="hmNoticeTxt"></span></div></div>
         <div class="home-acct-txt">
           <b id="hmAcctHead">Easy and free: make an account</b>
+          <i id="hmTitle" class="acct-title" hidden></i>
           <span id="hmAcctSub">A name and a password. No email, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.</span>
         </div>
         <div class="home-acct-btns">
@@ -2132,6 +2172,13 @@ body.daily .gar-arrow{display:none}
           <button class="sw" data-color="#2ED47A" style="background:#2ED47A" title="Verde"></button>
         </div>
       </div>
+      <!-- Shown to the account trying the kit out and to nobody else. -->
+      <div class="gar-kit" id="garKit" hidden>
+        <button class="kit-head" id="kitHead" aria-expanded="false">
+          <span>Kit</span><i id="kitWorn">Nothing on</i><em>▾</em>
+        </button>
+        <div class="kit-body" id="kitBody" hidden></div>
+      </div>
       <button class="go gar-go" id="garDrive">Drive it</button>
     </div>
   </section>
@@ -2169,7 +2216,7 @@ body.daily .gar-arrow{display:none}
       <canvas id="fx"></canvas>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
-        <div>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover · <kbd>R</kbd><kbd>R</kbd> restart</div>
+        <div><span id="hintHorn" hidden><kbd>H</kbd> horn · </span>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover · <kbd>R</kbd><kbd>R</kbd> restart</div>
         <div><kbd>C</kbd> camera · <kbd>M</kbd> sound · <kbd>Esc</kbd> menu</div>
       </div>
       <div class="mapbox"><canvas id="minimap" width="264" height="264"></canvas></div>
@@ -2186,6 +2233,7 @@ body.daily .gar-arrow{display:none}
         <button id="tRight" aria-label="Steer right">▶</button>
         <button id="tBrake" aria-label="Brake">BRAKE</button>
         <button id="tGas" aria-label="Accelerate">GAS</button>
+        <button id="tHorn" aria-label="Horn" hidden>HORN</button>
         <button id="tMenu" aria-label="Menu">☰</button>
       </div>
       <div class="rotate-tip">Turn your phone sideways to drive ↻</div>
@@ -2297,6 +2345,12 @@ body.daily .gar-arrow{display:none}
       <div id="authWho" hidden>
         <div class="notice" id="auNotice" hidden><i>!</i><div><b>A message about your account</b><span id="auNoticeTxt"></span></div></div>
         <p class="awho">Signed in as <b id="auWhoName">—</b></p>
+        <i id="auWhoTitle" class="acct-title" hidden></i>
+        <!-- shown only to the account the titles are being tried out on -->
+        <div class="acct-titles" id="auTitleRow" hidden>
+          <span class="k">Title</span>
+          <div class="kit-chips" id="auTitleChips"></div>
+        </div>
         <p class="amail" id="auWhoMail">—</p>
         <div class="astats" id="auStats" hidden>
           <div class="ast"><b id="stDaily">0</b><span>time trial wins</span></div>
@@ -3030,7 +3084,9 @@ function surfaceTextures(){
 
 /* A tiny equirect sky, PMREM-filtered, so paint and glass have something
    real to reflect. Without this, metallic materials render black. */
-function buildEnvironment(TH){
+/* the garage has a renderer of its own, so which one builds this is asked
+   for rather than assumed */
+function buildEnvironment(TH,renderer){
   const W=128,H=64;
   const c=document.createElement("canvas"); c.width=W; c.height=H;
   const ctx=c.getContext("2d");
@@ -3048,7 +3104,7 @@ function buildEnvironment(TH){
   const tex=new THREE.CanvasTexture(c);
   tex.mapping=THREE.EquirectangularReflectionMapping;
   tex.encoding=THREE.sRGBEncoding;
-  const pm=new THREE.PMREMGenerator(G.renderer);
+  const pm=new THREE.PMREMGenerator(renderer||G.renderer);
   const env=pm.fromEquirectangular(tex).texture;
   pm.dispose(); tex.dispose();
   return env;
@@ -4097,7 +4153,7 @@ function buildSmoke(){
   tex.encoding=THREE.sRGBEncoding;
   const grp=new THREE.Group();
   const pool=[];
-  for(let i=0;i<26;i++){
+  for(let i=0;i<56;i++){
     const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,
       opacity:0,depthWrite:false}));
     s.visible=false; grp.add(s); pool.push({s,life:0,vy:0});
@@ -4114,6 +4170,18 @@ function puffSmoke(x,y,z,strength){
   p.s.position.set(x+(Math.random()-.5)*0.7,y+0.25,z+(Math.random()-.5)*0.7);
   p.s.scale.setScalar(0.72+Math.random()*0.42);
   p.s.material.opacity=0.12*strength;
+}
+/* Out of the pipe: slower than tyre smoke, spreads more, and keeps its
+   colour instead of being handed white. */
+function puffExhaust(x,y,z,colour,strength){
+  const d=G.smoke.userData, p=d.pool[d.next];
+  d.next=(d.next+1)%d.pool.length;
+  p.life=1; p.vy=0.34+Math.random()*0.30; p.grav=0;
+  p.s.visible=true;
+  p.s.material.color.copy(SRGB(colour));
+  p.s.position.set(x+(Math.random()-.5)*0.32,y,z+(Math.random()-.5)*0.32);
+  p.s.scale.setScalar(0.30+Math.random()*0.18);
+  p.s.material.opacity=0.34*strength;
 }
 /* steel on steel — short-lived, gravity-fed, and they die fast */
 function puffSpark(x,y,z,strength){
@@ -4209,6 +4277,87 @@ const CAR_MODELS=[
   {id:"v12",    label:"V12 Monster", test:true, rarity:"mythic"}
 ];
 const carRarity=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return (m&&RARITY[m.rarity])||null; };
+
+/* ---- the kit ----
+   Six things a driver can put on: a title under their name, and five that
+   are on the car itself — paint, rims, the smoke out of the pipe, the glow
+   under the sills and the horn. Each item has a rarity of its own, the same
+   four the cars do, and wears it on its chip.
+
+   All of it sits behind the same gate as the test cars and the AI: it is
+   being tried out on one account and nobody else has it, sees it, or is
+   sent it. Numbers live beside the name rather than in the code that uses
+   them, so adding one later is adding a line here. */
+const KITS={
+  title:{label:"Title", none:"No title", items:[
+    {id:"trackday",  label:"Track Day Hero", rarity:"rare"},
+    {id:"backmarker",label:"Backmarker",     rarity:"rare"},
+    {id:"apex",      label:"Apex Hunter",    rarity:"epic"},
+    {id:"unbeaten",  label:"Unbeaten",       rarity:"legendary"},
+    {id:"king",      label:"The King",       rarity:"mythic"}
+  ]},
+  /* metal/rough/env go straight onto the paint material; tint overrides the
+     colour chosen on the swatches, which only the ones that are a material
+     rather than a colour do; shift is how fast the hue travels, for the two
+     that are never one colour for long */
+  paint:{label:"Paint", none:"Standard", items:[
+    {id:"candy", label:"Candy Apple",      rarity:"rare",      metal:0.72,rough:0.09,env:1.7,clear:0.55},
+    {id:"matte", label:"Matte Military",   rarity:"rare",      metal:0.00,rough:0.88,env:0.25},
+    {id:"flake", label:"Midnight Flake",   rarity:"epic",      metal:0.92,rough:0.20,env:1.9,tint:0x0B1020,spark:0.5},
+    {id:"gold",  label:"Gold Leaf",        rarity:"legendary", metal:1.00,rough:0.17,env:2.1,tint:0xC9A227},
+    {id:"holo",  label:"Holographic",      rarity:"legendary", metal:0.86,rough:0.13,env:1.9,
+      shift:0.22,sat:0.72,lit:0.52,glowAmt:0.34},
+    {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.035,env:2.5,
+      shift:0.50,sat:0.30,lit:0.74,glowAmt:0.40}
+  ]},
+  rims:{label:"Rims", none:"Standard", items:[
+    {id:"bronze", label:"Bronze Rims", rarity:"rare",      rim:0x8C6239,metal:0.85,rough:0.34},
+    {id:"carbon", label:"Carbon Rims", rarity:"epic",      rim:0x14181B,metal:0.30,rough:0.52},
+    {id:"chrome", label:"Chrome Rims", rarity:"epic",      rim:0xD8DEE3,metal:1.00,rough:0.06},
+    {id:"gold",   label:"Gold Rims",   rarity:"legendary", rim:0xD4A72C,metal:1.00,rough:0.16},
+    {id:"neon",   label:"Neon Rims",   rarity:"mythic",    rim:0x1A1F24,metal:0.60,rough:0.35,emit:0x28E0FF}
+  ]},
+  smoke:{label:"Smoke", none:"None", items:[
+    {id:"white",  label:"White Smoke",  rarity:"rare",      colour:0xE8EEEC},
+    {id:"blue",   label:"Blue Smoke",   rarity:"epic",      colour:0x3FA9FF},
+    {id:"purple", label:"Purple Smoke", rarity:"legendary", colour:0xA868FF},
+    {id:"gold",   label:"Gold Smoke",   rarity:"mythic",    colour:0xE8B32A}
+  ]},
+  glow:{label:"Underglow", none:"None", items:[
+    {id:"ice",    label:"Ice Blue",    rarity:"rare",      colour:0x63D6FF},
+    {id:"violet", label:"Violet",      rarity:"epic",      colour:0xA868FF},
+    {id:"toxic",  label:"Toxic Green", rarity:"epic",      colour:0x4BE86B},
+    {id:"ember",  label:"Ember Red",   rarity:"legendary", colour:0xFF4A32},
+    {id:"rain",   label:"Rainbow",     rarity:"mythic",    cycle:true}
+  ]},
+  /* a horn is a couple of notes and how long they last; the tune is the
+     item, so a new one is a new row rather than new code */
+  horn:{label:"Horn", none:"None", items:[
+    {id:"classic",label:"Classic Horn", rarity:"rare",      wave:"sawtooth",notes:[[440,0,0.45],[554,0,0.45]]},
+    {id:"air",    label:"Air Horn",     rarity:"epic",      wave:"square",  notes:[[233,0,0.65],[311,0,0.65],[466,0,0.65]]},
+    {id:"truck",  label:"Truck Horn",   rarity:"epic",      wave:"sawtooth",notes:[[131,0,0.9],[165,0,0.9]]},
+    {id:"cuca",   label:"La Cucaracha", rarity:"legendary", wave:"square",
+      notes:[[523,0,0.13],[523,0.15,0.13],[523,0.30,0.13],[698,0.45,0.30],[880,0.80,0.40]]},
+    {id:"train",  label:"Train Horn",   rarity:"mythic",    wave:"sawtooth",
+      notes:[[110,0,1.5],[147,0,1.5],[185,0,1.5],[220,0,1.5]]}
+  ]}
+};
+const KIT_SLOTS=["title","paint","rims","smoke","glow","horn"];
+/* the ones that are the car, which are the ones the garage offers */
+const KIT_CAR_SLOTS=["paint","rims","smoke","glow","horn"];
+const kitItem=(slot,id)=>{ const g=KITS[slot]; return (g&&id&&g.items.find(i=>i.id===id))||null; };
+/* What this driver is wearing — nothing at all unless the account that is
+   trying it out is signed in, so it cannot leak onto anybody else's car by
+   a stale setting in their storage. */
+function myKit(){
+  if(!isTester())return null;
+  const k=(ED.opts&&ED.opts.kit)||null;
+  if(!k)return null;
+  let any=false; const out={};
+  for(const sl of KIT_SLOTS){ const it=kitItem(sl,k[sl]); if(it){ out[sl]=it; any=true; } }
+  return any?out:null;
+}
+const myTitle=()=>{ const k=myKit(); return (k&&k.title&&k.title.label)||""; };
 /* the ones anybody may drive, and whether a given account may drive a given
    one — the test cars answer to the same name the AI opponents do */
 const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
@@ -4315,8 +4464,8 @@ function carOverlap(ax,az,ayaw,akind,bx,bz,byaw,bkind){
   return best;
 }
 
-function carMats(bodyColor){
-  return {
+function carMats(bodyColor,kit){
+  const M={
     paint:new THREE.MeshStandardMaterial({
       color:SRGB(bodyColor),metalness:0.5,roughness:0.26,envMapIntensity:1.15}),
     glass:new THREE.MeshStandardMaterial({
@@ -4330,6 +4479,120 @@ function carMats(bodyColor){
     spoke:new THREE.MeshStandardMaterial({color:SRGB(0x3E464C),roughness:0.44,metalness:0.7}),
     carbon:new THREE.MeshStandardMaterial({color:SRGB(0x121618),roughness:0.48,metalness:0.35})
   };
+  if(kit&&kit.paint){
+    const p=kit.paint, m=M.paint;
+    m.metalness=p.metal; m.roughness=p.rough; m.envMapIntensity=p.env;
+    /* A paint that is a material rather than a colour ignores the swatch:
+       gold leaf is gold whichever swatch is lit, and chrome is chrome. The
+       ones that are a finish keep the colour that was chosen. */
+    if(p.tint!=null) m.color.copy(SRGB(p.tint));
+    /* one from the middle of its range, so the picture in the garage shows
+       what it is rather than whichever swatch happened to be lit */
+    if(p.shift) m.color.setHSL(0.58,p.sat!=null?p.sat:0.55,p.lit!=null?p.lit:0.55);
+    if(p.glowAmt) m.emissive=SRGB(0x101010);
+    M.kitPaint=m; M.kitPaintSpec=p;
+  }
+  if(kit&&kit.rims){
+    const r=kit.rims;
+    for(const key of ["rim","spoke"]){
+      const m=M[key];
+      m.color.copy(SRGB(r.rim)); m.metalness=r.metal; m.roughness=r.rough;
+      if(r.emit){ m.emissive=SRGB(r.emit); m.emissiveIntensity=0.9; }
+    }
+    M.disc.color.copy(SRGB(r.rim)).multiplyScalar(0.7);
+    M.disc.metalness=Math.min(1,r.metal*0.9);
+  }
+  return M;
+}
+/* ---- underglow ----
+   A patch of light on the ground under the sills, carried by the car so it
+   banks and pitches with it. It is a picture of a glow laid flat and added
+   to whatever is beneath, the same trick the city's street lights use, for
+   the same reason: a real light under every car would be honest and would
+   halve the frame rate. */
+let GLOW_TEX=null;
+function glowTexture(){
+  if(GLOW_TEX)return GLOW_TEX;
+  const c=document.createElement("canvas"); c.width=c.height=128;
+  const g=c.getContext("2d");
+  const rad=g.createRadialGradient(64,64,0,64,64,64);
+  rad.addColorStop(0.00,"rgba(255,255,255,1)");
+  rad.addColorStop(0.42,"rgba(255,255,255,0.42)");
+  rad.addColorStop(0.78,"rgba(255,255,255,0.10)");
+  rad.addColorStop(1.00,"rgba(255,255,255,0)");
+  g.fillStyle=rad; g.fillRect(0,0,128,128);
+  GLOW_TEX=new THREE.CanvasTexture(c); GLOW_TEX.needsUpdate=true;
+  return GLOW_TEX;
+}
+/* put one under the car, or take it away again */
+function glowApply(){
+  const car=G.car; if(!car)return;
+  const it=(myKit()&&myKit().glow)||null;
+  let m=car.userData.glowMesh;
+  if(!it){ if(m){ car.remove(m); m.geometry.dispose(); m.material.dispose(); car.userData.glowMesh=null; } return; }
+  if(!m){
+    const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
+    box.getSize(sz);
+    const g=new THREE.PlaneGeometry(1,1); g.rotateX(-Math.PI/2);
+    m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({
+      map:glowTexture(), transparent:true, opacity:0.85, depthWrite:false,
+      blending:THREE.AdditiveBlending, toneMapped:false, fog:true,
+      side:THREE.DoubleSide}));
+    /* the model is scaled as a whole on some cars, so the patch is sized in
+       the car's own units rather than in metres */
+    const sc=car.scale.x||1;
+    m.scale.set(sz.x*2.3/sc, 1, sz.z*1.5/sc);
+    m.position.y=0.045/sc;
+    m.renderOrder=3;
+    car.add(m); car.userData.glowMesh=m;
+  }
+  car.userData.glowSpec=it;
+  if(!it.cycle) m.material.color.copy(SRGB(it.colour));
+}
+/* the one that is never the same colour twice */
+function glowTick(t){
+  const car=G.car; if(!car)return;
+  const m=car.userData.glowMesh, it=car.userData.glowSpec;
+  if(!m||!it)return;
+  if(it.cycle) m.material.color.setHSL((t*0.28)%1,0.9,0.56);
+  /* a slow breath, so it reads as a light rather than a decal */
+  m.material.opacity=0.72+0.16*Math.sin(t*2.4);
+}
+
+/* ---- the trail out of the pipe ----
+   Spawned behind the car and left in the world rather than carried with it,
+   because smoke that follows the car is a scarf. Gentle: one puff every
+   eighth of a second, drifting up and spreading, and only when the engine
+   is actually doing something. */
+function smokeTick(dt,t){
+  const it=(myKit()&&myKit().smoke)||null;
+  if(!it||!G.smoke||!G.car||CAR.state!=="run"){ SMK.t=0; return; }
+  const sp=Math.hypot(CAR.vx,CAR.vz);
+  SMK.t+=dt;
+  const every=0.085+0.10*(1-Math.min(1,sp/40));
+  if(SMK.t<every)return;
+  SMK.t=0;
+  const back=(G.car.userData.tailZ||2.0);
+  const x=CAR.x-Math.sin(CAR.yaw)*back, z=CAR.z-Math.cos(CAR.yaw)*back;
+  puffExhaust(x,CAR.y+0.32,z,it.colour,0.35+0.5*Math.min(1,(CAR.gas||0)+sp/70));
+}
+const SMK={t:0};
+
+/* The two paints that are never one colour for long. Walked every frame the
+   car is on screen; the hue travels and the sheen breathes with it, which is
+   what makes chrome look like chrome rather than like grey. */
+function kitPaintTick(t){
+  for(const g of [G.car]){
+    if(!g||!g.userData||!g.userData.kitPaint)continue;
+    const m=g.userData.kitPaint, p=g.userData.kitPaintSpec;
+    if(!p||!p.shift)continue;
+    const h=(t*p.shift)%1;
+    if(p.glowAmt){
+      m.emissive.setHSL(h,0.85,0.5*p.glowAmt);
+      m.emissiveIntensity=0.55+0.25*Math.sin(t*2.1);
+    }
+    m.color.setHSL(h,p.sat!=null?p.sat:0.55,p.lit!=null?p.lit:0.55);
+  }
 }
 
 /* ---- shaped parts ----
@@ -5729,11 +5992,13 @@ function bodyV12(b,M){
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
-function buildCar(bodyColor,kind){
+function buildCar(bodyColor,kind,kit){
   const g=new THREE.Group();
   const b=new THREE.Group();
   g.add(b);
-  const M=carMats(bodyColor);
+  const M=carMats(bodyColor,kit);
+  g.userData.kitPaint=M.kitPaint||null;
+  g.userData.kitPaintSpec=M.kitPaintSpec||null;
   const make=kind==="formula"?bodyFormula
             :kind==="yaris"  ?bodyYaris
             :kind==="kart"   ?bodyKart
@@ -5762,6 +6027,11 @@ function buildCar(bodyColor,kind){
   /* wheelSpin is integrated against a 0.36 m reference, so a car on smaller
      wheels has to turn them faster to look like it is rolling, not skating */
   g.userData.spin=0.36/(spec.wheels.r*(spec.scale||1));   // a bigger wheel turns slower
+  /* how far behind the middle the back of it is, in metres on the road */
+  try{
+    const bb=new THREE.Box3().setFromObject(g);
+    g.userData.tailZ=Math.max(0.8,Math.abs(bb.min.z)*0.92);
+  }catch(e){ g.userData.tailZ=2.0; }
   return g;
 }
 /* Flame out of the pipes, driven by the throttle. Each one has a length of
@@ -5906,7 +6176,7 @@ function buildWorld(T){
   const sl=buildStartLine(T,TH); scene.add(sl);
   scene.add(buildScatter(T,TH));
 
-  const car=buildCar(T.opts.color,T.opts.car);
+  const car=buildCar(T.opts.color,T.opts.car,myKit());
   scene.add(car);
   const blob=buildContactShadow();
   scene.add(blob);
@@ -5914,6 +6184,7 @@ function buildWorld(T){
   const smoke=buildSmoke(); scene.add(smoke);
 
   G.scene=scene; G.sun=sun; G.T=T; G.TH=TH; G.car=car; G.blob=blob;
+  glowApply();
   G.perf=carPerf(T.opts.car);          // the car the world was built with
   G.skid=skid; G.smoke=smoke;
   G.startLights=sl.userData.lights;
@@ -5981,6 +6252,7 @@ addEventListener("keydown",e=>{
   const t=e.target;
   if(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable))return;
   keys[e.code]=1;
+  if(e.code==="KeyH"&&!e.repeat&&document.body.classList.contains("driving")) hornPress();
   if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].indexOf(e.code)>=0)e.preventDefault();
   if(document.getElementById("drive").hidden)return;
   if(e.code==="Escape")togglePause();
@@ -7004,6 +7276,36 @@ function initAudio(){
     AU.ctx=ctx;AU.master=master;AU.eng=o1;AU.eng2=o2;AU.eng3=o3;AU.g2=g2;AU.g3=g3;AU.engGain=eg;AU.lp=lp;
   }catch(e){}
 }
+/* ---- the horn ----
+   A couple of notes held together, which is what a horn is: two or three
+   pipes of different lengths sounded at once. Built on the spot and thrown
+   away, so nothing is left running between presses. */
+let hornAt=0;
+function hornPlay(it){
+  if(!it)return;
+  initAudio();
+  if(!AU.ctx||!AU.master)return;
+  const now=AU.ctx.currentTime;
+  if(now-hornAt<0.18)return;                 // leaning on the key is one press
+  hornAt=now;
+  try{ if(AU.ctx.state==="suspended")AU.ctx.resume(); }catch(e){}
+  for(const [hz,at,len] of it.notes){
+    const o=AU.ctx.createOscillator(), g=AU.ctx.createGain();
+    o.type=it.wave||"sawtooth"; o.frequency.value=hz;
+    /* a horn does not start or stop instantly, and one that does clicks */
+    const t0=now+at, t1=t0+len;
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(0.16,t0+0.02);
+    g.gain.setValueAtTime(0.16,Math.max(t0+0.03,t1-0.06));
+    g.gain.exponentialRampToValueAtTime(0.0001,t1);
+    o.connect(g); g.connect(AU.master);
+    o.start(t0); o.stop(t1+0.02);
+  }
+}
+function hornPress(){
+  const k=myKit(); if(!k||!k.horn)return;
+  hornPlay(k.horn);
+}
 function updateAudio(){
   if(!AU.ctx)return;
   const sp=Math.hypot(CAR.vx,CAR.vz);
@@ -7217,6 +7519,9 @@ function frame(now){
   if(G.acc>0.5)G.acc=0;
 
   updateCarMesh();
+  kitPaintTick(G.bopT||0);
+  glowTick(G.bopT||0);
+  smokeTick(dt,G.bopT||0);
   if(CAR.state==="run")ghostRecord();               // the lap's trace, the evidence it was driven
   if(DAILY.on)ghostUpdate();
   netTick(); netUpdateCars();
@@ -7762,6 +8067,10 @@ function garRenderer(){
     sc.add(new THREE.HemisphereLight(SRGB(0xCFE3EE),SRGB(0x2A3330),0.95));
     const sun=new THREE.DirectionalLight(SRGB(0xFFF2DD),1.35); sun.position.set(3.5,5,2.5); sc.add(sun);
     const fill=new THREE.DirectionalLight(SRGB(0xB9D3E6),0.35); fill.position.set(-4,2,-3); sc.add(fill);
+    /* Something for the paint to reflect. Without it anything with metal in
+       it renders nearly black in here, which is most of the kit and also,
+       quietly, every car already in the garage. */
+    try{ sc.environment=buildEnvironment(THEMES.alpine,r); }catch(e){}
     const cam=new THREE.PerspectiveCamera(28,720/440,0.1,50);
     GAR.renderer=r; GAR.scene=sc; GAR.camera=cam;
     return true;
@@ -7769,10 +8078,14 @@ function garRenderer(){
 }
 function garPicture(kind,colour,cv){
   if(!garRenderer())return;
-  const key=kind+"|"+colour;
+  /* the kit is part of what the picture shows, so it is part of what the
+     picture is filed under — without it the first paint you picked would be
+     the one you saw for ever */
+  const k=myKit();
+  const key=kind+"|"+colour+"|"+(k?KIT_SLOTS.map(s=>k[s]?k[s].id:"-").join(","):"-");
   let img=GAR.cache[key];
   if(!img){
-    const car=buildCar(colour,kind);
+    const car=buildCar(colour,kind,k);
     car.rotation.y=-0.72;                        // three-quarter front
     GAR.scene.add(car);
     const box=new THREE.Box3().setFromObject(car), size=new THREE.Vector3(), c=new THREE.Vector3();
@@ -7983,6 +8296,129 @@ function showRaceSet(on){
   document.body.classList.toggle("racesetting",on);
   if(!on) fitPad();
 }
+/* ---- the kit drawer ----
+   One row per slot, one chip per item, each chip wearing the colour of its
+   own rarity the way the car cards do. It is a drawer rather than six rows
+   always open because the garage has to fit on a phone in one screen, and
+   six rows of chips does not.
+
+   Changing anything here rebuilds the car you are looking at and, if you
+   are already on track, the car you are driving — there is no use in a
+   paint you have to leave the session to see. */
+function kitSet(slot,id){
+  ED.opts.kit=ED.opts.kit||{};
+  ED.opts.kit[slot]=(ED.opts.kit[slot]===id)?null:id;   // pressing it again takes it off
+  store.set("ad.opts",ED.opts);
+  kitUI();
+  if(slot==="title"){ titleUI(); return; }
+  GAR.cache={};                       // the pictures are of the old kit
+  garPictures();
+  if(slot==="paint"||slot==="rims"){
+    if(G.car&&document.body.classList.contains("driving")) rebuildPlayerCar();
+  }
+  if(slot==="glow") glowApply();
+  if(slot==="horn"){ const it=kitItem("horn",ED.opts.kit[slot]); if(it)hornPlay(it); }
+}
+function kitBuild(){
+  const body=$("kitBody"); if(!body||body.dataset.built)return;
+  body.dataset.built="1";
+  for(const slot of KIT_CAR_SLOTS){
+    const g=KITS[slot];
+    const row=document.createElement("div"); row.className="kit-row";
+    const k=document.createElement("span"); k.className="k"; k.textContent=g.label;
+    row.appendChild(k);
+    const wrap=document.createElement("div"); wrap.className="kit-chips";
+    for(const it of g.items){
+      const b=document.createElement("button");
+      b.className="kit-chip"; b.dataset.slot=slot; b.dataset.item=it.id;
+      const R=RARITY[it.rarity];
+      if(R){ b.style.setProperty("--rar",R.colour);
+             b.style.setProperty("--rarDim",R.dim);
+             b.style.setProperty("--rarGlow",R.glow); }
+      b.innerHTML='<em></em><span></span>';
+      b.querySelector("em").textContent=R?R.label:"";
+      b.querySelector("span").textContent=it.label;
+      b.addEventListener("click",()=>kitSet(slot,it.id));
+      wrap.appendChild(b);
+    }
+    row.appendChild(wrap);
+    body.appendChild(row);
+  }
+}
+function kitUI(){
+  const on=isTester(), box=$("garKit");
+  if(box)box.hidden=!on;
+  if(!on){ hornUI(); titleUI(); return; }
+  kitBuild();
+  const k=(ED.opts&&ED.opts.kit)||{};
+  for(const b of document.querySelectorAll("#kitBody .kit-chip"))
+    b.setAttribute("aria-pressed",String(k[b.dataset.slot]===b.dataset.item));
+  const worn=KIT_CAR_SLOTS.map(sl=>kitItem(sl,k[sl])).filter(Boolean);
+  hornUI();
+  $("kitWorn").textContent=worn.length
+    ? worn.map(i=>i.label).join(" · ")
+    : "Nothing on";
+  titleUI();
+}
+/* A title goes under the name, wherever the name is: on the account strip
+   at home, and over your own car on track. */
+/* the horn button is there when there is a horn to sound, and not there
+   when there is not — an empty button that does nothing is worse than none */
+function hornUI(){
+  const b=$("tHorn"), h=$("hintHorn"); if(!b)return;
+  const k=myKit(), has=!!(k&&k.horn);
+  b.hidden=!has; if(h)h.hidden=!has;
+}
+/* A title goes under the name, wherever the name is shown: on the account
+   strip at home and on the account page itself. It is chosen there too. */
+function titleBuild(){
+  const box=$("auTitleChips"); if(!box||box.dataset.built)return;
+  box.dataset.built="1";
+  for(const it of KITS.title.items){
+    const b=document.createElement("button");
+    b.className="kit-chip"; b.dataset.item=it.id;
+    const R=RARITY[it.rarity];
+    if(R){ b.style.setProperty("--rar",R.colour);
+           b.style.setProperty("--rarDim",R.dim);
+           b.style.setProperty("--rarGlow",R.glow); }
+    b.innerHTML='<em></em><span></span>';
+    b.querySelector("em").textContent=R?R.label:"";
+    b.querySelector("span").textContent=it.label;
+    b.addEventListener("click",()=>kitSet("title",it.id));
+    box.appendChild(b);
+  }
+}
+function titleUI(){
+  const on=isTester();
+  const row=$("auTitleRow"); if(row)row.hidden=!on;
+  if(on) titleBuild();
+  const k=(ED.opts&&ED.opts.kit)||{};
+  for(const b of document.querySelectorAll("#auTitleChips .kit-chip"))
+    b.setAttribute("aria-pressed",String(k.title===b.dataset.item));
+  const t=myTitle();
+  const it=myKit()&&myKit().title;
+  const R=it&&RARITY[it.rarity];
+  for(const id of ["hmTitle","auWhoTitle"]){
+    const e=$(id); if(!e)continue;
+    e.textContent=t; e.hidden=!t;
+    e.style.color=R?R.colour:"";
+  }
+}
+/* Swapping paint or rims while out on track. The car is a model, not a
+   state: the quickest honest way to change what it is made of is to build
+   the new one and put it exactly where the old one was. */
+function rebuildPlayerCar(){
+  if(!G.car||!G.scene)return;
+  const old=G.car, kind=ED.opts.car||"gt";
+  const car=buildCar(G.T?G.T.opts.color:ED.opts.color,kind,myKit());
+  car.position.copy(old.position);
+  car.rotation.order=old.rotation.order;
+  car.rotation.copy(old.rotation);
+  G.scene.remove(old); disposeTree(old);
+  G.scene.add(car); G.car=car;
+  glowApply();
+  updateCarMesh();
+}
 function showGarage(on){
   $("garage").hidden=!on;
   baseShow(!on);
@@ -7990,6 +8426,7 @@ function showGarage(on){
   if(on){
     pressGroup($("garCards"),"car",ED.opts.car);
     pressGroup($("colors"),"color",ED.opts.color);
+    kitUI();
     const m=document.body.dataset.mode;
     $("garDrive").textContent=m==="host"?"Start the race":m==="guest"?"Join the race"
       :(aiAllowed()&&AI.count>0)?("Race "+AI.count+(AI.count===1?" opponent":" opponents")):"Drive it";
@@ -8146,10 +8583,19 @@ async function ghostFetch(){
   }catch(e){}
   dailyUI();
 }
+function ghostKind(){ return (G.T&&G.T.opts.car)||ED.opts.car||"gt"; }
 function ghostAttach(){
   if(!G.scene||!GH.wr)return;
+  /* built once, and built again if the car it should be has changed —
+     otherwise the first car of the session is the ghost all session */
+  const kind=ghostKind();
+  if(GH.mesh&&GH.kind!==kind){
+    if(GH.mesh.parent)GH.mesh.parent.remove(GH.mesh);
+    disposeTree(GH.mesh); GH.mesh=null;
+  }
   if(!GH.mesh){
-    const m=buildCar("#DCE6E3","gt");
+    GH.kind=kind;
+    const m=buildCar("#DCE6E3",kind);
     m.traverse(o=>{ if(o.isMesh){ o.castShadow=false; o.receiveShadow=false; const ms=Array.isArray(o.material)?o.material:[o.material]; for(const mat of ms){ mat.transparent=true; mat.opacity=0.32; mat.depthWrite=false; } } });
     GH.mesh=m;
   }
@@ -8411,6 +8857,13 @@ function garBackOut(){
   if(RS_FROM) showRaceSet(true);
 }
 $("garCards").addEventListener("scroll",garScrolled,{passive:true});
+/* A horn is a press, not a hold: pointerdown sounds it and there is
+   nothing to let go of. */
+$("tHorn").addEventListener("pointerdown",e=>{ e.preventDefault(); hornPress(); });
+$("kitHead").addEventListener("click",()=>{
+  const b=$("kitBody"), open=b.hidden;
+  b.hidden=!open; $("kitHead").setAttribute("aria-expanded",String(open));
+});
 $("garPrev").addEventListener("click",()=>garStep(-1));
 $("garNext").addEventListener("click",()=>garStep(1));
 addEventListener("resize",()=>{ if(!$("garage").hidden) garCentre(false); });
@@ -8680,6 +9133,7 @@ function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
   document.body.classList.toggle("aiok",on&&ACCT.user.name===TEST_ACCOUNT);
   shopUI();
+  kitUI();
   /* Signing out of the account that has them puts you back in the GT
      rather than leaving you sitting in something you can no longer see. */
   if(!carAllowed(ED.opts.car)){
@@ -8788,6 +9242,7 @@ function showAuth(on){
   document.body.classList.toggle("authing",on);
   if(on){
     acctUI();
+    titleUI();
     if(acctIn()) acctStats(false);
     if(!acctIn()){ authTab(AU_MODE); setTimeout(()=>{ try{$("auName").focus();}catch(e){} },40); }
     /* Opening this page is a deliberate look at the account, so ask the
@@ -10100,7 +10555,6 @@ function aiTick(dt){
        follow it exactly. */
     c.yawS=(c.yawS==null)?yawRate:c.yawS+(yawRate-c.yawS)*Math.min(1,dt*9);
     c.steer=clamp(-c.yawS/tightest,-1,1);
-    c.curv=here.k;
     c.spin+=c.v*dt/0.36;
   }
   /* solid to each other too: overlapping cars are pushed apart, half each,
@@ -10166,9 +10620,15 @@ function aiPose(c){
   ud.tRoll=lerp(ud.tRoll||0,Math.atan2(hL-hR,1.8),0.14);
   const lm=m.userData.lean||0;
   if(lm>0){
-    /* their lateral force is their speed against the curvature of the line
-       they are on, which is the same sum the player's car does for real */
-    const want=clamp(Math.atan2(-c.v*c.v*(c.curv||0),9.81),-lm,lm);
+    /* Their sideways force, worked out the way the player's car works out
+       its own: the rate the nose is swinging, against the speed it is
+       swinging at. It used to be taken from the curvature of the racing
+       line instead, and the line measures its bend with the opposite sign
+       to the one the world turns in — so every AI bike laid over away from
+       the corner. The wheels were already being pointed from the swing
+       rather than the line, which is why they looked right while the bike
+       under them did not. One quantity, used for both. */
+    const want=clamp(Math.atan2(-(c.yawS||0)*c.v,9.81),-lm,lm);
     c.lean=(c.lean||0)+(want-(c.lean||0))*0.10;
   }else c.lean=0;
   m.rotation.x=ud.tPitch;
@@ -10409,7 +10869,7 @@ function garage(kind){
   ED.opts.car=kind; G.T.opts.car=kind;
   pressGroup($("garCards"),"car",kind); store.set("ad.opts",ED.opts); garLabel();
   G.scene.remove(G.car); disposeTree(G.car);
-  G.car=buildCar(G.T.opts.color,kind); G.scene.add(G.car);
+  G.car=buildCar(G.T.opts.color,kind,myKit()); G.scene.add(G.car); glowApply();
   G.perf=carPerf(kind);
   resetCar(true);
   paintSectors(true);

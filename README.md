@@ -215,6 +215,45 @@ lead back.
   pinned and the back end lets go — at the cost of some braking, because a
   locked wheel stops the car worse than one on the edge of grip.
 
+### The kit
+
+Being tried out on the same one account as the shop, and nobody else has it,
+sees it, or is sent it — none of it goes over the network, so other people
+in a party see an ordinary car.
+
+Five things go on the car, chosen from a drawer in the garage, and each item
+has a rarity of its own and wears it the way the cars do:
+
+- **Paint** — Candy Apple and Matte Military (Rare), Midnight Flake (Epic),
+  Gold Leaf and Holographic (Legendary), Prismatic Chrome (Mythic). The last
+  two travel: the hue moves and the sheen breathes with it. Holographic runs
+  through vivid colour, Prismatic Chrome through the same range held at a low
+  saturation, which is chrome with a rainbow in it rather than a car painted
+  rainbow. Pinning it to one pale tint and shifting only what it gave off
+  made it a white car with a faint hum on it.
+- **Rims** — Bronze (Rare), Carbon and Chrome (Epic), Gold (Legendary), Neon
+  (Mythic, which lights).
+- **Smoke** — a gentle trail out of the pipe, in white, blue, purple or gold.
+  Spawned behind the car and left in the world rather than carried with it,
+  because smoke that follows the car is a scarf. The pipe's position is
+  measured off the model, since a kart's is a metre back and the V12's three.
+- **Underglow** — Ice Blue, Violet, Toxic Green, Ember Red, and a Rainbow
+  that cycles. A picture of a glow laid flat under the sills and carried by
+  the car, so it banks and pitches with it; a real light under every car
+  would be honest and would halve the frame rate.
+- **Horn** — Classic, Air, Truck, La Cucaracha and Train, on **H** and on a
+  button that appears on a phone only when there is a horn to sound. Each is
+  two or three notes held together, which is what a horn is.
+
+**Titles** go with the name rather than with the car, so they are chosen on
+the account page: Track Day Hero and Backmarker (Rare), Apex Hunter (Epic),
+Unbeaten (Legendary), The King (Mythic). The one you are wearing sits under
+your name there and on the home strip, in its rarity's colour.
+
+Anything changed in the garage rebuilds the car you are looking at and, if
+you are already on track, the car you are driving — a paint you have to
+leave the session to see is not much of a paint.
+
 ### The shop
 
 Being built, and open to one account while it is. For everybody else the
@@ -468,9 +507,11 @@ Drive it and the settings on the board lock, the garage offers only the GT,
 and the timing tower carries the record and your ranking while you drive.
 
 Every improvement you post carries the lap itself, as a run of positions,
-and the fastest lap of the day is the **ghost**: a see-through GT driving
+and the fastest lap of the day is the **ghost**: a see-through car driving
 its record beside you, switched on or off from the Daily page or the pause
-menu. Times need an account; the board is readable without one.
+menu. It is the car the circuit makes everybody use, not a GT — it used to
+be a GT whatever was being driven, which on a Formula daily is a GT going
+round on the Formula's line at the Formula's pace. Times need an account; the board is readable without one.
 ## Racing other people
 
 **Host** a party and you get a four-character code. Anyone who enters it joins
