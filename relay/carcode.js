@@ -20,9 +20,18 @@ const dailyMod = require("./daily");
    kept from — so the file may be absent on a given deploy. If it is, the
    relay runs and the three cars are simply not on offer; it does not fall
    over for the sake of a car. */
+/* Two places it may be: beside this file, or handed to the service as a
+   secret rather than committed. The repository is public, so on the live
+   site it is the second — a secret file called locked-cars.js, which Render
+   drops in /etc/secrets. Either way nothing here changes. */
 let SOURCE = {};
-try { SOURCE = require("./locked-cars").SOURCE || {}; }
-catch (e) { console.log("no locked-cars.js here — the three bought cars are not being served"); }
+for (const where of ["./locked-cars", "/etc/secrets/locked-cars.js"]) {
+  try { SOURCE = require(where).SOURCE || {}; break; } catch (e) { /* try the next */ }
+}
+if (!Object.keys(SOURCE).length)
+  console.log("locked-cars.js is not here — the bought cars are not being served to anybody");
+else
+  console.log("serving " + Object.keys(SOURCE).join(", ") + " to the accounts that hold them");
 
 function makeCarCode(userFor) {
   /* userFor is given the token, not the request */

@@ -817,6 +817,13 @@ a day whose car is one of these it goes out to people who have not bought
 it. That is the daily working as it was asked for rather than a hole in
 this.
 
+The shapes live in `relay/locked-cars.js`, which is deliberately not in
+this repository — it is public, and committing them there would hand them to
+exactly the people they are kept from. On the live service it is a Render
+**secret file** named `locked-cars.js`, which lands in `/etc/secrets`; the
+relay looks beside itself first and there second, and runs either way,
+serving nothing if it finds neither.
+
 And once an entitled account has been handed a car, the code for it is on
 that machine and can be copied from there. No page that runs in somebody's
 browser can do better. What this fixes is the thing that actually happened —
