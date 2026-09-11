@@ -4308,17 +4308,32 @@ const KITS={
        with time on top. Done as a finish they came out white, because at
        high metalness the base colour only tints a reflection and a bright
        sky washes it out — a rainbow you cannot see is not a rainbow. */
-    {id:"holo",  label:"Holographic",      rarity:"legendary", metal:0.55,rough:0.18,env:1.5,
-      iri:{bands:2.6, speed:0.16, mix:0.92, glow:0.34, sat:1.0}},
-    {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.02,env:2.4,
-      iri:{bands:7.0, speed:0.30, mix:1.00, glow:0.58, sat:1.00, hard:true}}
+    /* Pearl, not rainbow. Wide slow bands at half saturation on a satin
+       finish: it shifts as you move round it and it is plainly special, but
+       it is a paint. The one below is not a paint, and that is the point of
+       the gap between them. */
+    {id:"holo",  label:"Holographic",      rarity:"legendary", metal:0.45,rough:0.30,env:1.4,
+      iri:{bands:1.9, speed:0.11, mix:0.74, glow:0.28, sat:0.62}},
+    /* A mirror with a spectrum stepped across it, moving fast enough to
+       see. Nothing else here is allowed to look like this. */
+    {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
+      iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}}
   ]},
+  /* rim is the barrel, spoke the face, hub the middle and lip the machined
+     ring round the edge — the dearer ones set all four rather than painting
+     the whole wheel one colour, which is what made them look cheap */
   rims:{label:"Rims", none:"Standard", items:[
-    {id:"bronze", label:"Bronze Rims", rarity:"rare",      rim:0x8C6239,metal:0.85,rough:0.34},
-    {id:"carbon", label:"Carbon Rims", rarity:"epic",      rim:0x14181B,metal:0.30,rough:0.52},
-    {id:"chrome", label:"Chrome Rims", rarity:"epic",      rim:0xD8DEE3,metal:1.00,rough:0.06},
-    {id:"gold",   label:"Gold Rims",   rarity:"legendary", rim:0xD4A72C,metal:1.00,rough:0.16},
-    {id:"neon",   label:"Neon Rims",   rarity:"mythic",    rim:0x1A1F24,metal:0.60,rough:0.35,emit:0x28E0FF}
+    {id:"bronze", label:"Bronze Rims", rarity:"rare",      rim:0x7A5430,metal:0.85,rough:0.36,
+      spoke:0x9C6E3C, hub:0x3A2A18, lip:0xC79552, lipRough:0.22},
+    /* carbon weave is not shiny; what sells it is the polished ring round it */
+    {id:"carbon", label:"Carbon Rims", rarity:"epic",      rim:0x101317,metal:0.25,rough:0.58,
+      spoke:0x181D22, hub:0x0A0C0F, lip:0xB9C2C8, lipMetal:1.0, lipRough:0.07},
+    {id:"chrome", label:"Chrome Rims", rarity:"epic",      rim:0xDCE3E8,metal:1.00,rough:0.04,
+      spoke:0xF0F4F7, hub:0x6E767C, lip:0xFFFFFF, lipRough:0.02},
+    {id:"gold",   label:"Gold Rims",   rarity:"legendary", rim:0xB8902A,metal:1.00,rough:0.13,
+      spoke:0xE8C24E, hub:0x2A2113, lip:0xFFE79A, lipRough:0.04},
+    {id:"neon",   label:"Neon Rims",   rarity:"mythic",    rim:0x0D1014,metal:0.55,rough:0.40,
+      spoke:0x141A20, hub:0x080A0C, lip:0x1A2028, lipMetal:0.5, lipRough:0.30, emit:0x28E0FF, cycle:true}
   ]},
   glow:{label:"Underglow", none:"None", items:[
     {id:"ice",    label:"Ice Blue",    rarity:"rare",      colour:0x63D6FF},
@@ -4472,6 +4487,12 @@ function carMats(bodyColor,kit){
     /* A race wheel is not chrome. The rim is dark and satin, the disc is a
        dull grey behind it, and neither should be catching the sky. */
     rim:new THREE.MeshStandardMaterial({color:SRGB(0x2A2F33),roughness:0.42,metalness:0.75}),
+    /* The bright ring round each face of the wheel. It used to be the same
+       material as the badges and the brightwork, which meant the rims you
+       chose stopped at the edge of the rim — and the line round the face is
+       the part of a wheel you actually see at speed. */
+    lip:new THREE.MeshStandardMaterial({color:SRGB(0xC6CCCF),roughness:0.22,metalness:0.95}),
+    face:new THREE.MeshStandardMaterial({color:SRGB(0xC6CCCF),roughness:0.26,metalness:0.92}),
     disc:new THREE.MeshStandardMaterial({color:SRGB(0x6A7075),roughness:0.55,metalness:0.6}),
     spoke:new THREE.MeshStandardMaterial({color:SRGB(0x3E464C),roughness:0.44,metalness:0.7}),
     carbon:new THREE.MeshStandardMaterial({color:SRGB(0x121618),roughness:0.48,metalness:0.35})
@@ -4488,13 +4509,24 @@ function carMats(bodyColor,kit){
   }
   if(kit&&kit.rims){
     const r=kit.rims;
-    for(const key of ["rim","spoke"]){
-      const m=M[key];
-      m.color.copy(SRGB(r.rim)); m.metalness=r.metal; m.roughness=r.rough;
-      if(r.emit){ m.emissive=SRGB(r.emit); m.emissiveIntensity=0.9; }
+    M.rim.color.copy(SRGB(r.rim));   M.rim.metalness=r.metal;   M.rim.roughness=r.rough;
+    M.spoke.color.copy(SRGB(r.spoke!=null?r.spoke:r.rim));
+    M.spoke.metalness=r.metal; M.spoke.roughness=r.rough;
+    /* the hub sits behind the spokes and wants to be darker than them, or
+       the middle of the wheel reads as a solid disc */
+    M.disc.color.copy(SRGB(r.hub!=null?r.hub:r.rim)).multiplyScalar(r.hub!=null?1:0.55);
+    M.disc.metalness=Math.min(1,r.metal*0.9); M.disc.roughness=Math.min(1,r.rough+0.12);
+    M.lip.color.copy(SRGB(r.lip!=null?r.lip:r.rim));
+    M.lip.metalness=r.lipMetal!=null?r.lipMetal:1.0;
+    M.lip.roughness=r.lipRough!=null?r.lipRough:0.10;
+    M.face.color.copy(SRGB(r.spoke!=null?r.spoke:r.rim));
+    M.face.metalness=r.metal; M.face.roughness=r.rough;
+    if(r.emit){
+      /* only the spokes and the ring light: a wheel glowing all over is a
+         lamp, and what reads as neon is a dark rim with bright edges */
+      for(const m of [M.spoke,M.lip,M.face]){ m.emissive=SRGB(r.emit); m.emissiveIntensity=1.5; }
+      M.kitNeon=[M.spoke,M.lip,M.face];
     }
-    M.disc.color.copy(SRGB(r.rim)).multiplyScalar(0.7);
-    M.disc.metalness=Math.min(1,r.metal*0.9);
   }
   return M;
 }
@@ -4509,19 +4541,34 @@ function glowTexture(){
   if(GLOW_TEX)return GLOW_TEX;
   const c=document.createElement("canvas"); c.width=c.height=128;
   const g=c.getContext("2d");
+  /* Solid out to two-thirds and then away sharply, rather than a soft blob
+     that is only really there in the middle. What is wanted under a car is a
+     pool of light with an edge to it. */
   const rad=g.createRadialGradient(64,64,0,64,64,64);
   rad.addColorStop(0.00,"rgba(255,255,255,1)");
-  rad.addColorStop(0.42,"rgba(255,255,255,0.42)");
-  rad.addColorStop(0.78,"rgba(255,255,255,0.10)");
+  rad.addColorStop(0.55,"rgba(255,255,255,1)");
+  rad.addColorStop(0.74,"rgba(255,255,255,0.78)");
+  rad.addColorStop(0.90,"rgba(255,255,255,0.28)");
   rad.addColorStop(1.00,"rgba(255,255,255,0)");
   g.fillStyle=rad; g.fillRect(0,0,128,128);
   GLOW_TEX=new THREE.CanvasTexture(c); GLOW_TEX.needsUpdate=true;
   return GLOW_TEX;
 }
 /* put one under the car, or take it away again */
+/* A lit car should not also be casting a hard sun shadow across its own
+   pool of light. The cast one is turned off with the contact one while the
+   glow is on, and each mesh remembers what it was so it comes back. */
+function glowShadows(car,on){
+  car.traverse(o=>{
+    if(!o.isMesh)return;
+    if(o.userData.castWas===undefined) o.userData.castWas=o.castShadow;
+    o.castShadow=on?o.userData.castWas:false;
+  });
+}
 function glowApply(){
   const car=G.car; if(!car)return;
   const it=(myKit()&&myKit().glow)||null;
+  glowShadows(car,!it);
   let m=car.userData.glowMesh;
   if(!it){ if(m){ car.remove(m); m.geometry.dispose(); m.material.dispose(); car.userData.glowMesh=null; } return; }
   if(!m){
@@ -4529,15 +4576,16 @@ function glowApply(){
     box.getSize(sz);
     const g=new THREE.PlaneGeometry(1,1); g.rotateX(-Math.PI/2);
     m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({
-      map:glowTexture(), transparent:true, opacity:0.85, depthWrite:false,
+      map:glowTexture(), transparent:true, opacity:1.0, depthWrite:false,
       blending:THREE.AdditiveBlending, toneMapped:false, fog:true,
       side:THREE.DoubleSide}));
     /* the model is scaled as a whole on some cars, so the patch is sized in
        the car's own units rather than in metres */
     const sc=car.scale.x||1;
-    m.scale.set(sz.x*2.3/sc, 1, sz.z*1.5/sc);
+    /* wide enough to reach out past the car on every side */
+    m.scale.set(sz.x*2.9/sc, 1, sz.z*1.55/sc);
     m.position.y=0.045/sc;
-    m.renderOrder=3;
+    m.renderOrder=6;
     car.add(m); car.userData.glowMesh=m;
   }
   car.userData.glowSpec=it;
@@ -4548,9 +4596,9 @@ function glowTick(t){
   const car=G.car; if(!car)return;
   const m=car.userData.glowMesh, it=car.userData.glowSpec;
   if(!m||!it)return;
-  if(it.cycle) m.material.color.setHSL((t*0.28)%1,0.9,0.56);
+  if(it.cycle) m.material.color.setHSL((t*0.28)%1,0.95,0.62);
   /* a slow breath, so it reads as a light rather than a decal */
-  m.material.opacity=0.72+0.16*Math.sin(t*2.4);
+  m.material.opacity=0.94+0.06*Math.sin(t*2.4);
 }
 
 /* An iridescent finish, done where iridescence happens: in the shading of
@@ -4586,12 +4634,20 @@ function iridescent(mat,I){
   };
   mat.needsUpdate=true;
 }
-/* the clock the two of them run on */
+/* the clock the two of them run on, and the wheels that never settle */
 function kitPaintTick(t){
   const g=G.car;
   if(!g||!g.userData)return;
   const m=g.userData.kitPaint;
   if(m&&m.userData&&m.userData.iriTime) m.userData.iriTime.value=t;
+  const neon=g.userData.kitNeon;
+  if(neon){
+    const it=myKit()&&myKit().rims;
+    for(const mm of neon){
+      if(it&&it.cycle) mm.emissive.setHSL((t*0.22)%1,0.95,0.58);
+      mm.emissiveIntensity=1.35+0.35*Math.sin(t*3.1);
+    }
+  }
 }
 
 /* ---- shaped parts ----
@@ -4735,7 +4791,7 @@ function buildWheels(g,M,spec){
     if(k.race&&spec.plain){
       /* A kart rim is a plain light dish with a hub in it — no spokes to
          speak of. Same lathed tyre, different wheel entirely. */
-      w.add(new THREE.Mesh(k.rg,M.metal));
+      w.add(new THREE.Mesh(k.rg,M.face));
       for(const sx of [-1,1]){
         const l=new THREE.Mesh(k.lg,M.disc);
         l.position.x=sx*k.tw*0.43; w.add(l);
@@ -4753,15 +4809,17 @@ function buildWheels(g,M,spec){
       /* A bright ring at the edge of each face. It is the line that says
          "machined rim" from further away than any spoke does. */
       for(const sx of [-1,1]){
-        const l=new THREE.Mesh(k.lg,M.metal);
+        const l=new THREE.Mesh(k.lg,M.lip);
         l.position.x=sx*k.tw*0.43; w.add(l);
       }
       w.add(new THREE.Mesh(k.hg,M.disc));
-      w.add(new THREE.Mesh(k.ng,M.metal));
+      w.add(new THREE.Mesh(k.ng,M.lip));
     }else{
-      w.add(new THREE.Mesh(k.rg,M.metal));
+      /* A road wheel was built out of the general brightwork, so choosing
+         rims did nothing at all on the hatchback. */
+      w.add(new THREE.Mesh(k.rg,M.face));
       for(let s=0;s<5;s++){
-        const sp=new THREE.Mesh(k.sg,M.metal); sp.rotation.x=s/5*TAU; w.add(sp);
+        const sp=new THREE.Mesh(k.sg,M.face); sp.rotation.x=s/5*TAU; w.add(sp);
       }
     }
     w.position.set(p[0],k.r,p[1]);
@@ -5998,6 +6056,7 @@ function buildCar(bodyColor,kind,kit){
   const M=carMats(bodyColor,kit);
   g.userData.kitPaint=M.kitPaint||null;
   g.userData.kitPaintSpec=M.kitPaintSpec||null;
+  g.userData.kitNeon=M.kitNeon||null;
   const make=kind==="formula"?bodyFormula
             :kind==="yaris"  ?bodyYaris
             :kind==="kart"   ?bodyKart
@@ -7007,7 +7066,9 @@ function updateCarMesh(){
   }
   /* contact shadow stays on the ground and fades as the car leaves it */
   const b=G.blob;
-  if(b&&c.userData.noShadow){ b.visible=false; }
+  /* A contact shadow under a lit car is a dark patch sitting on top of the
+     light, which is the one thing underglow must not have. */
+  if(b&&(c.userData.noShadow||c.userData.glowMesh)){ b.visible=false; }
   else if(b){
     const surf=heightAt(T,CAR.x,CAR.z,null,CAR.y);
     const lift=Math.max(0,CAR.y-surf);

@@ -234,18 +234,34 @@ has a rarity of its own and wears it the way the cars do:
   colour is decided per pixel from the angle that pixel is seen at, which is
   what iridescence physically is: the band sweeps across the bodywork as the
   car turns and sits in the curve of a wing the way it does on a real one.
-  **Holographic** gets wide soft bands on satin; **Prismatic Chrome** gets
-  tight hard-edged ones at full saturation on a mirror, so the Mythic is the
-  louder of the two. **Midnight Flake** uses the same shader at a twentieth
+  **Holographic** is a pearl: wide slow bands at half saturation on a satin
+  finish, so it shifts as you walk round it and is plainly special, but it is
+  still a paint. **Prismatic Chrome** is not a paint — it is a mirror with a
+  spectrum stepped hard across it, moving fast enough to watch, and nothing
+  else here is allowed to look like it. The two being merely different
+  rainbows was not enough of a gap between a Legendary and a Mythic. **Midnight Flake** uses the same shader at a twentieth
   of the strength and adds nothing to the colour at all — on a near-black car
   the light it gives off is the only thing there is to see, and two goes at
   it turned midnight into neon before that was understood.
 - **Rims** — Bronze (Rare), Carbon and Chrome (Epic), Gold (Legendary), Neon
-  (Mythic, which lights).
+  (Mythic). A wheel is four parts, not one: the barrel, the face, the hub and
+  the machined ring round the edge. Painting all four the same colour is what
+  made these look cheap, so the dearer ones set each — carbon with a polished
+  ring, gold with a dark hub behind bright spokes — and Neon lights only its
+  spokes and ring, cycling, because a wheel glowing all over is a lamp. The
+  ring used to be the same material as the badges and the brightwork, so the
+  rims you chose stopped at the edge of the rim; and a kart's dish and a road
+  car's wheel were built out of that brightwork too, which is why choosing
+  rims did nothing at all to them.
 - **Underglow** — Ice Blue, Violet, Toxic Green, Ember Red, and a Rainbow
   that cycles. A picture of a glow laid flat under the sills and carried by
   the car, so it banks and pitches with it; a real light under every car
-  would be honest and would halve the frame rate.
+  would be honest and would halve the frame rate. It is solid out to two
+  thirds and then falls away, rather than a soft blob only really there in
+  the middle, and it reaches past the car on every side. Both of the car's
+  shadows — the contact patch and the cast one — are turned off while it is
+  lit, because a dark patch sitting on top of the light is the one thing
+  underglow must not have.
 - **Horn** — Classic, Air, Truck, La Cucaracha and Train, on **H** and on a
   button that appears on a phone only when there is a horn to sound. Each is
   two or three notes held together, which is what a horn is.
