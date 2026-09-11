@@ -15,6 +15,7 @@ const { makeAuth } = require("./auth");
 const { makeTracks } = require("./tracks");
 const { makeLaps } = require("./laps");
 const { makeAdmin } = require("./admin");
+const { makeCarCode } = require("./carcode");
 const { makeVisits } = require("./visits");
 const { makePresence } = require("./presence");
 const { makeStats } = require("./stats");
@@ -40,6 +41,8 @@ const liveNow = () => ({
   racing: [...rooms.values()].filter((r) => r.live && r.players.size).length,
 });
 const admin = makeAdmin(store, auth.userFor, liveNow, presence);
+/* the cars that are not in the page, for the accounts that hold them */
+const carcode = makeCarCode(auth.userFor);
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;
@@ -129,6 +132,7 @@ const server = http.createServer((req, res) => {
                 : url.pathname === "/api/presence" ? presence.route
                 : (url.pathname === "/api/me/stats" || url.pathname === "/api/wins") ? stats.route
                 : url.pathname === "/api/daily" ? daily.route
+                : url.pathname === "/api/cars/code" ? carcode
                 : url.pathname.startsWith("/api/tracks") ? tracks.route
                 : url.pathname.startsWith("/api/laps") ? laps.route
                 : url.pathname.startsWith("/api/admin") ? admin.route

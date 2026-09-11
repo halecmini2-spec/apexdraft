@@ -792,3 +792,33 @@ CDN and never-sleeping free plan in exchange for cold starts.
 
 Vanilla JS + three.js (WebGL). Everything else — the tarmac texture, the sky,
 the environment map, the car body — is generated procedurally at runtime.
+
+### Who may drive what
+
+The three cars being tried out are not in this file. A car whose body is
+built in the page is a car everybody has, because the page is one file and
+everybody who opens the game downloads all of it — which is how somebody
+with a copy of the source gave themselves all three. Their shapes live on
+the relay now and are handed over only to an account that holds them, so a
+driver who is not entitled to one has nothing to build it out of. There is
+no gate to edit, because the thing the gate was guarding was never sent.
+
+What an account holds is a list on the account, written by the admin desk
+and, when buying exists, by a purchase. `relay/cars.js` is the only thing
+that answers the question, and both the lap checks and the handing over ask
+it. A lap claiming a car the account does not hold is refused before any of
+the verification work is done: it is a question about the account rather
+than about the lap.
+
+Two honest limits.
+
+A daily hands the day's car to everybody for the day, whatever it is, so on
+a day whose car is one of these it goes out to people who have not bought
+it. That is the daily working as it was asked for rather than a hole in
+this.
+
+And once an entitled account has been handed a car, the code for it is on
+that machine and can be copied from there. No page that runs in somebody's
+browser can do better. What this fixes is the thing that actually happened —
+helping yourself out of your own copy of the file — and everything added
+from now on is added on the far side of the same gate.

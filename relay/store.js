@@ -177,7 +177,7 @@ function fileStore(file) {
     /* ---- what an admin can see and undo ---- */
     async users() {
       return db.users.slice().sort((a, b) => b.created - a.created).map((u) => ({
-        id: u.id, name: u.name, email: u.email, created: u.created, notice: u.notice || null,
+        id: u.id, name: u.name, email: u.email, created: u.created, notice: u.notice || null, cars: u.cars || null,
         tracks: db.tracks.filter((t) => t.user_id === u.id).length,
         laps: db.laps.filter((l) => l.user_id === u.id).length,
       }));
@@ -198,6 +198,22 @@ function fileStore(file) {
       db.laps = db.laps.filter((l) => !(l.circuit === circuit && l.user_id === userId));
       if (db.laps.length !== n) await save();
       return db.laps.length !== n;
+    },
+    async setCars(id, list) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return false;
+      u.cars = list || null;
+      await save();
+      return true;
+    },
+    /* Laps standing in a car the account does not hold. The daily is left
+       alone: on a daily the car is the day's, handed to everybody, and the
+       relay works it out from the circuit itself rather than being told. */
+    async gatedLaps(cars) {
+      const want = new Set(cars.map((c) => c.toLowerCase()));
+      return db.laps
+        .filter((l) => want.has(String(l.car || "").toLowerCase()) && !/^daily_\d{8}$/.test(l.circuit))
+        .map((l) => ({ circuit: l.circuit, user_id: l.user_id, name: l.name, car: l.car, ms: Number(l.ms) }));
     },
     async wipeBoard(circuit) {
       const n = db.laps.length;
@@ -314,6 +330,11 @@ function pgStore(url) {
       await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_lower_key`);
       /* a word from an admin to the person whose account it is */
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notice TEXT`);
+      /* Which of the cars that are not simply there for the taking this
+         account holds, as a comma-separated list. Empty for everyone until
+         they are bought; see cars.js, which is the only thing that reads
+         it. */
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS cars TEXT`);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           token_hash TEXT PRIMARY KEY,
@@ -510,7 +531,7 @@ function pgStore(url) {
     },
     async users() {
       return (await pool.query(`
-        SELECT u.id, u.name, u.email, u.created, u.notice,
+        SELECT u.id, u.name, u.email, u.created, u.notice, u.cars,
                (SELECT COUNT(*)::int FROM tracks t WHERE t.user_id=u.id) AS tracks,
                (SELECT COUNT(*)::int FROM laps   l WHERE l.user_id=u.id) AS laps
         FROM users u ORDER BY u.created DESC`)).rows;
@@ -524,6 +545,17 @@ function pgStore(url) {
     async deleteLap(circuit, userId) {
       const r = await pool.query(`DELETE FROM laps WHERE circuit=$1 AND user_id=$2`, [circuit, userId]);
       return r.rowCount > 0;
+    },
+    async setCars(id, list) {
+      const r = await pool.query(`UPDATE users SET cars=$2 WHERE id=$1`, [id, list || null]);
+      return r.rowCount > 0;
+    },
+    /* see the note on the other store: dailies are not a claim anyone makes */
+    async gatedLaps(cars) {
+      return (await pool.query(
+        `SELECT circuit, user_id, name, car, ms FROM laps
+          WHERE lower(car) = ANY($1::text[]) AND circuit !~ '^daily_[0-9]{8}$'`,
+        [cars.map((c) => c.toLowerCase())])).rows.map((r) => ({ ...r, ms: Number(r.ms) }));
     },
     async wipeBoard(circuit) {
       const r = await pool.query(`DELETE FROM laps WHERE circuit=$1`, [circuit]);

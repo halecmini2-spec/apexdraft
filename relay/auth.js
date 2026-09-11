@@ -166,8 +166,13 @@ const ADMINS = new Set(
    admin listing has only name. */
 const isAdmin = (u) => !!u && ADMINS.has(u.name_lower || String(u.name || "").toLowerCase());
 
+const carsMod = require("./cars.js");
 const publicUser = (u) => ({
   name: u.name, email: u.email, created: Number(u.created), admin: isAdmin(u),
+  /* The cars this account holds beyond the ones everybody has. The page uses
+     it to decide what to show; the relay does not take its word for anything
+     and works this out again for itself whenever it matters. */
+  cars: carsMod.ownedBy(u),
   /* Anything an admin has left for this account to read. It rides along with
      the account itself rather than being fetched, so it is in front of them
      the moment they are signed in and cannot be missed. */

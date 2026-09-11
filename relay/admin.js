@@ -8,6 +8,7 @@
  * Who counts as an admin is decided by ADMIN_USERS in the environment (see
  * auth.js). There is no way to become one through the API.
  */
+const carsMod = require("./cars");
 const { json, readBody, cors, isAdmin } = require("./auth");
 
 function makeAdmin(store, userFor, liveNow, presence) {
@@ -97,6 +98,44 @@ function makeAdmin(store, userFor, liveNow, presence) {
       const ok = await store.deleteLap(circuit, u.id);
       console.log("admin " + me.name + " removed " + u.name + "'s time on " + circuit);
       return json(res, 200, { ok }), true;
+    }
+
+    /* Which cars an account holds. Until buying exists this is how one is
+       given or taken away, and it is the whole of what "having" a car means
+       — the page's own gate decides only what a driver is shown. */
+    if (url.pathname === "/api/admin/users/cars") {
+      const name = String(body.name || "").trim().toLowerCase();
+      const u = await store.userByName(name);
+      if (!u) return json(res, 404, { error: "No account by that name." }), true;
+      if (!store.setCars) return json(res, 503, { error: "Not available just now." }), true;
+      const want = String(body.cars == null ? "" : body.cars)
+        .split(",").map((c) => c.trim().toLowerCase())
+        .filter((c) => carsMod.GATED.includes(c));
+      const list = [...new Set(want)].join(",");
+      await store.setCars(u.id, list || null);
+      console.log("admin " + me.name + (list ? " gave " + u.name + " " + list : " took every bought car off " + u.name));
+      return json(res, 200, { ok: true, cars: list ? list.split(",") : [] }), true;
+    }
+
+    /* A sweep, for after somebody has edited the page and driven something
+       that was not theirs. Every standing time in one of these cars is
+       checked against the account that set it, and the ones nobody was
+       entitled to are removed. Dailies are left alone: there the car is the
+       day's, handed to everybody, and never the driver's claim.
+       Ask first with a look, which changes nothing. */
+    if (url.pathname === "/api/admin/cars/sweep") {
+      if (!store.gatedLaps) return json(res, 503, { error: "Not available just now." }), true;
+      const rows = await store.gatedLaps(carsMod.GATED);
+      const wrong = [];
+      for (const r of rows) {
+        const owner = await store.userById(r.user_id);
+        if (carsMod.mayDrive(owner, r.car, false)) continue;
+        wrong.push({ name: r.name, car: r.car, circuit: r.circuit, ms: r.ms });
+        if (body.remove) await store.deleteLap(r.circuit, r.user_id);
+      }
+      if (body.remove && wrong.length)
+        console.log("admin " + me.name + " swept " + wrong.length + " time(s) set in cars nobody held");
+      return json(res, 200, { ok: true, removed: !!body.remove, found: wrong }), true;
     }
 
     if (url.pathname === "/api/admin/laps/wipe") {
