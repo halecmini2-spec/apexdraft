@@ -254,14 +254,28 @@ has a rarity of its own and wears it the way the cars do:
   car's wheel were built out of that brightwork too, which is why choosing
   rims did nothing at all to them.
 - **Underglow** — Ice Blue, Violet, Toxic Green, Ember Red, and a Rainbow
-  that cycles. A picture of a glow laid flat under the sills and carried by
-  the car, so it banks and pitches with it; a real light under every car
-  would be honest and would halve the frame rate. It is solid out to two
-  thirds and then falls away, rather than a soft blob only really there in
-  the middle, and it reaches past the car on every side. Both of the car's
-  shadows — the contact patch and the cast one — are turned off while it is
-  lit, because a dark patch sitting on top of the light is the one thing
+  that cycles. A picture of a glow rather than a real light, because a real
+  light under every car would be honest and would halve the frame rate. Both
+  of the car's shadows — the contact patch and the cast one — are off while
+  it is lit, since a dark patch sitting on top of the light is the one thing
   underglow must not have.
+
+  Getting it to stay on the ground took three goes. It began as a flat sheet
+  hanging off the car, so it did everything the car does: pitched over a
+  crest, rolled on its springs, and on a superbike laid over thirty-five
+  degrees — which put half of it under the tarmac. Taking the car's attitude
+  out of it fixed the bike and left every other car still dipping an edge in:
+  measured over a lap of the hilliest circuit the board will draw, the worst
+  was seven tenths of a metre under the road at no roll and no pitch at all.
+  It was never the car. A flat sheet four metres long laid on ground that
+  curves has its ends in the tarmac whatever it is attached to.
+
+  So it is not a sheet. It is a small grid whose every point is put on the
+  ground where that point is, refreshed each frame, belonging to the world
+  rather than to the car — the car only says where it is and which way it
+  faces. Eighty-one ground lookups a frame, which costs a tenth of one per
+  cent of a frame at 60fps, and it cannot be buried on any car over any
+  ground because there is nowhere left for it to be buried into.
 - **Horn** — Classic, Air, Truck, La Cucaracha and Train, on **H** and on a
   button that appears on a phone only when there is a horn to sound. Each is
   two or three notes held together, which is what a horn is.

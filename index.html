@@ -4546,9 +4546,9 @@ function glowTexture(){
      pool of light with an edge to it. */
   const rad=g.createRadialGradient(64,64,0,64,64,64);
   rad.addColorStop(0.00,"rgba(255,255,255,1)");
-  rad.addColorStop(0.55,"rgba(255,255,255,1)");
-  rad.addColorStop(0.74,"rgba(255,255,255,0.78)");
-  rad.addColorStop(0.90,"rgba(255,255,255,0.28)");
+  rad.addColorStop(0.70,"rgba(255,255,255,1)");
+  rad.addColorStop(0.86,"rgba(255,255,255,0.80)");
+  rad.addColorStop(0.95,"rgba(255,255,255,0.30)");
   rad.addColorStop(1.00,"rgba(255,255,255,0)");
   g.fillStyle=rad; g.fillRect(0,0,128,128);
   GLOW_TEX=new THREE.CanvasTexture(c); GLOW_TEX.needsUpdate=true;
@@ -4565,40 +4565,90 @@ function glowShadows(car,on){
     o.castShadow=on?o.userData.castWas:false;
   });
 }
-function glowApply(){
-  const car=G.car; if(!car)return;
-  const it=(myKit()&&myKit().glow)||null;
-  glowShadows(car,!it);
-  let m=car.userData.glowMesh;
-  if(!it){ if(m){ car.remove(m); m.geometry.dispose(); m.material.dispose(); car.userData.glowMesh=null; } return; }
-  if(!m){
-    const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
-    box.getSize(sz);
-    const g=new THREE.PlaneGeometry(1,1); g.rotateX(-Math.PI/2);
-    m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({
-      map:glowTexture(), transparent:true, opacity:1.0, depthWrite:false,
-      blending:THREE.AdditiveBlending, toneMapped:false, fog:true,
-      side:THREE.DoubleSide}));
-    /* the model is scaled as a whole on some cars, so the patch is sized in
-       the car's own units rather than in metres */
-    const sc=car.scale.x||1;
-    /* wide enough to reach out past the car on every side */
-    m.scale.set(sz.x*2.9/sc, 1, sz.z*1.55/sc);
-    m.position.y=0.045/sc;
-    m.renderOrder=6;
-    car.add(m); car.userData.glowMesh=m;
+/* ---- where the pool actually goes ----
+   Three goes at this. It began as a flat sheet hanging off the car, which
+   meant it did everything the car did — pitched over a crest, rolled on its
+   springs, and on a superbike laid over thirty-five degrees, which put half
+   of it under the tarmac. Taking the car's attitude out of it fixed the
+   bike and left every other car still dipping an edge in: measured over a
+   lap of the hilliest circuit the board will draw, the worst of them was
+   seven tenths of a metre under the road, at no roll and no pitch at all.
+   It was never the car. A flat sheet four metres long laid on ground that
+   curves has its ends in the tarmac whatever it is attached to.
+
+   So it is not a sheet. It is a small grid whose every point is put on the
+   ground where that point is, refreshed each frame, and it belongs to the
+   world rather than to the car — the car only says where it is and which
+   way it faces. It cannot be buried, on any car, over any ground, because
+   there is nowhere for it to be buried into. */
+const GLOW_N=8;                       // squares across the grid
+function glowBuild(car){
+  const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
+  box.getSize(sz);
+  /* held in close around the car, which is what an underbody light throws */
+  const hw=sz.x*0.98, hl=sz.z*0.62;
+  const n=GLOW_N, w=n+1, count=w*w;
+  const g=new THREE.BufferGeometry();
+  const pos=new Float32Array(count*3), uv=new Float32Array(count*2);
+  const base=new Float32Array(count*2);
+  const idx=[];
+  for(let j=0;j<w;j++)for(let i=0;i<w;i++){
+    const k=j*w+i, u=i/n, v=j/n;
+    base[k*2]  =(u-0.5)*2*hw;         // metres across, in the car's own frame
+    base[k*2+1]=(v-0.5)*2*hl;         // metres along
+    uv[k*2]=u; uv[k*2+1]=v;
   }
-  car.userData.glowSpec=it;
-  if(!it.cycle) m.material.color.copy(SRGB(it.colour));
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){
+    const p=j*w+i;
+    idx.push(p,p+w,p+1, p+1,p+w,p+w+1);
+  }
+  g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  g.setAttribute("uv",new THREE.BufferAttribute(uv,2));
+  g.setIndex(idx);
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({
+    map:glowTexture(), transparent:true, opacity:1.0, depthWrite:false,
+    blending:THREE.AdditiveBlending, toneMapped:false, fog:true,
+    side:THREE.DoubleSide}));
+  m.userData.base=base;
+  /* the points are written in world coordinates, so the mesh itself never
+     moves and must not be culled against a bounding box it does not have */
+  m.frustumCulled=false;
+  m.renderOrder=6;
+  return m;
 }
-/* the one that is never the same colour twice */
+function glowApply(){
+  const car=G.car;
+  const it=(myKit()&&myKit().glow)||null;
+  if(car) glowShadows(car,!it);
+  if(!it||!car||!G.scene){
+    if(G.glow){
+      if(G.glow.parent)G.glow.parent.remove(G.glow);
+      G.glow.geometry.dispose(); G.glow.material.dispose(); G.glow=null;
+    }
+    G.glowSpec=null;
+    return;
+  }
+  /* a new world means a new scene, and the old pool went with it */
+  if(G.glow&&G.glow.parent!==G.scene) G.glow=null;
+  if(!G.glow){ G.glow=glowBuild(car); G.scene.add(G.glow); }
+  G.glowSpec=it;
+  if(!it.cycle) G.glow.material.color.copy(SRGB(it.colour));
+  glowTick(G.bopT||0);
+}
 function glowTick(t){
-  const car=G.car; if(!car)return;
-  const m=car.userData.glowMesh, it=car.userData.glowSpec;
-  if(!m||!it)return;
+  const m=G.glow, it=G.glowSpec, T=G.T;
+  if(!m||!it||!T)return;
   if(it.cycle) m.material.color.setHSL((t*0.28)%1,0.95,0.62);
   /* a slow breath, so it reads as a light rather than a decal */
   m.material.opacity=0.94+0.06*Math.sin(t*2.4);
+  const base=m.userData.base, pos=m.geometry.attributes.position;
+  const cy=Math.cos(CAR.yaw), sy=Math.sin(CAR.yaw);
+  for(let i=0;i<pos.count;i++){
+    const lx=base[i*2], lz=base[i*2+1];
+    const wx=CAR.x+lx*cy+lz*sy, wz=CAR.z-lx*sy+lz*cy;
+    pos.setXYZ(i, wx, heightAt(T,wx,wz)+0.05, wz);
+  }
+  pos.needsUpdate=true;
 }
 
 /* An iridescent finish, done where iridescence happens: in the shading of
@@ -7068,7 +7118,7 @@ function updateCarMesh(){
   const b=G.blob;
   /* A contact shadow under a lit car is a dark patch sitting on top of the
      light, which is the one thing underglow must not have. */
-  if(b&&(c.userData.noShadow||c.userData.glowMesh)){ b.visible=false; }
+  if(b&&(c.userData.noShadow||G.glow)){ b.visible=false; }
   else if(b){
     const surf=heightAt(T,CAR.x,CAR.z,null,CAR.y);
     const lift=Math.max(0,CAR.y-surf);
