@@ -16,10 +16,7 @@
 
 const GATED = ["bike", "trike", "v12"];
 
-/* The one account they are being tried out on. An environment variable so it
-   can be moved or emptied on the live relay without a deploy. */
-const TRIAL = String(process.env.TRIAL_USER === undefined ? "cosmo38" : process.env.TRIAL_USER)
-  .trim().toLowerCase();
+const { isAdmin } = require("./admins");
 
 const isGated = (car) => GATED.includes(String(car || "").toLowerCase());
 
@@ -29,10 +26,15 @@ function bought(user) {
     .split(",").map((s) => s.trim().toLowerCase()).filter((c) => GATED.includes(c));
 }
 
+/* Whoever runs the place has everything, and that is not a name written in
+   the page for anyone to read and try — it is the admin list, which exists
+   only in the dashboard of the service and cannot be granted from inside the
+   game at all. Everybody else has what they have bought.
+
+   It also means the public source no longer says whose account to go for. */
 function ownedBy(user) {
   if (!user) return [];
-  const name = String(user.name_lower || user.name || "").toLowerCase();
-  if (TRIAL && name === TRIAL) return GATED.slice();
+  if (isAdmin(user)) return GATED.slice();
   return bought(user);
 }
 
@@ -42,4 +44,4 @@ function ownedBy(user) {
 const mayDrive = (user, car, onDaily) =>
   !isGated(car) || !!onDaily || ownedBy(user).includes(String(car).toLowerCase());
 
-module.exports = { GATED, TRIAL, isGated, ownedBy, bought, mayDrive };
+module.exports = { GATED, isGated, ownedBy, bought, mayDrive };

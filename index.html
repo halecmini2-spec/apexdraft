@@ -4413,11 +4413,18 @@ const myTitle=()=>{ const k=myKit(); return (k&&k.title&&k.title.label)||""; };
 /* the ones anybody may drive, and whether a given account may drive a given
    one — the test cars answer to the same name the AI opponents do */
 const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
-/* the one account that sees things still being tried out */
-const TEST_ACCOUNT="cosmo38";
-/* Everything still being tried out answers to this one question: the test
-   cars, the AI opponents, and now the shop. */
-function isTester(){ return acctIn()&&ACCT.user.name===TEST_ACCOUNT; }
+/* ---- who sees what is still being tried out ----
+   Whoever runs the place: the AI opponents, the shop, the customisation and
+   the three cars all answer to this one question.
+
+   It used to be a username, written here in the page, which told anybody
+   reading it exactly whose account to go for. It is now the admin flag the
+   relay works out for itself from a list that lives only in the dashboard
+   of the service — there is deliberately no way to grant it from inside the
+   game, so it cannot be given to yourself from in here however much of this
+   file you rewrite. Rewriting it still changes what you are shown; it has
+   never changed what you are sent or what is kept. */
+function isTester(){ return acctIn()&&ACCT.user.admin===true; }
 /* ---- which of the gated cars are actually on this account ----
    The relay says so, and it works the same answer out again for itself every
    time it matters, so this is a convenience rather than a permission: it
@@ -8899,7 +8906,7 @@ function acctSave(){
 function acctIn(){ return !!(ACCT.token&&ACCT.user); }
 function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
-  document.body.classList.toggle("aiok",on&&ACCT.user.name===TEST_ACCOUNT);
+  document.body.classList.toggle("aiok",on&&ACCT.user.admin===true);
   /* If this account holds any of the cars that are not in the page, ask for
      them now rather than when somebody is waiting to drive one. */
   if(on&&(ACCT.user.cars||[]).length) carsInstall(true);

@@ -16,6 +16,7 @@ const { makeTracks } = require("./tracks");
 const { makeLaps } = require("./laps");
 const { makeAdmin } = require("./admin");
 const { makeCarCode } = require("./carcode");
+const { anyAdmins } = require("./admins");
 const { makeVisits } = require("./visits");
 const { makePresence } = require("./presence");
 const { makeStats } = require("./stats");
@@ -43,6 +44,10 @@ const liveNow = () => ({
 const admin = makeAdmin(store, auth.userFor, liveNow, presence);
 /* the cars that are not in the page, for the accounts that hold them */
 const carcode = makeCarCode(auth.userFor);
+/* Everything still being tried out hangs off being an admin, so a relay
+   deployed without the list has no admins, no shop and none of the bought
+   cars — and would look broken rather than misconfigured. Say so at boot. */
+if (!anyAdmins()) console.log("ADMIN_USERS is not set: nobody is an admin, so nothing being tried out is on offer");
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;

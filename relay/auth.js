@@ -159,12 +159,7 @@ function clientIp(req) {
 /* Who gets the admin controls. Named in the environment, never in the data:
    an admin flag that could be set through the API is an admin flag anyone
    can set. Usernames, comma-separated, matched case-insensitively. */
-const ADMINS = new Set(
-  (process.env.ADMIN_USERS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
-);
-/* Works from whichever the row carries: full user rows have name_lower, the
-   admin listing has only name. */
-const isAdmin = (u) => !!u && ADMINS.has(u.name_lower || String(u.name || "").toLowerCase());
+const { isAdmin } = require("./admins");
 
 const carsMod = require("./cars.js");
 const publicUser = (u) => ({

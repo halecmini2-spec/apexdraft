@@ -803,6 +803,15 @@ the relay now and are handed over only to an account that holds them, so a
 driver who is not entitled to one has nothing to build it out of. There is
 no gate to edit, because the thing the gate was guarding was never sent.
 
+Who gets everything is not a username any more. It used to be one, written
+in the page, which told anybody reading it exactly whose account to go for.
+It is the **admin list** now — `ADMIN_USERS`, set by hand in the dashboard of
+the service, never in the repository, with deliberately no way to grant it
+from inside the game. So the thing that unlocks what is being tried out
+exists only somewhere the game cannot reach, and the public source no longer
+names anybody. A relay deployed without the list says so at boot rather than
+quietly having no admins and looking broken.
+
 What an account holds is a list on the account, written by the admin desk
 and, when buying exists, by a purchase. `relay/cars.js` is the only thing
 that answers the question, and both the lap checks and the handing over ask
