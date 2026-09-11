@@ -5701,9 +5701,15 @@ function carsInstall(force){
       const made=new Function(src+"\nreturn {bodySuperbike:typeof bodySuperbike===\"function\"?bodySuperbike:null,"+
         "bodyTrike:typeof bodyTrike===\"function\"?bodyTrike:null,"+
         "bodyV12:typeof bodyV12===\"function\"?bodyV12:null};")();
-      if(made.bodySuperbike) CAR_BODY.bike=made.bodySuperbike;
-      if(made.bodyTrike)     CAR_BODY.trike=made.bodyTrike;
-      if(made.bodyV12)       CAR_BODY.v12=made.bodyV12;
+      let got=false;
+      if(made.bodySuperbike){ CAR_BODY.bike=made.bodySuperbike; got=true; }
+      if(made.bodyTrike)    { CAR_BODY.trike=made.bodyTrike;    got=true; }
+      if(made.bodyV12)      { CAR_BODY.v12=made.bodyV12;        got=true; }
+      /* A garage picture drawn before this landed was drawn of the GT
+         standing in, and the cache would otherwise keep showing that for the
+         rest of the session even once the real shape is here — so whatever
+         is cached is thrown out now that there is something truer to draw. */
+      if(got){ GAR.cache={}; if(!$("garage").hidden) garPictures(); }
       return true;
     }catch(e){ return false; }
   })();
@@ -8219,6 +8225,11 @@ async function dailyLoad(force){
   if(!force&&DAILY.data&&Date.now()-DAILY.at<60000)return DAILY.data;
   const d=await api("/api/daily");
   DAILY.data=d; DAILY.at=Date.now();
+  /* The relay hands the day's car to anybody, held or not — that is the
+     whole point of a daily — so the fetch for it can start the moment the
+     day is known instead of waiting on whether this account owns anything. */
+  const dcar=(d.track&&d.track.opts&&d.track.opts.car)||d.car||"gt";
+  if(carTest(dcar)) carsInstall();
   return d;
 }
 function showDaily(on){
