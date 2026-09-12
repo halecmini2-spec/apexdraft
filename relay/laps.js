@@ -25,7 +25,6 @@ const GHOST_MAX = 4000;
 const isDaily = (c) => /^daily_\d{8}$/.test(c);
 const { lapBound, checkTrace, circuitFor } = require("./verify");
 const dailyMod = require("./daily");
-const carsMod = require("./cars");
 /* A lap has to have begun before it can end: the page asks for a ticket
    as it crosses the line, and the finish has to come at least the lap's
    own length later. One ticket, one lap, and only for the driver and the
@@ -158,21 +157,6 @@ function makeLaps(store, userFor) {
 
     /* ---- could this lap have been driven? ---- */
     const refuse = (why) => { console.log("lap refused: " + user.name + " " + ms + " ms on " + circuit + " — " + why); return json(res, 422, { error: "That lap couldn't be verified (" + why + "), so it wasn't kept." }), true; };
-    /* Is this car theirs at all? Asked before any of the work below, because
-       it is a question about the account rather than about the lap, and the
-       answer does not depend on a single thing the page says.
-
-       This is the gate that holds. The page is one file that everybody who
-       opens the game downloads and it can be edited in any browser, so the
-       gate inside it decides only what a driver is shown. Refusing here is
-       what stops an edited page putting anything in front of anybody else:
-       the time is not kept, reaches no board, and is never raced against.
-       On a daily the car is not a claim at all — the day hands the same one
-       to everybody and the relay worked it out from the circuit above,
-       without asking. */
-    if (!carsMod.mayDrive(user, car, isDaily(circuit)))
-      return refuse("that car isn't on your account");
-
     const tk = tickets.get(String(body.ticket || ""));
     if (!tk || tk.userId !== user.id || tk.circuit !== circuit) return refuse("no ticket for this lap");
     tickets.delete(String(body.ticket));

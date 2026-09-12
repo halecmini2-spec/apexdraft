@@ -159,15 +159,15 @@ function clientIp(req) {
 /* Who gets the admin controls. Named in the environment, never in the data:
    an admin flag that could be set through the API is an admin flag anyone
    can set. Usernames, comma-separated, matched case-insensitively. */
-const { isAdmin } = require("./admins");
+const ADMINS = new Set(
+  (process.env.ADMIN_USERS || "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+);
+/* Works from whichever the row carries: full user rows have name_lower, the
+   admin listing has only name. */
+const isAdmin = (u) => !!u && ADMINS.has(u.name_lower || String(u.name || "").toLowerCase());
 
-const carsMod = require("./cars.js");
 const publicUser = (u) => ({
   name: u.name, email: u.email, created: Number(u.created), admin: isAdmin(u),
-  /* The cars this account holds beyond the ones everybody has. The page uses
-     it to decide what to show; the relay does not take its word for anything
-     and works this out again for itself whenever it matters. */
-  cars: carsMod.ownedBy(u),
   /* Anything an admin has left for this account to read. It rides along with
      the account itself rather than being fetched, so it is in front of them
      the moment they are signed in and cannot be missed. */

@@ -1,8 +1,3 @@
 Thumbs.db
 desktop.ini
 .DS_Store
-
-# The bought cars, kept out of a public repository on purpose.
-# See relay/carcode.js — the relay runs without it and simply does not
-# offer them until it is supplied.
-relay/locked-cars.js
