@@ -728,6 +728,29 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
   .sh-card b{font-size:12.5px}
   .sh-card span{font-size:10.5px}
 }
+/* ---- opening a pack: a pass over the pad, then the card ---- */
+.pack-overlay{position:fixed;inset:0;z-index:100;background:rgba(5,8,9,.88);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:20px}
+.pack-overlay canvas{width:min(94vw,720px);height:auto;aspect-ratio:960/480;
+  background:radial-gradient(ellipse at 50% 55%,#182022 0%,#0A1011 75%);border-radius:4px;
+  border:1px solid var(--line-soft)}
+.pack-x{position:absolute;top:calc(14px + var(--sat));right:calc(16px + var(--sar));
+  width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);
+  color:var(--dim);font-size:18px;line-height:1;cursor:pointer}
+.pack-card{background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:4px;
+  padding:22px 28px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  min-width:220px;text-align:center;
+  box-shadow:0 0 0 1px var(--rarGlow,transparent),0 18px 40px rgba(0,0,0,.5);
+  animation:packPop .32s cubic-bezier(.2,1.4,.4,1)}
+@keyframes packPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.pack-card em{font-style:normal;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+  font-weight:700;color:var(--rar,var(--faint))}
+.pack-card b{font-size:19px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
+.pack-card span{font-size:12px;color:var(--dim)}
+.pack-card-btns{margin-top:10px;display:flex;gap:10px}
+.sh-pack-test{margin:4px 0 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sh-pack-test span{font-size:11.5px;color:var(--faint)}
+#shPackTally{font-family:var(--mono);font-size:11.5px;color:var(--dim)}
 .home-card.gold i{background:var(--amber)}
 .home-card.gold:hover{border-color:var(--amber);background:var(--amber-glow)}
 .dy-tile{background:var(--panel2);border:1px solid var(--line);border-radius:2px;padding:10px 12px;display:flex;flex-direction:column;gap:3px}
@@ -1889,13 +1912,34 @@ body.daily .gar-arrow{display:none}
         built. The prices shown are what these will cost.</p>
       <h2 class="sh-h">Cars <span>Yours for good, once bought</span></h2>
       <div class="sh-grid" id="shCars"></div>
-      <h2 class="sh-h">Packs <span>Still being put together</span></h2>
+      <h2 class="sh-h">Packs <span>Test mode — open as many as you like, free</span></h2>
       <div class="sh-grid" id="shPacks"></div>
+      <div class="sh-pack-test">
+        <button class="chip" id="shPackTest">Simulate 500 openings</button>
+        <span id="shPackTally"></span>
+      </div>
       <h2 class="sh-h">Coins <span>Still being priced</span></h2>
       <div class="sh-grid sh-coins" id="shCoins"></div>
       <p class="sh-note" id="shSaid"></p>
     </div>
   </section>
+  <!-- A pack opening: the GT crosses the pad top-down, marking the ground
+       the colour of whatever it left the truck with, and then the card
+       says what that was. Reachable only from the shop, which is reachable
+       only by the account trying it out. -->
+  <div id="packOverlay" class="pack-overlay" hidden>
+    <button class="pack-x" id="packX" aria-label="Close">×</button>
+    <canvas id="packCanvas" width="960" height="480"></canvas>
+    <div class="pack-card" id="packCard" hidden>
+      <em id="pcRar"></em>
+      <b id="pcName"></b>
+      <span id="pcSub"></span>
+      <div class="pack-card-btns">
+        <button class="chip" id="pcAgain">Open another</button>
+        <button class="chip go" id="pcClose">Nice</button>
+      </div>
+    </div>
+  </div>
   <section id="multiScreen" class="screen" hidden>
     <div class="tk-wrap">
       <div class="tk-head">
@@ -8917,6 +8961,61 @@ const SHOP_PACKS=[
 const SHOP_COINS=[{n:"500"},{n:"1,200"},{n:"3,000"},{n:"8,000"}];
 /* British money reads as pence below a pound and as pounds above it */
 const money=p=>p<1?Math.round(p*100)+"p":"£"+p.toFixed(2);
+
+/* ---- what a pack can give ----
+   Two pools, cars and everything else, and the chances below are of a pack
+   as a whole rather than of each pool asked in turn — so a mythic car at
+   0.1% is rarer than anything the other pool can give, and the four bands
+   inside each pool never overlap with the other pool's. A car is the find
+   here: even the commonest of them, a rare one, is a hundred times rarer
+   than the commonest thing from the other pool. */
+const PACK_CAR_ODDS=[
+  {rarity:"mythic",   chance:0.001},
+  {rarity:"legendary",chance:0.003},
+  {rarity:"epic",     chance:0.005},
+  {rarity:"rare",     chance:0.010}
+];
+/* a title or something for the kit — far commoner than a car, and still
+   mostly the rare end of its own four rarities, so the top of this pool
+   still feels like something */
+const PACK_ITEM_ODDS=[
+  {rarity:"mythic",   chance:0.010},
+  {rarity:"legendary",chance:0.040},
+  {rarity:"epic",     chance:0.150},
+  {rarity:"rare",     chance:0.781}
+];
+const packCarsOf=rarity=>CAR_MODELS.filter(m=>m.rarity===rarity);
+function packItemsOf(rarity){
+  const out=[];
+  for(const slot of KIT_SLOTS) for(const it of KITS[slot].items) if(it.rarity===rarity) out.push({slot,item:it});
+  return out;
+}
+/* One roll of the wheel: a single number walked down through the cars
+   first and then the rest, so the bands never overlap and nothing is
+   asked twice. */
+function rollPack(){
+  const r=Math.random();
+  let acc=0;
+  for(const o of PACK_CAR_ODDS){
+    acc+=o.chance;
+    if(r<acc){
+      const pool=packCarsOf(o.rarity), m=pool[Math.floor(Math.random()*pool.length)];
+      return {kind:"car", rarity:o.rarity, label:m.label, sub:"A car for the garage."};
+    }
+  }
+  for(const o of PACK_ITEM_ODDS){
+    acc+=o.chance;
+    if(r<acc){
+      const pool=packItemsOf(o.rarity), pick=pool[Math.floor(Math.random()*pool.length)];
+      return {kind:"item", rarity:o.rarity, label:pick.item.label,
+        sub:pick.slot==="title"?"A title to wear.":KITS[pick.slot].label+" for the kit."};
+    }
+  }
+  /* the bands sum to 1 already; this is only insurance against the last
+     sliver floating point rounding could leave unclaimed */
+  const pool=packItemsOf("rare"), pick=pool[Math.floor(Math.random()*pool.length)];
+  return {kind:"item", rarity:"rare", label:pick.item.label, sub:KITS[pick.slot].label+" for the kit."};
+}
 function shopSay(t){ $("shSaid").textContent=t||""; }
 function shopBuild(){
   const cars=$("shCars"); if(!cars||cars.dataset.built)return;
@@ -8941,11 +9040,12 @@ function shopBuild(){
   }
   for(const p of SHOP_PACKS){
     const b=document.createElement("div");
-    b.className="sh-card soon";
+    b.className="sh-card";
     b.innerHTML='<em class="rar">Pack</em><b></b><span></span>'+
-      '<div class="sh-buy"><i>Price to come</i></div>';
+      '<div class="sh-buy"><i>Test — free</i><button class="chip go">Open</button></div>';
     b.querySelector("b").textContent=p.name;
     b.querySelector("span").textContent=p.blurb;
+    b.querySelector("button").addEventListener("click",()=>openPack());
     $("shPacks").appendChild(b);
   }
   for(const c of SHOP_COINS){
@@ -8963,6 +9063,90 @@ function shopPictures(){
     const cv=b.querySelector("canvas"); if(!cv)continue;
     try{ garPicture(b.dataset.car,ED.opts.color,cv); }catch(e){ console.error(e); }
   }
+}
+/* ---- opening a pack ----
+   A plain top-down car, because what it looks like from above is not the
+   point of it: the point is the mark it leaves, which is the one thing on
+   screen already the colour of what is about to be revealed. Nothing about
+   the roll depends on the drawing, and nothing about the drawing depends on
+   three.js — it is flat, fast, and cannot stall on a slow phone the way a
+   lit scene might. */
+function drawTopDownCar(c,x,y,l,w){
+  c.save(); c.translate(x,y);
+  c.fillStyle="#171B1D"; c.fillRect(-l*0.5,-w*0.62,l,w*1.24);           // shadow footprint
+  c.fillStyle="#DCE6E3";
+  c.beginPath();
+  c.moveTo(l*0.50,0);
+  c.lineTo(l*0.34,-w*0.46); c.lineTo(-l*0.30,-w*0.46);
+  c.lineTo(-l*0.50,-w*0.30); c.lineTo(-l*0.50,w*0.30);
+  c.lineTo(-l*0.30,w*0.46); c.lineTo(l*0.34,w*0.46);
+  c.closePath(); c.fill();
+  c.fillStyle="#0E1418";                                                // screen
+  c.fillRect(-l*0.06,-w*0.34,l*0.30,w*0.68);
+  c.fillStyle="#15191B";
+  for(const wx of [-l*0.30,l*0.22]) for(const wy of [-w*0.56,w*0.56-w*0.16])
+    c.fillRect(wx,wy,l*0.20,w*0.16);                                    // four wheels
+  c.restore();
+}
+let PACK_BUSY=false;
+function packRoll(reward){
+  const ov=$("packOverlay"), cv=$("packCanvas"), card=$("packCard");
+  const ctx=cv.getContext("2d"), W=cv.width, H=cv.height, y=H/2;
+  const R=RARITY[reward.rarity];
+  ov.hidden=false; card.hidden=true; PACK_BUSY=true;
+  const l=64,w=30, startX=-70, endX=W+70, dur=1500;
+  let t0=null;
+  function frame(ts){
+    if(!t0)t0=ts;
+    const p=Math.min(1,(ts-t0)/dur), ease=1-Math.pow(1-p,2);
+    const x=startX+(endX-startX)*ease;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle=R.colour; ctx.lineWidth=5; ctx.globalAlpha=0.82; ctx.lineCap="round";
+    for(const dy of [-w*0.30,w*0.30]){
+      ctx.beginPath();
+      ctx.moveTo(startX+l*0.15,y+dy);
+      ctx.lineTo(x-l*0.42,y+dy);
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+    drawTopDownCar(ctx,x,y,l,w);
+    if(p<1) requestAnimationFrame(frame);
+    else setTimeout(()=>packReveal(reward),200);
+  }
+  requestAnimationFrame(frame);
+}
+function packReveal(reward){
+  const R=RARITY[reward.rarity], card=$("packCard");
+  card.style.setProperty("--rar",R.colour);
+  card.style.setProperty("--rarDim",R.dim);
+  card.style.setProperty("--rarGlow",R.glow);
+  $("pcRar").textContent=R.label;
+  $("pcName").textContent=reward.label;
+  $("pcSub").textContent=reward.sub;
+  card.hidden=false;
+  PACK_BUSY=false;
+}
+function openPack(){
+  if(PACK_BUSY)return;
+  packRoll(rollPack());
+}
+function packOverlayClose(){
+  $("packOverlay").hidden=true;
+  PACK_BUSY=false;
+}
+/* the odds are small enough that clicking one at a time would take all day
+   to see whether they hold up — this runs the roll, without the drawing,
+   however many times asked and counts what came out */
+function packSimulate(n){
+  const tally={};
+  for(let i=0;i<n;i++){
+    const r=rollPack(), key=(r.kind==="car"?"Car — ":"Item — ")+RARITY[r.rarity].label;
+    tally[key]=(tally[key]||0)+1;
+  }
+  const order=["Car — Mythic","Car — Legendary","Car — Epic","Car — Rare",
+    "Item — Mythic","Item — Legendary","Item — Epic","Item — Rare"];
+  const parts=order.filter(k=>tally[k]).map(k=>k+": "+tally[k]+" ("+(100*tally[k]/n).toFixed(2)+"%)");
+  $("shPackTally").textContent=parts.join("  ·  ");
 }
 /* The door on the home page. Open for the account trying it out; for
    everybody else it stays exactly the grey "coming soon" it always was. */
@@ -9019,6 +9203,10 @@ $("hmShop").addEventListener("click",()=>{
   setTimeout(()=>{ b.textContent="Coming soon."; },1800);
 });
 $("shBack").addEventListener("click",goHome);
+$("packX").addEventListener("click",packOverlayClose);
+$("pcClose").addEventListener("click",packOverlayClose);
+$("pcAgain").addEventListener("click",()=>openPack());
+$("shPackTest").addEventListener("click",()=>packSimulate(500));
 $("hmAccount").addEventListener("click",()=>{ AU_MODE="in"; showAuth(true); });
 $("hmSignUp").addEventListener("click",()=>{ AU_MODE="up"; showAuth(true); });
 $("hmAdmin").addEventListener("click",()=>showAdmin(true));
