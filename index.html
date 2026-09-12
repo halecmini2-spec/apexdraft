@@ -728,21 +728,31 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
   .sh-card b{font-size:12.5px}
   .sh-card span{font-size:10.5px}
 }
-/* ---- opening a pack: a pass over the pad, then the card ---- */
-.pack-overlay{position:fixed;inset:0;z-index:100;background:rgba(5,8,9,.88);
-  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:20px}
-.pack-overlay canvas{width:min(94vw,720px);height:auto;aspect-ratio:960/480;
-  background:radial-gradient(ellipse at 50% 55%,#182022 0%,#0A1011 75%);border-radius:4px;
-  border:1px solid var(--line-soft)}
-.pack-x{position:absolute;top:calc(14px + var(--sat));right:calc(16px + var(--sar));
+/* ---- opening a pack: a pass over the pad, then the card ----
+   The canvas is the whole screen and stays put throughout — the car and
+   the mark it leaves are drawn close in, at a size measured off the
+   canvas's own height, so the pass reads as a close, fast thing rather
+   than a strip cut out of the middle of the screen. */
+.pack-overlay{position:fixed;inset:0;z-index:100}
+.pack-overlay canvas{position:fixed;inset:0;width:100%;height:100%;display:block;
+  background:radial-gradient(ellipse at 50% 58%,#182022 0%,#070B0C 78%)}
+.pack-x{position:fixed;top:calc(14px + var(--sat));right:calc(16px + var(--sar));
   width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);
-  color:var(--dim);font-size:18px;line-height:1;cursor:pointer}
-.pack-card{background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:4px;
-  padding:22px 28px;display:flex;flex-direction:column;align-items:center;gap:6px;
-  min-width:220px;text-align:center;
-  box-shadow:0 0 0 1px var(--rarGlow,transparent),0 18px 40px rgba(0,0,0,.5);
+  color:var(--dim);font-size:18px;line-height:1;cursor:pointer;z-index:1}
+.pack-card{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;
+  background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:4px;
+  padding:20px 26px 24px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  min-width:220px;max-width:88vw;text-align:center;
+  box-shadow:0 0 0 1px var(--rarGlow,transparent),0 24px 60px rgba(0,0,0,.6);
   animation:packPop .32s cubic-bezier(.2,1.4,.4,1)}
-@keyframes packPop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes packPop{from{transform:translate(-50%,-50%) scale(.7);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.pack-img{width:min(80vw,300px);aspect-ratio:360/220;border-radius:3px;overflow:hidden;
+  background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);
+  display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+.pack-img canvas{width:100%;height:100%;display:block}
+.pack-img-title{background:#0D1415}
+.pack-img-title b{font-size:20px;letter-spacing:.06em;text-transform:uppercase;
+  padding:8px 18px;border:1px solid;border-radius:3px;background:rgba(0,0,0,.3)}
 .pack-card em{font-style:normal;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
   font-weight:700;color:var(--rar,var(--faint))}
 .pack-card b{font-size:19px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
@@ -1931,6 +1941,7 @@ body.daily .gar-arrow{display:none}
     <button class="pack-x" id="packX" aria-label="Close">×</button>
     <canvas id="packCanvas" width="960" height="480"></canvas>
     <div class="pack-card" id="packCard" hidden>
+      <div class="pack-img" id="pcImg"></div>
       <em id="pcRar"></em>
       <b id="pcName"></b>
       <span id="pcSub"></span>
@@ -8269,6 +8280,24 @@ function garRenderer(){
     return true;
   }catch(e){ console.error(e); return false; }
 }
+/* the three-quarter render every still picture of a car uses — the garage
+   cards, the shop, and a pack's reveal card all want the same shot, just
+   of different cars wearing different kit */
+function renderCarPreview(cv,kind,colour,kit){
+  if(!garRenderer())return;
+  const car=buildCar(colour,kind,kit);
+  car.rotation.y=-0.72;                        // three-quarter front
+  GAR.scene.add(car);
+  const box=new THREE.Box3().setFromObject(car), size=new THREE.Vector3(), c=new THREE.Vector3();
+  box.getSize(size); box.getCenter(c);
+  const span=Math.max(size.x,size.z)*1.05, d=span/Math.tan(GAR.camera.fov*Math.PI/360)*0.47+size.y*0.6;
+  GAR.camera.position.set(c.x+d*0.62,c.y+d*0.36,c.z+d*0.72);
+  GAR.camera.lookAt(c.x,c.y+size.y*0.02,c.z);
+  GAR.renderer.render(GAR.scene,GAR.camera);
+  const x=cv.getContext("2d"); x.clearRect(0,0,cv.width,cv.height);
+  x.drawImage(GAR.renderer.domElement,0,0,cv.width,cv.height);
+  GAR.scene.remove(car); disposeTree(car);
+}
 function garPicture(kind,colour,cv){
   if(!garRenderer())return;
   /* the kit is part of what the picture shows, so it is part of what the
@@ -8278,18 +8307,8 @@ function garPicture(kind,colour,cv){
   const key=kind+"|"+colour+"|"+(k?KIT_SLOTS.map(s=>k[s]?k[s].id:"-").join(","):"-");
   let img=GAR.cache[key];
   if(!img){
-    const car=buildCar(colour,kind,k);
-    car.rotation.y=-0.72;                        // three-quarter front
-    GAR.scene.add(car);
-    const box=new THREE.Box3().setFromObject(car), size=new THREE.Vector3(), c=new THREE.Vector3();
-    box.getSize(size); box.getCenter(c);
-    const span=Math.max(size.x,size.z)*1.05, d=span/Math.tan(GAR.camera.fov*Math.PI/360)*0.47+size.y*0.6;
-    GAR.camera.position.set(c.x+d*0.62,c.y+d*0.36,c.z+d*0.72);
-    GAR.camera.lookAt(c.x,c.y+size.y*0.02,c.z);
-    GAR.renderer.render(GAR.scene,GAR.camera);
     img=document.createElement("canvas"); img.width=720; img.height=440;
-    img.getContext("2d").drawImage(GAR.renderer.domElement,0,0);
-    GAR.scene.remove(car); disposeTree(car);
+    renderCarPreview(img,kind,colour,k);
     /* a handful of colours times four cars is all it can ever be */
     GAR.cache[key]=img;
   }
@@ -9000,7 +9019,7 @@ function rollPack(){
     acc+=o.chance;
     if(r<acc){
       const pool=packCarsOf(o.rarity), m=pool[Math.floor(Math.random()*pool.length)];
-      return {kind:"car", rarity:o.rarity, label:m.label, sub:"A car for the garage."};
+      return {kind:"car", rarity:o.rarity, label:m.label, sub:"A car for the garage.", carId:m.id};
     }
   }
   for(const o of PACK_ITEM_ODDS){
@@ -9008,13 +9027,15 @@ function rollPack(){
     if(r<acc){
       const pool=packItemsOf(o.rarity), pick=pool[Math.floor(Math.random()*pool.length)];
       return {kind:"item", rarity:o.rarity, label:pick.item.label,
-        sub:pick.slot==="title"?"A title to wear.":KITS[pick.slot].label+" for the kit."};
+        sub:pick.slot==="title"?"A title to wear.":KITS[pick.slot].label+" for the kit.",
+        slot:pick.slot, item:pick.item};
     }
   }
   /* the bands sum to 1 already; this is only insurance against the last
      sliver floating point rounding could leave unclaimed */
   const pool=packItemsOf("rare"), pick=pool[Math.floor(Math.random()*pool.length)];
-  return {kind:"item", rarity:"rare", label:pick.item.label, sub:KITS[pick.slot].label+" for the kit."};
+  return {kind:"item", rarity:"rare", label:pick.item.label,
+    sub:KITS[pick.slot].label+" for the kit.", slot:pick.slot, item:pick.item};
 }
 function shopSay(t){ $("shSaid").textContent=t||""; }
 function shopBuild(){
@@ -9089,19 +9110,27 @@ function drawTopDownCar(c,x,y,l,w){
   c.restore();
 }
 let PACK_BUSY=false;
+/* Full screen and close in, so the pass and the mark it leaves are the
+   whole of what you are looking at rather than a strip of it. The car's
+   own size is a fraction of the canvas height rather than a fixed pixel
+   count, so a phone held up close gets exactly as tight a shot as a
+   monitor across the room. */
 function packRoll(reward){
   const ov=$("packOverlay"), cv=$("packCanvas"), card=$("packCard");
-  const ctx=cv.getContext("2d"), W=cv.width, H=cv.height, y=H/2;
-  const R=RARITY[reward.rarity];
   ov.hidden=false; card.hidden=true; PACK_BUSY=true;
-  const l=64,w=30, startX=-70, endX=W+70, dur=1500;
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const W=cv.width=Math.round(innerWidth*dpr), H=cv.height=Math.round(innerHeight*dpr);
+  const ctx=cv.getContext("2d"), y=H*0.56;
+  const R=RARITY[reward.rarity];
+  const l=H*0.46, w=H*0.20;                       // close in: the car fills most of the height
+  const startX=-l*0.6, endX=W+l*0.6, dur=1900;
   let t0=null;
   function frame(ts){
     if(!t0)t0=ts;
     const p=Math.min(1,(ts-t0)/dur), ease=1-Math.pow(1-p,2);
     const x=startX+(endX-startX)*ease;
     ctx.clearRect(0,0,W,H);
-    ctx.strokeStyle=R.colour; ctx.lineWidth=5; ctx.globalAlpha=0.82; ctx.lineCap="round";
+    ctx.strokeStyle=R.colour; ctx.lineWidth=Math.max(4,H*0.016); ctx.globalAlpha=0.85; ctx.lineCap="round";
     for(const dy of [-w*0.30,w*0.30]){
       ctx.beginPath();
       ctx.moveTo(startX+l*0.15,y+dy);
@@ -9111,15 +9140,61 @@ function packRoll(reward){
     ctx.globalAlpha=1;
     drawTopDownCar(ctx,x,y,l,w);
     if(p<1) requestAnimationFrame(frame);
-    else setTimeout(()=>packReveal(reward),200);
+    else setTimeout(()=>packReveal(reward),250);
   }
   requestAnimationFrame(frame);
+}
+/* ---- the reveal card's own picture ----
+   A car gets the same three-quarter shot the garage gives it. A paint or a
+   set of rims goes on whichever car is currently chosen, because "what did
+   I just get" is answered better by seeing it on a car than by a name. The
+   rest — glow, horn, a title — have no body to sit on, so each draws
+   something of its own that still answers to the rarity colour. */
+function packBuildImage(reward){
+  const box=$("pcImg"); box.innerHTML=""; box.className="pack-img";
+  const R=RARITY[reward.rarity];
+  const canvasIn=()=>{ const cv=document.createElement("canvas"); cv.width=360; cv.height=220; box.appendChild(cv); return cv; };
+  if(reward.kind==="car"){
+    try{ renderCarPreview(canvasIn(),reward.carId,ED.opts.color||"#E2482B",null); }catch(e){}
+    return;
+  }
+  if(reward.slot==="paint"||reward.slot==="rims"){
+    const kind=(ED.opts&&ED.opts.car)||"gt";
+    const kit={}; kit[reward.slot]=reward.item;
+    const colour=(reward.slot==="paint"&&reward.item.std)?reward.item.std:((ED.opts&&ED.opts.color)||"#E2482B");
+    try{ renderCarPreview(canvasIn(),kind,colour,kit); }catch(e){}
+    return;
+  }
+  if(reward.slot==="glow"){
+    const cv=canvasIn(), ctx=cv.getContext("2d");
+    const hex=reward.item.cycle?"#FFFFFF":"#"+reward.item.colour.toString(16).padStart(6,"0");
+    ctx.fillStyle="#0D1415"; ctx.fillRect(0,0,360,220);
+    const g=ctx.createRadialGradient(180,150,6,180,150,150);
+    g.addColorStop(0,hex); g.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=g; ctx.fillRect(0,0,360,220);
+    return;
+  }
+  if(reward.slot==="horn"){
+    const cv=canvasIn(), ctx=cv.getContext("2d");
+    ctx.fillStyle="#0D1415"; ctx.fillRect(0,0,360,220);
+    ctx.fillStyle=R.colour; ctx.strokeStyle=R.colour; ctx.lineWidth=7;
+    ctx.beginPath();
+    ctx.moveTo(150,78); ctx.lineTo(184,78); ctx.lineTo(228,44); ctx.lineTo(228,176); ctx.lineTo(184,142); ctx.lineTo(150,142);
+    ctx.closePath(); ctx.fill();
+    for(const r of [18,32,46]){ ctx.beginPath(); ctx.arc(228,110,r,-0.55,0.55); ctx.stroke(); }
+    return;
+  }
+  /* a title: the badge it would sit in under a name, at full size */
+  box.className="pack-img pack-img-title";
+  const b=document.createElement("b"); b.textContent=reward.label; b.style.color=R.colour; b.style.borderColor=R.colour;
+  box.appendChild(b);
 }
 function packReveal(reward){
   const R=RARITY[reward.rarity], card=$("packCard");
   card.style.setProperty("--rar",R.colour);
   card.style.setProperty("--rarDim",R.dim);
   card.style.setProperty("--rarGlow",R.glow);
+  packBuildImage(reward);
   $("pcRar").textContent=R.label;
   $("pcName").textContent=reward.label;
   $("pcSub").textContent=reward.sub;
