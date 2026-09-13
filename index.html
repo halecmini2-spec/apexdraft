@@ -9009,6 +9009,57 @@ function packItemsOf(rarity){
   for(const slot of KIT_SLOTS) for(const it of KITS[slot].items) if(it.rarity===rarity) out.push({slot,item:it});
   return out;
 }
+/* ---- what the card says under the name ----
+   Neither a car nor a kit item carries a line of its own to show here — the
+   garage writes a car's under its picture as markup, and a kit item has
+   never needed to say anything about itself before now. Rather than thread
+   a blurb field through data other screens also read, the pack keeps its
+   own copy, keyed by slot so "gold" the paint and "gold" the rims don't
+   collide. */
+const CAR_BLURB={
+  gt:"Grip and pace. The all-rounder.",
+  formula:"The fastest thing here, and the twitchiest.",
+  yaris:"Soft, forgiving, never quite settled.",
+  kart:"No top end, enormous grip.",
+  bike:"280+ km/h, 165 kg. Leans into the corner with the rider. Unforgiving.",
+  trike:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back.",
+  v12:"360 km/h — far and away the fastest thing here. 1,450 kg of it."
+};
+const ITEM_BLURB={
+  "title:trackday":"For the ones who turn up on a Tuesday and mean it.",
+  "title:backmarker":"Last across the line, and first to laugh about it.",
+  "title:apex":"Clips every apex worth clipping.",
+  "title:unbeaten":"Nobody's caught you yet.",
+  "title:king":"There is no higher title than this one.",
+  "paint:c-red":"A red that needs no explaining.",
+  "paint:c-yellow":"Loud, and proud of it.",
+  "paint:c-blue":"The blue every other blue is measured against.",
+  "paint:c-white":"Clean — and shows every mark from the track.",
+  "paint:c-black":"Black enough to vanish at night, under the glow.",
+  "paint:c-green":"Green, and rarer than the rest for exactly that reason.",
+  "paint:candy":"Deep and glassy — candy paint the way it used to be done.",
+  "paint:matte":"No shine, no nonsense.",
+  "paint:flake":"Black until the light finds the flake in it.",
+  "paint:gold":"Metal enough to mean it.",
+  "paint:holo":"Shifts colour as you move round it — a paint, not a light show.",
+  "paint:prism":"A mirror with a spectrum stepped across it. Nothing else looks like this.",
+  "rims:bronze":"Warm metal, and one less rim like everyone else's.",
+  "rims:carbon":"Weave under a polished ring — the ring is what sells it.",
+  "rims:chrome":"Mirror-bright, every face of it.",
+  "rims:gold":"Gold to match the paint, or clash with it on purpose.",
+  "rims:neon":"Dark rims, lit at the edges. The rarest wheel here.",
+  "glow:ice":"A cool blue pool under the sills.",
+  "glow:violet":"Purple light on dark tarmac.",
+  "glow:toxic":"Green enough to look radioactive. It isn't.",
+  "glow:ember":"Looks like the car's still hot from the last lap.",
+  "glow:rain":"Cycles through every colour there is. Never the same lap twice.",
+  "horn:classic":"Two notes — the ones a horn has always used.",
+  "horn:air":"Three notes, and everyone on the circuit hears it.",
+  "horn:truck":"Deep enough that it shouldn't fit in the car.",
+  "horn:cuca":"The tune everyone knows, and nobody expects on a racetrack.",
+  "horn:train":"Four low notes — the kind that means get out of the way."
+};
+const itemBlurb=(slot,id)=>ITEM_BLURB[slot+":"+id]||"";
 /* One roll of the wheel: a single number walked down through the cars
    first and then the rest, so the bands never overlap and nothing is
    asked twice. */
@@ -9019,7 +9070,7 @@ function rollPack(){
     acc+=o.chance;
     if(r<acc){
       const pool=packCarsOf(o.rarity), m=pool[Math.floor(Math.random()*pool.length)];
-      return {kind:"car", rarity:o.rarity, label:m.label, sub:"A car for the garage.", carId:m.id};
+      return {kind:"car", rarity:o.rarity, label:m.label, sub:CAR_BLURB[m.id]||"A car for the garage.", carId:m.id};
     }
   }
   for(const o of PACK_ITEM_ODDS){
@@ -9027,15 +9078,14 @@ function rollPack(){
     if(r<acc){
       const pool=packItemsOf(o.rarity), pick=pool[Math.floor(Math.random()*pool.length)];
       return {kind:"item", rarity:o.rarity, label:pick.item.label,
-        sub:pick.slot==="title"?"A title to wear.":KITS[pick.slot].label+" for the kit.",
-        slot:pick.slot, item:pick.item};
+        sub:itemBlurb(pick.slot,pick.item.id), slot:pick.slot, item:pick.item};
     }
   }
   /* the bands sum to 1 already; this is only insurance against the last
      sliver floating point rounding could leave unclaimed */
   const pool=packItemsOf("rare"), pick=pool[Math.floor(Math.random()*pool.length)];
   return {kind:"item", rarity:"rare", label:pick.item.label,
-    sub:KITS[pick.slot].label+" for the kit.", slot:pick.slot, item:pick.item};
+    sub:itemBlurb(pick.slot,pick.item.id), slot:pick.slot, item:pick.item};
 }
 function shopSay(t){ $("shSaid").textContent=t||""; }
 function shopBuild(){
@@ -9086,70 +9136,141 @@ function shopPictures(){
   }
 }
 /* ---- opening a pack ----
-   A plain top-down car, because what it looks like from above is not the
-   point of it: the point is the mark it leaves, which is the one thing on
-   screen already the colour of what is about to be revealed. Nothing about
-   the roll depends on the drawing, and nothing about the drawing depends on
-   three.js — it is flat, fast, and cannot stall on a slow phone the way a
-   lit scene might. */
-function drawTopDownCar(c,x,y,l,w){
-  c.save(); c.translate(x,y);
-  c.fillStyle="#171B1D"; c.fillRect(-l*0.5,-w*0.62,l,w*1.24);           // shadow footprint
-  c.fillStyle="#DCE6E3";
-  c.beginPath();
-  c.moveTo(l*0.50,0);
-  c.lineTo(l*0.34,-w*0.46); c.lineTo(-l*0.30,-w*0.46);
-  c.lineTo(-l*0.50,-w*0.30); c.lineTo(-l*0.50,w*0.30);
-  c.lineTo(-l*0.30,w*0.46); c.lineTo(l*0.34,w*0.46);
-  c.closePath(); c.fill();
-  c.fillStyle="#0E1418";                                                // screen
-  c.fillRect(-l*0.06,-w*0.34,l*0.30,w*0.68);
-  c.fillStyle="#15191B";
-  for(const wx of [-l*0.30,l*0.22]) for(const wy of [-w*0.56,w*0.56-w*0.16])
-    c.fillRect(wx,wy,l*0.20,w*0.16);                                    // four wheels
-  c.restore();
+   Always the GT crossing, whatever the pack rolled — a genuine top-down
+   shot of it, rendered once from directly above with an orthographic
+   camera and kept as a plain image from then on. Nothing about the roll
+   depends on this drawing and nothing about the drawing depends on three.js
+   after that first render: the animation itself is flat 2D, so it cannot
+   stall on a slow phone the way a lit scene redrawn sixty times a second
+   might. */
+let GT_TOPDOWN=null;
+function gtTopDownSprite(){
+  if(GT_TOPDOWN)return GT_TOPDOWN;
+  if(!garRenderer())return null;
+  const car=buildCar("#DCE6E3","gt",null);
+  GAR.scene.add(car);
+  const box=new THREE.Box3().setFromObject(car), size=new THREE.Vector3(), c=new THREE.Vector3();
+  box.getSize(size); box.getCenter(c);
+  const span=Math.max(size.x,size.z)*1.18;
+  const cam=new THREE.OrthographicCamera(-span/2,span/2,span/2,-span/2,0.1,50);
+  /* looking straight down, "up" in the picture has to be picked by hand —
+     the car's nose (+z) is what ends up pointing to the top of the image */
+  cam.position.set(c.x,c.y+size.y*4,c.z); cam.up.set(0,0,-1); cam.lookAt(c.x,c.y,c.z);
+  const before=new THREE.Vector2(); GAR.renderer.getSize(before);
+  GAR.renderer.setSize(512,512,false);
+  GAR.renderer.render(GAR.scene,cam);
+  const cv=document.createElement("canvas"); cv.width=512; cv.height=512;
+  cv.getContext("2d").drawImage(GAR.renderer.domElement,0,0);
+  GAR.renderer.setSize(before.x,before.y,false);
+  GAR.scene.remove(car); disposeTree(car);
+  GT_TOPDOWN=cv;
+  return cv;
 }
 let PACK_BUSY=false;
 /* Full screen and close in, so the pass and the mark it leaves are the
    whole of what you are looking at rather than a strip of it. The car's
    own size is a fraction of the canvas height rather than a fixed pixel
    count, so a phone held up close gets exactly as tight a shot as a
-   monitor across the room. */
+   monitor across the room.
+
+   It crosses corner to corner, bottom right to top left, sideways on: a
+   drift, not a drive-by. The marks it leaves are two lines away from
+   straight — a slow weave built into the path itself — because a car
+   sliding does not draw a ruler-straight pair of stripes, and a mark that
+   perfect would have said "line" before it said "skid". */
 function packRoll(reward){
   const ov=$("packOverlay"), cv=$("packCanvas"), card=$("packCard");
   ov.hidden=false; card.hidden=true; PACK_BUSY=true;
+  const sprite=gtTopDownSprite();
   const dpr=Math.min(2,window.devicePixelRatio||1);
   const W=cv.width=Math.round(innerWidth*dpr), H=cv.height=Math.round(innerHeight*dpr);
-  const ctx=cv.getContext("2d"), y=H*0.56;
+  const ctx=cv.getContext("2d");
   const R=RARITY[reward.rarity];
-  const l=H*0.46, w=H*0.20;                       // close in: the car fills most of the height
-  const startX=-l*0.6, endX=W+l*0.6, dur=1900;
+  const size=H*0.50;                              // close in: the car fills most of the height
+  /* bottom right to top left, well past each corner so it is never seen
+     appearing or vanishing */
+  const sx=W*1.12, sy=H*1.12, ex=-W*0.12, ey=-H*0.12;
+  const dx=ex-sx, dy=ey-sy, dist=Math.hypot(dx,dy);
+  const ux=dx/dist, uy=dy/dist;             // unit vector along the run
+  const px=-uy, py=ux;                      // unit vector across it
+  const travel=Math.atan2(uy,ux);
+  const drift=0.56;                         // radians the car sits sideways off its own path
+  const trackW=H*0.052, wobAmp=H*0.075, dur=3200;
   let t0=null;
   function frame(ts){
     if(!t0)t0=ts;
-    const p=Math.min(1,(ts-t0)/dur), ease=1-Math.pow(1-p,2);
-    const x=startX+(endX-startX)*ease;
+    const raw=Math.min(1,(ts-t0)/dur), p=1-Math.pow(1-raw,2);
     ctx.clearRect(0,0,W,H);
-    ctx.strokeStyle=R.colour; ctx.lineWidth=Math.max(4,H*0.016); ctx.globalAlpha=0.85; ctx.lineCap="round";
-    for(const dy of [-w*0.30,w*0.30]){
+    ctx.strokeStyle=R.colour; ctx.lineWidth=Math.max(10,H*0.034); ctx.globalAlpha=0.82;
+    ctx.lineCap="round"; ctx.lineJoin="round";
+    for(const side of [-1,1]){
+      const N=Math.max(2,Math.round(48*p));
       ctx.beginPath();
-      ctx.moveTo(startX+l*0.15,y+dy);
-      ctx.lineTo(x-l*0.42,y+dy);
+      for(let i=0;i<=N;i++){
+        const t=(i/N)*p;
+        const bx=sx+dx*t, by=sy+dy*t;
+        const ramp=Math.min(1,t*10);
+        const wob=Math.sin(t*9.5+1.3)*wobAmp*ramp;
+        const off=trackW*side+wob;
+        const x=bx+px*off, y=by+py*off;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
       ctx.stroke();
     }
     ctx.globalAlpha=1;
-    drawTopDownCar(ctx,x,y,l,w);
-    if(p<1) requestAnimationFrame(frame);
-    else setTimeout(()=>packReveal(reward),250);
+    const cx=sx+dx*p, cy=sy+dy*p;
+    const heading=travel+drift+Math.sin(p*11)*0.10;
+    if(sprite){
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(heading+Math.PI/2);
+      ctx.drawImage(sprite,-size/2,-size/2,size,size);
+      ctx.restore();
+    }
+    if(raw<1) requestAnimationFrame(frame);
+    else setTimeout(()=>packReveal(reward),300);
   }
   requestAnimationFrame(frame);
 }
 /* ---- the reveal card's own picture ----
-   A car gets the same three-quarter shot the garage gives it. A paint or a
-   set of rims goes on whichever car is currently chosen, because "what did
-   I just get" is answered better by seeing it on a car than by a name. The
-   rest — glow, horn, a title — have no body to sit on, so each draws
-   something of its own that still answers to the rarity colour. */
+   A car gets the same three-quarter shot the garage gives it. Paint is a
+   tub of the colour, because that is what a paint is before it is on
+   anything. A set of rims goes on whichever car is currently chosen, since
+   a wheel design reads better worn than named. Glow, horn and a title have
+   no body and no tub to speak of, so each draws something of its own that
+   still answers to the rarity colour. */
+/* a plain colour is exactly its own hex; a tinted finish is its tint; the
+   two shader paints and the two finishes with no hue of their own (they
+   take whatever colour is already on the car) show as a plain steel tub
+   with a sheen across the label instead of pretending to a colour they
+   don't have */
+const paintPreviewColour=item=>item.std||(item.tint!=null?"#"+item.tint.toString(16).padStart(6,"0"):"#B9C2C8");
+function drawPaintTub(ctx,item){
+  const W=360,H=220,cx=W/2,baseY=H*0.80,tubW=132,tubH=108,topY=baseY-tubH;
+  const colour=paintPreviewColour(item);
+  ctx.fillStyle="#0D1415"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(0,0,0,.35)";
+  ctx.beginPath(); ctx.ellipse(cx,baseY+8,tubW*0.52,10,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#CBD2D5";
+  ctx.beginPath();
+  ctx.moveTo(cx-tubW/2,topY+18);
+  ctx.lineTo(cx-tubW*0.44,baseY);
+  ctx.quadraticCurveTo(cx,baseY+10,cx+tubW*0.44,baseY);
+  ctx.lineTo(cx+tubW/2,topY+18);
+  ctx.quadraticCurveTo(cx,topY+34,cx-tubW/2,topY+18);
+  ctx.closePath(); ctx.fill();
+  const bandY=topY+40, bandH=tubH*0.5;
+  ctx.fillStyle=colour; ctx.fillRect(cx-tubW*0.42,bandY,tubW*0.84,bandH);
+  if(item.iri||item.metal>=0.9){
+    const g=ctx.createLinearGradient(cx-tubW*0.42,bandY,cx+tubW*0.42,bandY+bandH);
+    g.addColorStop(0,"rgba(255,255,255,0)"); g.addColorStop(0.5,"rgba(255,255,255,.55)"); g.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=g; ctx.fillRect(cx-tubW*0.42,bandY,tubW*0.84,bandH);
+  }
+  ctx.fillStyle="#9AA1A5";
+  ctx.beginPath(); ctx.ellipse(cx,topY+18,tubW/2,16,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#E3E8EA";
+  ctx.beginPath(); ctx.ellipse(cx,topY+12,tubW*0.44,13,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle="#7B8286"; ctx.lineWidth=7; ctx.lineCap="round";
+  ctx.beginPath(); ctx.arc(cx,topY-6,tubW*0.40,Math.PI*1.08,Math.PI*1.92); ctx.stroke();
+}
 function packBuildImage(reward){
   const box=$("pcImg"); box.innerHTML=""; box.className="pack-img";
   const R=RARITY[reward.rarity];
@@ -9158,10 +9279,14 @@ function packBuildImage(reward){
     try{ renderCarPreview(canvasIn(),reward.carId,ED.opts.color||"#E2482B",null); }catch(e){}
     return;
   }
-  if(reward.slot==="paint"||reward.slot==="rims"){
+  if(reward.slot==="paint"){
+    try{ drawPaintTub(canvasIn().getContext("2d"),reward.item); }catch(e){}
+    return;
+  }
+  if(reward.slot==="rims"){
     const kind=(ED.opts&&ED.opts.car)||"gt";
-    const kit={}; kit[reward.slot]=reward.item;
-    const colour=(reward.slot==="paint"&&reward.item.std)?reward.item.std:((ED.opts&&ED.opts.color)||"#E2482B");
+    const kit={rims:reward.item};
+    const colour=(ED.opts&&ED.opts.color)||"#E2482B";
     try{ renderCarPreview(canvasIn(),kind,colour,kit); }catch(e){}
     return;
   }
