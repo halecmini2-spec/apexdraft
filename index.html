@@ -9016,7 +9016,13 @@ const PACK_ITEM_ODDS=[
 const packCarsOf=rarity=>CAR_MODELS.filter(m=>m.rarity===rarity);
 function packItemsOf(rarity){
   const out=[];
-  for(const slot of KIT_SLOTS) for(const it of KITS[slot].items) if(it.rarity===rarity) out.push({slot,item:it});
+  for(const slot of KIT_SLOTS) for(const it of KITS[slot].items){
+    if(it.rarity!==rarity) continue;
+    /* the six plain colours are on the swatch strip for free, for every
+       driver there is — a pack cannot hand out a find that isn't one */
+    if(slot==="paint"&&it.std) continue;
+    out.push({slot,item:it});
+  }
   return out;
 }
 /* ---- what the card says under the name ----
@@ -9254,34 +9260,53 @@ function packRoll(reward){
    take whatever colour is already on the car) show as a plain steel tub
    with a sheen across the label instead of pretending to a colour they
    don't have */
-const paintPreviewColour=item=>item.std||(item.tint!=null?"#"+item.tint.toString(16).padStart(6,"0"):"#B9C2C8");
+/* candy and matte are finishes with no hue of their own — whatever colour
+   is already on the car, they change the shine of it — so the tub shows
+   the colour each is named for rather than a fallback that would read as
+   no paint at all */
+const PAINT_FALLBACK={candy:"#B01818",matte:"#5B5F45"};
+const paintPreviewColour=item=>item.std||(item.tint!=null?"#"+item.tint.toString(16).padStart(6,"0"):(PAINT_FALLBACK[item.id]||"#B9C2C8"));
+/* The tub open, the lid set down beside it, and the paint itself sitting
+   in the opening — the colour is what's in the tin, not a sticker on it. */
 function drawPaintTub(ctx,item){
-  const W=360,H=220,cx=W/2,baseY=H*0.80,tubW=132,tubH=108,topY=baseY-tubH;
+  const W=360,H=220,cx=W/2-14,baseY=H*0.80,tubW=132,tubH=100,topY=baseY-tubH;
   const colour=paintPreviewColour(item);
   ctx.fillStyle="#0D1415"; ctx.fillRect(0,0,W,H);
   ctx.fillStyle="rgba(0,0,0,.35)";
   ctx.beginPath(); ctx.ellipse(cx,baseY+8,tubW*0.52,10,0,0,Math.PI*2); ctx.fill();
+  /* the body, straight-sided, open at the top */
   ctx.fillStyle="#CBD2D5";
   ctx.beginPath();
-  ctx.moveTo(cx-tubW/2,topY+18);
+  ctx.moveTo(cx-tubW/2,topY+8);
   ctx.lineTo(cx-tubW*0.44,baseY);
   ctx.quadraticCurveTo(cx,baseY+10,cx+tubW*0.44,baseY);
-  ctx.lineTo(cx+tubW/2,topY+18);
-  ctx.quadraticCurveTo(cx,topY+34,cx-tubW/2,topY+18);
+  ctx.lineTo(cx+tubW/2,topY+8);
   ctx.closePath(); ctx.fill();
-  const bandY=topY+40, bandH=tubH*0.5;
-  ctx.fillStyle=colour; ctx.fillRect(cx-tubW*0.42,bandY,tubW*0.84,bandH);
-  if(item.iri||item.metal>=0.9){
-    const g=ctx.createLinearGradient(cx-tubW*0.42,bandY,cx+tubW*0.42,bandY+bandH);
-    g.addColorStop(0,"rgba(255,255,255,0)"); g.addColorStop(0.5,"rgba(255,255,255,.55)"); g.addColorStop(1,"rgba(255,255,255,0)");
-    ctx.fillStyle=g; ctx.fillRect(cx-tubW*0.42,bandY,tubW*0.84,bandH);
-  }
+  /* a shaded flank, for a shape rather than a flat card */
+  ctx.fillStyle="rgba(0,0,0,.09)";
+  ctx.beginPath();
+  ctx.moveTo(cx-tubW/2,topY+8); ctx.lineTo(cx-tubW*0.44,baseY);
+  ctx.lineTo(cx-tubW*0.24,baseY); ctx.lineTo(cx-tubW*0.30,topY+8);
+  ctx.closePath(); ctx.fill();
+  /* the rim, and the paint sitting inside it */
   ctx.fillStyle="#9AA1A5";
-  ctx.beginPath(); ctx.ellipse(cx,topY+18,tubW/2,16,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle="#E3E8EA";
-  ctx.beginPath(); ctx.ellipse(cx,topY+12,tubW*0.44,13,0,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle="#7B8286"; ctx.lineWidth=7; ctx.lineCap="round";
-  ctx.beginPath(); ctx.arc(cx,topY-6,tubW*0.40,Math.PI*1.08,Math.PI*1.92); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(cx,topY+8,tubW/2,15,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=colour;
+  ctx.beginPath(); ctx.ellipse(cx,topY+8,tubW*0.44,12,0,0,Math.PI*2); ctx.fill();
+  if(item.iri||item.metal>=0.9){
+    const g=ctx.createLinearGradient(cx-tubW*0.44,topY-4,cx+tubW*0.44,topY+20);
+    g.addColorStop(0,"rgba(255,255,255,0)"); g.addColorStop(0.5,"rgba(255,255,255,.6)"); g.addColorStop(1,"rgba(255,255,255,0)");
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(cx,topY+8,tubW*0.44,12,0,0,Math.PI*2); ctx.fill();
+  }
+  /* a highlight catching the paint's own surface */
+  ctx.fillStyle="rgba(255,255,255,.30)";
+  ctx.beginPath(); ctx.ellipse(cx-tubW*0.16,topY+4,tubW*0.12,4,-0.2,0,Math.PI*2); ctx.fill();
+  /* the lid, set down beside the tub rather than back on it */
+  ctx.save(); ctx.translate(cx+tubW*0.62,baseY-tubH*0.14); ctx.rotate(-0.12);
+  ctx.fillStyle="rgba(0,0,0,.30)"; ctx.beginPath(); ctx.ellipse(2,10,44,15,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#E3E8EA"; ctx.beginPath(); ctx.ellipse(0,0,44,15,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle="#B7BEC1"; ctx.beginPath(); ctx.ellipse(0,3,44,15,0,0,Math.PI); ctx.fill();
+  ctx.restore();
 }
 function packBuildImage(reward){
   const box=$("pcImg"); box.innerHTML=""; box.className="pack-img";
