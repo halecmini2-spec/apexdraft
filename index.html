@@ -740,21 +740,27 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
   width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);
   color:var(--dim);font-size:18px;line-height:1;cursor:pointer;z-index:1}
 .pack-card{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:1;
-  background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:4px;
+  background:var(--panel2);border:1px solid var(--rar,var(--line));border-radius:4px;
   padding:20px 26px 24px;display:flex;flex-direction:column;align-items:center;gap:6px;
   min-width:220px;max-width:88vw;text-align:center;
   box-shadow:0 0 0 1px var(--rarGlow,transparent),0 24px 60px rgba(0,0,0,.6);
   animation:packPop .32s cubic-bezier(.2,1.4,.4,1)}
 @keyframes packPop{from{transform:translate(-50%,-50%) scale(.7);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+/* Every reward sits in the same box, coloured the same way — a car's
+   picture, a paint's tub, a title's own name, whatever it is — rather than
+   a title being the one thing here that looked like it was worth having. */
 .pack-img{width:min(80vw,300px);aspect-ratio:360/220;border-radius:3px;overflow:hidden;
+  border:2px solid var(--rar,var(--line));
   background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);
-  display:flex;align-items:center;justify-content:center;margin-bottom:6px}
+  display:flex;align-items:center;justify-content:center;margin-bottom:8px}
 .pack-img canvas{width:100%;height:100%;display:block}
-.pack-img-title{background:#0D1415}
-.pack-img-title b{font-size:20px;letter-spacing:.06em;text-transform:uppercase;
-  padding:8px 18px;border:1px solid;border-radius:3px;background:rgba(0,0,0,.3)}
+.pack-img-title b{font-size:22px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
+.pack-tags{display:flex;align-items:center;gap:8px}
 .pack-card em{font-style:normal;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
   font-weight:700;color:var(--rar,var(--faint))}
+.pack-tags i{font-style:normal;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint)}
+.pack-tags i::before{content:"·";margin-right:8px;color:var(--dim)}
 .pack-card b{font-size:19px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
 .pack-card span{font-size:12px;color:var(--dim)}
 .pack-card-btns{margin-top:10px;display:flex;gap:10px}
@@ -1942,7 +1948,7 @@ body.daily .gar-arrow{display:none}
     <canvas id="packCanvas" width="960" height="480"></canvas>
     <div class="pack-card" id="packCard" hidden>
       <div class="pack-img" id="pcImg"></div>
-      <em id="pcRar"></em>
+      <div class="pack-tags"><em id="pcRar"></em><i id="pcCat"></i></div>
       <b id="pcName"></b>
       <span id="pcSub"></span>
       <div class="pack-card-btns">
@@ -9311,9 +9317,10 @@ function packBuildImage(reward){
     for(const r of [18,32,46]){ ctx.beginPath(); ctx.arc(228,110,r,-0.55,0.55); ctx.stroke(); }
     return;
   }
-  /* a title: the badge it would sit in under a name, at full size */
+  /* a title has no picture of its own — the box it sits in, the same box
+     everything else here sits in, is the whole of its picture */
   box.className="pack-img pack-img-title";
-  const b=document.createElement("b"); b.textContent=reward.label; b.style.color=R.colour; b.style.borderColor=R.colour;
+  const b=document.createElement("b"); b.textContent=reward.label;
   box.appendChild(b);
 }
 function packReveal(reward){
@@ -9323,6 +9330,9 @@ function packReveal(reward){
   card.style.setProperty("--rarGlow",R.glow);
   packBuildImage(reward);
   $("pcRar").textContent=R.label;
+  /* what a reward is, in the same word the kit drawer already uses for its
+     slot — a car has no slot of its own, so it is just "Car" */
+  $("pcCat").textContent=reward.kind==="car"?"Car":(KITS[reward.slot]&&KITS[reward.slot].label)||"";
   $("pcName").textContent=reward.label;
   $("pcSub").textContent=reward.sub;
   card.hidden=false;
