@@ -9214,20 +9214,22 @@ function packRoll(reward){
   const px=-uy, py=ux;                      // unit vector across it
   const travel=Math.atan2(uy,ux);
   const drift=0.56;                         // radians the car sits sideways off its own path
-  const trackW=H*0.058, wobAmp=H*0.075;
+  const trackW=H*0.058, wobAmp=H*0.075, w=Math.max(14,H*0.046);
   /* stopped, then away: a hold with the car sitting still, then a launch
      eased in hard from nothing, rather than the whole pass gliding through
      at one even lick */
   const holdMs=550, launchMs=2900, dur=holdMs+launchMs;
-  let t0=null;
+  /* straight off the line, and only sliding sideways once there is real
+     distance under it — a car does not leave a corner already crossed up */
+  const driftRamp=t=>Math.max(0,Math.min(1,(t-0.14)/0.20));
+  let t0=null, smoke=[];
   function trackPath(side,p){
     ctx.beginPath();
     const N=Math.max(2,Math.round(56*p));
     for(let i=0;i<=N;i++){
       const t=(i/N)*p;
       const bx=sx+dx*t, by=sy+dy*t;
-      const ramp=Math.min(1,t*10);
-      const wob=Math.sin(t*9.5+1.3)*wobAmp*ramp;
+      const wob=Math.sin(t*9.5+1.3)*wobAmp*driftRamp(t);
       const off=trackW*side+wob;
       const x=bx+px*off, y=by+py*off;
       if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
@@ -9240,7 +9242,6 @@ function packRoll(reward){
     const p=raw*raw*raw;                    // stood on the line, then floors it
     ctx.clearRect(0,0,W,H);
     ctx.lineCap="round"; ctx.lineJoin="round";
-    const w=Math.max(14,H*0.046);
     for(const side of [-1,1]){
       /* a soft dark halo first, for depth, then the rubber itself, then a
          darker groove down the middle of it — one path stroked three ways
@@ -9257,7 +9258,36 @@ function packRoll(reward){
     /* a small restless shift while it's stopped, so "waiting" doesn't read
        as "frozen", then the same sideways sit as the launch takes hold */
     const idle=el<holdMs?Math.sin(el*0.012)*0.02:0;
-    const heading=travel+drift*Math.min(1,raw*3)+Math.sin(p*11)*0.10+idle;
+    const heading=travel+drift*driftRamp(p)+Math.sin(p*11)*0.10*driftRamp(p)+idle;
+    /* ---- tyre smoke ----
+       Time moves evenly but distance does not — early in the launch the
+       clock has run further than the car has, and that gap is exactly the
+       wheels spinning faster than the car is going. It peaks partway
+       through the launch and is gone by the time the car actually is. */
+    const slip=Math.max(0,raw-p);
+    if(el>=holdMs&&slip>0.02){
+      const fx=Math.cos(heading), fy=Math.sin(heading), sxp=-fy, syp=fx;
+      const rx=cx-fx*size*0.30, ry=cy-fy*size*0.30;
+      for(const wheel of [-1,1]){
+        if(Math.random()>slip*3)continue;
+        smoke.push({
+          x:rx+sxp*size*0.19*wheel+(Math.random()-0.5)*w*0.4,
+          y:ry+syp*size*0.19*wheel+(Math.random()-0.5)*w*0.4,
+          vx:-fx*0.3+(Math.random()-0.5)*0.6, vy:-fy*0.3+(Math.random()-0.5)*0.6,
+          r:w*0.55*(0.7+Math.random()*0.5), life:0.85+Math.random()*0.15,
+          decay:0.016+Math.random()*0.012
+        });
+      }
+    }
+    for(let i=smoke.length-1;i>=0;i--){
+      const s=smoke[i];
+      s.x+=s.vx; s.y+=s.vy; s.vx*=0.97; s.vy*=0.97; s.r+=0.55; s.life-=s.decay;
+      if(s.life<=0){ smoke.splice(i,1); continue; }
+      const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r);
+      const a=s.life*0.32;
+      g.addColorStop(0,"rgba(222,226,224,"+a+")"); g.addColorStop(1,"rgba(222,226,224,0)");
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    }
     if(sprite){
       ctx.save(); ctx.translate(cx,cy); ctx.rotate(heading-Math.PI/2);
       ctx.drawImage(sprite,-size/2,-size/2,size,size);
