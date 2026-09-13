@@ -2248,6 +2248,7 @@ body.daily .gar-arrow{display:none}
         <button class="gar-card test" data-car="bike"><canvas width="360" height="220"></canvas><b>Superbike X</b><span>280+ km/h, 165 kg. Leans. Challenging.</span></button>
         <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 210 kg. Three wheels, very twitchy.</span></button>
         <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span><b class="big">360 km/h</b><i>Far and away the fastest thing here. 1,450 kg, heavy and stable.</i></span></button>
+        <button class="gar-card test" data-car="lmp1"><canvas width="360" height="220"></canvas><b>LMP1 Prototype</b><span>275+ km/h, 875 kg. Built to hold that pace for hours, not one lap.</span></button>
         </div>
         <button class="gar-arrow" id="garNext" aria-label="The car after this one">›</button>
       </div>
@@ -2362,6 +2363,7 @@ body.daily .gar-arrow{display:none}
             <button class="chip test" data-car="bike">Superbike X</button>
             <button class="chip test" data-car="trike">Rocket Trike</button>
             <button class="chip test" data-car="v12">V12 Monster</button>
+            <button class="chip test" data-car="lmp1">LMP1 Prototype</button>
           </div>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
           <!-- A car's own music, made in the browser as it plays. The row
@@ -4355,7 +4357,8 @@ const CAR_MODELS=[
      their own, and the relay checks their laps like any other. */
   {id:"bike",   label:"Superbike X", test:true, rarity:"epic"},
   {id:"trike",  label:"Rocket Trike",test:true, rarity:"epic"},
-  {id:"v12",    label:"V12 Monster", test:true, rarity:"mythic"}
+  {id:"v12",    label:"V12 Monster", test:true, rarity:"mythic"},
+  {id:"lmp1",   label:"LMP1 Prototype", test:true, rarity:"legendary"}
 ];
 const carRarity=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return (m&&RARITY[m.rarity])||null; };
 
@@ -4512,7 +4515,12 @@ const CAR_PERF={
      by the standing hundred, and the handling words decide the rest. */
   bike:   {power:1.30, top:1.22, grip:1.26, turnin:1.86, front:1.46},  // 280+, 2.3 s, challenging
   trike:  {power:1.12, top:1.04, grip:1.08, turnin:2.10, front:1.56},  // 240+, 2.8 s, very twitchy
-  v12:    {power:1.04, top:1.5625, grip:1.24, turnin:1.30, front:1.28} // 360 km/h exactly, heavy but stable
+  v12:    {power:1.04, top:1.5625, grip:1.24, turnin:1.30, front:1.28},// 360 km/h exactly, heavy but stable
+  /* Built for six hours at that pace rather than one lap of it — a
+     prototype rather than an open-wheeler, so the same straight-line
+     figures as the Formula sit on a heavier, less flighty car: still
+     quick into a corner, just not thrown at one. */
+  lmp1:   {power:1.26, top:1.20, grip:1.30, turnin:1.55, front:1.35}   // 275+, matches Formula for speed
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -4556,7 +4564,7 @@ function hitbox(kind){
    compressed scale the kart already sits on: a 165 kg bike is not a
    seventh of a GT to lean on, only a good deal less than one. */
 const CAR_MASS={gt:1.00, formula:0.78, yaris:0.92, kart:0.42,
-                bike:0.46, trike:0.54, v12:1.12};
+                bike:0.46, trike:0.54, v12:1.12, lmp1:0.86};
 const carMass=k=>CAR_MASS[k]||1;
 const openWheel=k=>k==="formula"||k==="kart"||k==="bike"||k==="trike";
 /* the circles of one car, in the world */
@@ -6204,6 +6212,101 @@ function bodyV12(b,M){
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
+/* ---- LMP1 PROTOTYPE: a closed-cockpit endurance racer ----
+   The shape a Le Mans car has to have rather than the one it would
+   choose: an hourglass in plan, pinched to almost nothing over the
+   driver so the air that matters can get to the diffuser, and flared out
+   hard over both axles because the wheels have to be covered and the
+   underbody still has to breathe. Low enough that the roofline sits only
+   a hand's width above the tyres, which is what a car built to run at
+   this speed for six hours looks like rather than one built to look fast
+   standing still.
+   4.65 long, 1.98 across the arches, 1.03 tall, on a 3.00 wheelbase. */
+function bodyLMP1(b,M){
+  const FR=0.335, RR=0.360;
+  const FZ=1.500, RZ=-1.500;
+  const FX=0.800, RX=0.830;
+  const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x121517),roughness:0.50,metalness:0.28});
+  const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0E),roughness:0.82,metalness:0.14});
+
+  const shell=new THREE.Mesh(loft([
+    {z: 2.34,w:0.220,y0:0.055,y1:0.150,n:2.2},   // a needle nose
+    {z: 2.10,w:0.420,y0:0.045,y1:0.220,n:2.6},
+    {z: 1.82,w:0.680,y0:0.045,y1:0.280,n:3.0},   // the front arch starts to flare
+    {z: 1.50,w:0.860,y0:0.050,y1:0.330,n:3.6},   // widest over the front wheels
+    {z: 1.16,w:0.760,y0:0.055,y1:0.360,n:3.6},   // pinched back in behind them
+    {z: 0.70,w:0.560,y0:0.070,y1:0.470,n:3.0},
+    {z: 0.10,w:0.500,y0:0.090,y1:0.540,n:2.8},   // the tub, at its narrowest
+    {z:-0.55,w:0.560,y0:0.090,y1:0.500,n:3.0},   // opening out again over the engine
+    {z:-1.05,w:0.800,y0:0.085,y1:0.420,n:3.6},
+    {z:-1.52,w:0.900,y0:0.090,y1:0.370,n:3.8},   // widest point, over the rear wheels
+    {z:-1.98,w:0.660,y0:0.100,y1:0.300,n:3.0},
+    {z:-2.30,w:0.400,y0:0.120,y1:0.220,n:2.4}    // short and blunt — there is a diffuser to fit
+  ],28),M.paint);
+  shell.castShadow=true; b.add(shell);
+
+  /* the bubble, not a greenhouse — one seat, sunk low, glassed only where
+     a driver's head actually is */
+  const canopy=new THREE.Mesh(loft([
+    {z: 0.62,w:0.260,y0:0.470,y1:0.530,n:3.0},
+    {z: 0.28,w:0.320,y0:0.500,y1:0.720,n:3.4},
+    {z:-0.10,w:0.300,y0:0.520,y1:0.680,n:3.2},
+    {z:-0.42,w:0.230,y0:0.500,y1:0.560,n:2.6}
+  ],18),M.glass);
+  b.add(canopy);
+
+  addFenders(b,M,FZ,FR,0.360,FX,0.230);
+  addFenders(b,M,RZ,RR,0.400,RX,0.260);
+
+  /* the duct along each flank that feeds the rear brakes and the diffuser */
+  for(const s of [-1,1]){
+    const duct=new THREE.Mesh(loft([
+      {z: 0.55,w:0.032,y0:0.220,y1:0.400,n:3.0},
+      {z: 0.05,w:0.046,y0:0.210,y1:0.440,n:3.4},
+      {z:-0.55,w:0.040,y0:0.210,y1:0.420,n:3.2},
+      {z:-1.00,w:0.026,y0:0.220,y1:0.360,n:2.8}
+    ],12),meshM);
+    duct.position.x=s*0.560; b.add(duct);
+  }
+
+  /* front: a splitter blade and a pair of canards, nothing more — there is
+     no grille to speak of on something with the radiators in its flanks */
+  const spl=new THREE.Mesh(lens(1.020,0.360,0.024),blackM);
+  spl.position.set(0,0.050,2.150); spl.rotation.x=Math.PI/2; b.add(spl);
+  for(const s of [-1,1]){
+    const cn=new THREE.Mesh(lens(0.220,0.110,0.014),blackM);
+    cn.position.set(s*0.440,0.170,2.140); cn.rotation.set(0.10,s*0.30,0); b.add(cn);
+  }
+  const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
+    emissiveIntensity:0.95,roughness:0.18,metalness:0.10});
+  for(const s of [-1,1]){
+    const l=new THREE.Mesh(lens(0.260,0.040,0.020),lampM);
+    l.position.set(s*0.300,0.230,2.310); l.rotation.set(0,s*0.12,0); b.add(l);
+  }
+
+  /* rear: a diffuser that is most of the underbody, and a wing set low
+     and wide rather than tall — there is no rule against drag here, and
+     every rule against not having enough downforce at the far end of the
+     straight */
+  const dif=new THREE.Mesh(lens(0.860,0.360,0.024),blackM);
+  dif.position.set(0,0.130,-2.150); dif.rotation.x=Math.PI/2-0.24; b.add(dif);
+  const wing=new THREE.Mesh(aerofoil(1.680,0.380,0.060),blackM);
+  wing.position.set(0,0.760,-2.020); wing.rotation.x=-0.14;
+  wing.castShadow=true; b.add(wing);
+  for(const s of [-1,1]){
+    const ep=new THREE.Mesh(panel([[0.20,-0.10],[0.20,0.11],[-0.18,0.12],[-0.18,-0.08]],0.018),M.carbon);
+    ep.position.set(s*0.820,0.775,-2.020); b.add(ep);
+    const py=new THREE.Mesh(new THREE.BoxGeometry(0.040,0.260,0.140),blackM);
+    py.position.set(s*0.360,0.640,-1.980); b.add(py);
+  }
+
+  const tailMats=addLamps(b,null,{w:0.440,h:0.045,y:0.330,z:-2.280,x:[-0.380,0.380]});
+  return {tailMats,
+    wheels:{race:true,
+            r:FR,tw:0.290, rR:RR,twR:0.360,
+            pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
+}
+
 function buildCar(bodyColor,kind,kit){
   const g=new THREE.Group();
   const b=new THREE.Group();
@@ -6217,7 +6320,8 @@ function buildCar(bodyColor,kind,kit){
             :kind==="kart"   ?bodyKart
             :kind==="bike"   ?bodySuperbike
             :kind==="trike"  ?bodyTrike
-            :kind==="v12"    ?bodyV12:bodyGT;
+            :kind==="v12"    ?bodyV12
+            :kind==="lmp1"   ?bodyLMP1:bodyGT;
   const spec=make(b,M);
   g.userData.body=b;
   g.userData.wheels=buildWheels(g,M,spec.wheels);
@@ -7423,6 +7527,7 @@ const ENGINE={
   bike:   {pitch:1.38, sub:0.08, hi:0.42, cut:1.34, gears:6}, // an inline four, screaming
   trike:  {pitch:0.70, sub:0.62, hi:0.14, cut:1.10, gears:4}, // a blown V8, all lump
   v12:    {pitch:1.52, sub:0.03, hi:0.55, cut:1.50, gears:7}, // even, high and smooth
+  lmp1:   {pitch:1.10, sub:0.24, hi:0.26, cut:1.15, gears:7}, // a turbo hybrid, closed in by the bodywork
 };
 const engineVoice=k=>ENGINE[k]||ENGINE.gt;
 
@@ -8980,7 +9085,8 @@ function closeScreens(){
 const SHOP_CARS=[
   {id:"bike", price:0.50, blurb:"280+ km/h, 165 kg. Leans into the corner with the rider. Unforgiving."},
   {id:"trike",price:0.50, blurb:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back."},
-  {id:"v12",  price:1.50, blurb:"360 km/h — far and away the fastest thing here. 1,450 kg of it."}
+  {id:"v12",  price:1.50, blurb:"360 km/h — far and away the fastest thing here. 1,450 kg of it."},
+  {id:"lmp1", price:1.00, blurb:"275+ km/h, 875 kg. Built to hold that pace for hours, not one lap."}
 ];
 const SHOP_PACKS=[
   {name:"Starter pack",  blurb:"A car, a handful of coins and a colour or two."},
@@ -9013,7 +9119,11 @@ const PACK_ITEM_ODDS=[
   {rarity:"epic",     chance:0.150},
   {rarity:"rare",     chance:0.781}
 ];
-const packCarsOf=rarity=>CAR_MODELS.filter(m=>m.rarity===rarity);
+/* gt, formula, yaris and kart are free to everyone, all the time, the same
+   as the plain colours are — a pack cannot hand out a find that isn't
+   one, so only the cars behind the same gate the rest of what's tried out
+   sits behind are ever in this pool */
+const packCarsOf=rarity=>CAR_MODELS.filter(m=>m.rarity===rarity&&m.test);
 function packItemsOf(rarity){
   const out=[];
   for(const slot of KIT_SLOTS) for(const it of KITS[slot].items){
@@ -9039,7 +9149,8 @@ const CAR_BLURB={
   kart:"No top end, enormous grip.",
   bike:"280+ km/h, 165 kg. Leans into the corner with the rider. Unforgiving.",
   trike:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back.",
-  v12:"360 km/h — far and away the fastest thing here. 1,450 kg of it."
+  v12:"360 km/h — far and away the fastest thing here. 1,450 kg of it.",
+  lmp1:"275+ km/h, 875 kg. Built to hold that pace for hours, not one lap."
 };
 const ITEM_BLURB={
   "title:trackday":"For the ones who turn up on a Tuesday and mean it.",
@@ -9076,19 +9187,12 @@ const ITEM_BLURB={
   "horn:train":"Four low notes — the kind that means get out of the way."
 };
 const itemBlurb=(slot,id)=>ITEM_BLURB[slot+":"+id]||"";
-/* One roll of the wheel: a single number walked down through the cars
-   first and then the rest, so the bands never overlap and nothing is
-   asked twice. */
-function rollPack(){
+/* the item half of the wheel, on its own so a car rarity with nothing
+   behind its gate yet can hand this a fresh roll of its own rather than
+   reusing a number that already answered a different question */
+function rollItem(){
   const r=Math.random();
   let acc=0;
-  for(const o of PACK_CAR_ODDS){
-    acc+=o.chance;
-    if(r<acc){
-      const pool=packCarsOf(o.rarity), m=pool[Math.floor(Math.random()*pool.length)];
-      return {kind:"car", rarity:o.rarity, label:m.label, sub:CAR_BLURB[m.id]||"A car for the garage.", carId:m.id};
-    }
-  }
   for(const o of PACK_ITEM_ODDS){
     acc+=o.chance;
     if(r<acc){
@@ -9102,6 +9206,27 @@ function rollPack(){
   const pool=packItemsOf("rare"), pick=pool[Math.floor(Math.random()*pool.length)];
   return {kind:"item", rarity:"rare", label:pick.item.label,
     sub:itemBlurb(pick.slot,pick.item.id), slot:pick.slot, item:pick.item};
+}
+/* One roll of the wheel: a single number walked down through the cars
+   first and then the rest, so the bands never overlap and nothing is
+   asked twice. */
+function rollPack(){
+  const r=Math.random();
+  let acc=0;
+  for(const o of PACK_CAR_ODDS){
+    acc+=o.chance;
+    if(r<acc){
+      const pool=packCarsOf(o.rarity);
+      /* nothing behind that gate yet — an ordinary find instead of
+         reaching for an index that isn't there. A fresh roll, not the
+         rest of this one, or a rarity with no car in it would always
+         land on whatever the item wheel's own first band happens to be */
+      if(!pool.length) return rollItem();
+      const m=pool[Math.floor(Math.random()*pool.length)];
+      return {kind:"car", rarity:o.rarity, label:m.label, sub:CAR_BLURB[m.id]||"A car for the garage.", carId:m.id};
+    }
+  }
+  return rollItem();
 }
 function shopSay(t){ $("shSaid").textContent=t||""; }
 function shopBuild(){
