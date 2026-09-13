@@ -734,7 +734,11 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
    canvas's own height, so the pass reads as a close, fast thing rather
    than a strip cut out of the middle of the screen. */
 .pack-overlay{position:fixed;inset:0;z-index:100}
-.pack-overlay canvas{position:fixed;inset:0;width:100%;height:100%;display:block;
+/* the flythrough canvas only — a descendant selector here would just as
+   happily catch the reveal card's own canvas (a paint tub, a car's
+   picture) nested inside it, fixing that one to the viewport too and
+   sitting it in front of every plain-text sibling in the card */
+#packCanvas{position:fixed;inset:0;width:100%;height:100%;display:block;
   background:radial-gradient(ellipse at 50% 58%,#182022 0%,#070B0C 78%)}
 .pack-x{position:fixed;top:calc(14px + var(--sat));right:calc(16px + var(--sar));
   width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);
