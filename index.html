@@ -9612,16 +9612,20 @@ function packSimulate(n){
   $("shPackTally").textContent=parts.join("  ·  ");
 }
 /* The door on the home page. Open to everyone now — packs and coins are
-   still behind the same gate as the rest of what's being tried out, but a
-   car is a real thing to buy for anybody who opens this. */
+   still behind the same gate as the rest of what's being tried out — real
+   money is wired up behind it now, but not turned on for anybody else
+   until it's actually been paid through once. */
 function shopUI(){
   const card=$("hmShop"); if(!card)return;
-  card.classList.remove("grey"); card.classList.add("gold");
-  card.querySelector("span").textContent=isTester()
+  const on=isTester();
+  card.classList.toggle("grey",!on);
+  card.classList.toggle("gold",on);
+  card.querySelector("span").textContent=on
     ? "Cars, packs and coins. Being built — have a look."
-    : "Cars, for real money now.";
+    : "Coming soon.";
 }
 function showShop(on){
+  if(on&&!isTester())return;
   if(on){ shopBuild(); }
   $("shop").hidden=!on; baseShow(!on);
   document.body.classList.toggle("shopping",on);
@@ -9658,7 +9662,10 @@ $("hmDraw").addEventListener("click",goDraw);
 $("hmMulti").addEventListener("click",goMulti);
 $("hmDaily").addEventListener("click",goDaily);
 $("hmShop").addEventListener("click",()=>{
-  closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true);
+  if(isTester()){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true); return; }
+  const b=$("hmShop").querySelector("span");
+  b.textContent="Coming soon — nothing to buy yet.";
+  setTimeout(()=>{ b.textContent="Coming soon."; },1800);
 });
 $("shBack").addEventListener("click",goHome);
 $("packX").addEventListener("click",packOverlayClose);
