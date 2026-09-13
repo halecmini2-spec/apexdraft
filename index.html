@@ -9154,7 +9154,9 @@ function gtTopDownSprite(){
   const span=Math.max(size.x,size.z)*1.18;
   const cam=new THREE.OrthographicCamera(-span/2,span/2,span/2,-span/2,0.1,50);
   /* looking straight down, "up" in the picture has to be picked by hand —
-     the car's nose (+z) is what ends up pointing to the top of the image */
+     which edge of the square that puts the nose on is fixed for this one
+     camera, and the animation's own rotation is what points it the right
+     way once it's moving */
   cam.position.set(c.x,c.y+size.y*4,c.z); cam.up.set(0,0,-1); cam.lookAt(c.x,c.y,c.z);
   const before=new THREE.Vector2(); GAR.renderer.getSize(before);
   GAR.renderer.setSize(512,512,false);
@@ -9186,7 +9188,7 @@ function packRoll(reward){
   const W=cv.width=Math.round(innerWidth*dpr), H=cv.height=Math.round(innerHeight*dpr);
   const ctx=cv.getContext("2d");
   const R=RARITY[reward.rarity];
-  const size=H*0.50;                              // close in: the car fills most of the height
+  const size=H*0.74;                              // close in: the car fills most of the height
   /* bottom right to top left, well past each corner so it is never seen
      appearing or vanishing */
   const sx=W*1.12, sy=H*1.12, ex=-W*0.12, ey=-H*0.12;
@@ -9221,7 +9223,7 @@ function packRoll(reward){
     const cx=sx+dx*p, cy=sy+dy*p;
     const heading=travel+drift+Math.sin(p*11)*0.10;
     if(sprite){
-      ctx.save(); ctx.translate(cx,cy); ctx.rotate(heading+Math.PI/2);
+      ctx.save(); ctx.translate(cx,cy); ctx.rotate(heading-Math.PI/2);
       ctx.drawImage(sprite,-size/2,-size/2,size,size);
       ctx.restore();
     }
