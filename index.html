@@ -6237,77 +6237,136 @@ function bodyLMP1(b,M){
   const FZ=1.500, RZ=-1.500;
   const FX=0.800, RX=0.830;
   const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x121517),roughness:0.50,metalness:0.28});
-  const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0E),roughness:0.82,metalness:0.14});
+  const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x06080A),roughness:0.80,metalness:0.20});
+  const armM  =new THREE.MeshStandardMaterial({color:SRGB(0x1B2023),roughness:0.42,metalness:0.55});
 
+  /* the hourglass, pushed further than the first go at it — the waist
+     pinched in tighter and both flares pushed out harder, which is the
+     one line that says "endurance prototype" before anything else does */
   const shell=new THREE.Mesh(loft([
-    {z: 2.34,w:0.220,y0:0.055,y1:0.150,n:2.2},   // a needle nose
-    {z: 2.10,w:0.420,y0:0.045,y1:0.220,n:2.6},
-    {z: 1.82,w:0.680,y0:0.045,y1:0.280,n:3.0},   // the front arch starts to flare
-    {z: 1.50,w:0.860,y0:0.050,y1:0.330,n:3.6},   // widest over the front wheels
-    {z: 1.16,w:0.760,y0:0.055,y1:0.360,n:3.6},   // pinched back in behind them
-    {z: 0.70,w:0.560,y0:0.070,y1:0.470,n:3.0},
-    {z: 0.10,w:0.500,y0:0.090,y1:0.540,n:2.8},   // the tub, at its narrowest
-    {z:-0.55,w:0.560,y0:0.090,y1:0.500,n:3.0},   // opening out again over the engine
-    {z:-1.05,w:0.800,y0:0.085,y1:0.420,n:3.6},
-    {z:-1.52,w:0.900,y0:0.090,y1:0.370,n:3.8},   // widest point, over the rear wheels
-    {z:-1.98,w:0.660,y0:0.100,y1:0.300,n:3.0},
+    {z: 2.36,w:0.200,y0:0.055,y1:0.145,n:2.2},   // a needle nose
+    {z: 2.14,w:0.400,y0:0.045,y1:0.215,n:2.6},
+    {z: 1.86,w:0.700,y0:0.045,y1:0.280,n:3.0},   // the front arch starts to flare
+    {z: 1.50,w:0.930,y0:0.050,y1:0.335,n:3.8},   // widest over the front wheels
+    {z: 1.14,w:0.780,y0:0.055,y1:0.370,n:3.8},   // pinched back in behind them
+    {z: 0.68,w:0.520,y0:0.070,y1:0.470,n:3.0},
+    {z: 0.08,w:0.460,y0:0.090,y1:0.560,n:2.8},   // the tub, at its narrowest
+    {z:-0.55,w:0.520,y0:0.090,y1:0.520,n:3.0},   // opening out again over the engine
+    {z:-1.05,w:0.820,y0:0.085,y1:0.430,n:3.8},
+    {z:-1.54,w:0.960,y0:0.090,y1:0.375,n:4.0},   // widest point, over the rear wheels
+    {z:-1.98,w:0.680,y0:0.100,y1:0.300,n:3.0},
     {z:-2.30,w:0.400,y0:0.120,y1:0.220,n:2.4}    // short and blunt — there is a diffuser to fit
   ],28),M.paint);
   shell.castShadow=true; b.add(shell);
 
   /* the bubble, not a greenhouse — one seat, sunk low, glassed only where
-     a driver's head actually is */
+     a driver's head actually is, and faired into a spine running back to
+     the engine intake rather than stopping dead behind the driver */
   const canopy=new THREE.Mesh(loft([
-    {z: 0.62,w:0.260,y0:0.470,y1:0.530,n:3.0},
-    {z: 0.28,w:0.320,y0:0.500,y1:0.720,n:3.4},
-    {z:-0.10,w:0.300,y0:0.520,y1:0.680,n:3.2},
-    {z:-0.42,w:0.230,y0:0.500,y1:0.560,n:2.6}
+    {z: 0.66,w:0.240,y0:0.460,y1:0.520,n:3.0},
+    {z: 0.30,w:0.310,y0:0.495,y1:0.730,n:3.4},
+    {z:-0.06,w:0.290,y0:0.515,y1:0.690,n:3.2},
+    {z:-0.36,w:0.220,y0:0.500,y1:0.570,n:2.6}
   ],18),M.glass);
   b.add(canopy);
+  const spine=new THREE.Mesh(loft([
+    {z:-0.30,w:0.110,y0:0.560,y1:0.640,n:3.0},   // the intake snorkel behind the driver's head
+    {z:-0.70,w:0.130,y0:0.520,y1:0.610,n:3.4},
+    {z:-1.20,w:0.110,y0:0.480,y1:0.560,n:3.0},
+    {z:-1.55,w:0.080,y0:0.440,y1:0.500,n:2.6}
+  ],14),M.paint);
+  b.add(spine);
 
   addFenders(b,M,FZ,FR,0.360,FX,0.230);
   addFenders(b,M,RZ,RR,0.400,RX,0.260);
 
-  /* the duct along each flank that feeds the rear brakes and the diffuser */
+  /* the duct along each flank, cut in rather than laid on — a lip standing
+     proud of the bodywork, a dark mouth sunk behind it */
   for(const s of [-1,1]){
+    const lip=new THREE.Mesh(loft([
+      {z: 0.60,w:0.052,y0:0.190,y1:0.430,n:3.2},
+      {z: 0.05,w:0.072,y0:0.175,y1:0.470,n:3.8},
+      {z:-0.55,w:0.062,y0:0.175,y1:0.445,n:3.4},
+      {z:-1.02,w:0.038,y0:0.190,y1:0.380,n:2.8}
+    ],12),M.paint);
+    lip.position.x=s*0.560; b.add(lip);
     const duct=new THREE.Mesh(loft([
-      {z: 0.55,w:0.032,y0:0.220,y1:0.400,n:3.0},
-      {z: 0.05,w:0.046,y0:0.210,y1:0.440,n:3.4},
-      {z:-0.55,w:0.040,y0:0.210,y1:0.420,n:3.2},
-      {z:-1.00,w:0.026,y0:0.220,y1:0.360,n:2.8}
+      {z: 0.52,w:0.030,y0:0.210,y1:0.400,n:3.0},
+      {z: 0.02,w:0.044,y0:0.198,y1:0.438,n:3.4},
+      {z:-0.52,w:0.036,y0:0.198,y1:0.412,n:3.2},
+      {z:-0.98,w:0.022,y0:0.210,y1:0.352,n:2.6}
     ],12),meshM);
-    duct.position.x=s*0.560; b.add(duct);
+    duct.position.x=s*0.575; b.add(duct);
   }
 
-  /* front: a splitter blade and a pair of canards, nothing more — there is
-     no grille to speak of on something with the radiators in its flanks */
-  const spl=new THREE.Mesh(lens(1.020,0.360,0.024),blackM);
-  spl.position.set(0,0.050,2.150); spl.rotation.x=Math.PI/2; b.add(spl);
+  /* front: a splitter, turning vanes stacked under the nose, and a canard
+     on each corner — the assembly a Le Mans nose actually carries rather
+     than a blade on its own */
+  const spl=new THREE.Mesh(lens(1.080,0.380,0.024),blackM);
+  spl.position.set(0,0.048,2.170); spl.rotation.x=Math.PI/2; b.add(spl);
   for(const s of [-1,1]){
-    const cn=new THREE.Mesh(lens(0.220,0.110,0.014),blackM);
-    cn.position.set(s*0.440,0.170,2.140); cn.rotation.set(0.10,s*0.30,0); b.add(cn);
+    const cn=new THREE.Mesh(lens(0.260,0.130,0.014),blackM);
+    cn.position.set(s*0.460,0.185,2.150); cn.rotation.set(0.10,s*0.32,0); b.add(cn);
+    const fin=new THREE.Mesh(panel([[0,-0.06],[0.30,-0.02],[0.30,0.08],[0,0.10]],0.012),blackM);
+    fin.position.set(s*0.640,0.130,1.980); fin.rotation.y=s*0.5; b.add(fin);
+    for(const yy of [0.095,0.140]){
+      const vane=new THREE.Mesh(new THREE.BoxGeometry(0.220,0.010,0.260),blackM);
+      vane.position.set(s*0.300,yy,2.080); b.add(vane);
+    }
   }
+  /* a thin wraparound signature rather than two separate lamps — the light
+     itself, and a dark surround it sits inside the way a real lens does */
   const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
-    emissiveIntensity:0.95,roughness:0.18,metalness:0.10});
+    emissiveIntensity:1.05,roughness:0.16,metalness:0.10});
+  const lampSurroundM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.5});
   for(const s of [-1,1]){
-    const l=new THREE.Mesh(lens(0.260,0.040,0.020),lampM);
-    l.position.set(s*0.300,0.230,2.310); l.rotation.set(0,s*0.12,0); b.add(l);
+    const sur=new THREE.Mesh(lens(0.340,0.075,0.024),lampSurroundM);
+    sur.position.set(s*0.330,0.235,2.315); sur.rotation.set(0,s*0.16,s*0.05); b.add(sur);
+    const l=new THREE.Mesh(lens(0.280,0.038,0.020),lampM);
+    l.position.set(s*0.330,0.238,2.328); l.rotation.set(0,s*0.16,s*0.05); b.add(l);
   }
 
-  /* rear: a diffuser that is most of the underbody, and a wing set low
-     and wide rather than tall — there is no rule against drag here, and
-     every rule against not having enough downforce at the far end of the
-     straight */
-  const dif=new THREE.Mesh(lens(0.860,0.360,0.024),blackM);
-  dif.position.set(0,0.130,-2.150); dif.rotation.x=Math.PI/2-0.24; b.add(dif);
-  const wing=new THREE.Mesh(aerofoil(1.680,0.380,0.060),blackM);
-  wing.position.set(0,0.760,-2.020); wing.rotation.x=-0.14;
+  /* rear deck: louvres over the engine, because six hours of it needs the
+     heat out, and the diffuser and wing that end the car */
+  const k=trimKit();
+  for(let i=0;i<4;i++) k.box(0.520,0.028,0.075,0,0.485+i*0.010,-0.90-i*0.13,0x0A0C0E,-0.10);
+  /* pushrod suspension, front and rear — the wishbones a Formula shows in
+     the open, faired in here but still worth a line each */
+  for(const sx of [-1,1]){
+    k.box(0.340,0.032,0.045,sx*0.560,0.360,FZ+0.05,0x171B1E);
+    k.box(0.340,0.032,0.045,sx*0.560,0.300,FZ-0.32,0x171B1E);
+    k.box(0.340,0.032,0.045,sx*0.580,0.340,RZ+0.32,0x171B1E);
+    k.box(0.340,0.032,0.045,sx*0.580,0.280,RZ-0.05,0x171B1E);
+  }
+  b.add(k.mesh());
+  /* mirrors, on stalks rather than the flanks — there is nowhere else to
+     hang them with the ducts occupying the sides. Built apart from the
+     trim kit, whose boxes only ever tilt about the car's own width: a
+     stalk standing upright needs its length in the other axis entirely. */
+  const mirrorM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.4});
+  for(const sx of [-1,1]){
+    const stalk=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.20,8),blackM);
+    stalk.position.set(sx*0.500,0.500,0.58); b.add(stalk);
+    const head=new THREE.Mesh(new THREE.BoxGeometry(0.130,0.075,0.045),mirrorM);
+    head.position.set(sx*0.560,0.600,0.60); head.rotation.y=sx*0.30; b.add(head);
+  }
+
+  const dif=new THREE.Mesh(lens(0.920,0.380,0.024),blackM);
+  dif.position.set(0,0.128,-2.160); dif.rotation.x=Math.PI/2-0.24; b.add(dif);
+  for(const s of [-2,-1,0,1,2]){
+    const strake=new THREE.Mesh(new THREE.BoxGeometry(0.018,0.180,0.360),blackM);
+    strake.position.set(s*0.170,0.220,-2.180); strake.rotation.x=-0.24; b.add(strake);
+  }
+  /* the wing itself, low and wide, carried on a swan-neck: the arm meets
+     it from above and curves down to the deck, so nothing hangs beneath
+     the aerofoil to disturb the air the endplates are shaping */
+  const wing=new THREE.Mesh(aerofoil(1.720,0.400,0.062),blackM);
+  wing.position.set(0,0.860,-2.030); wing.rotation.x=-0.13;
   wing.castShadow=true; b.add(wing);
   for(const s of [-1,1]){
-    const ep=new THREE.Mesh(panel([[0.20,-0.10],[0.20,0.11],[-0.18,0.12],[-0.18,-0.08]],0.018),M.carbon);
-    ep.position.set(s*0.820,0.775,-2.020); b.add(ep);
-    const py=new THREE.Mesh(new THREE.BoxGeometry(0.040,0.260,0.140),blackM);
-    py.position.set(s*0.360,0.640,-1.980); b.add(py);
+    const ep=new THREE.Mesh(panel([[0.20,-0.11],[0.20,0.12],[-0.18,0.13],[-0.18,-0.09]],0.018),M.carbon);
+    ep.position.set(s*0.840,0.875,-2.030); b.add(ep);
+    tubeTo(b,[s*0.620,0.860,-2.070],[s*0.460,0.620,-1.760],0.024,armM,8);
   }
 
   const tailMats=addLamps(b,null,{w:0.440,h:0.045,y:0.330,z:-2.280,x:[-0.380,0.380]});
