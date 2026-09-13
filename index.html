@@ -799,6 +799,11 @@ body.daily .rail-scroll .grp:not(.grp-daily){opacity:.45;pointer-events:none}
 body.aiok .gar-card.test{display:flex}
 body.aiok .chips .chip.test{display:inline-flex}
 .gar-card.test.today{display:flex}
+/* a car bought from the shop shows for the account that bought it, whether
+   or not it's cosmo38 — this is per car, unlike aiok, which is all of them
+   or none */
+.gar-card.test.owned{display:flex}
+.chips .chip.test.owned{display:inline-flex}
 .chips .chip.test.today{display:inline-flex}
 .grp-daily .chips{margin-top:8px}
 #aboutScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
@@ -1916,30 +1921,32 @@ body.daily .gar-arrow{display:none}
     </div>
   </section>
 
-  <!-- The shop. Shown to the one account that is trying it out; for
-       everybody else the door on the home page still says coming soon and
-       still does nothing, which is exactly what it did before. -->
+  <!-- The shop. Cars are open to everyone and take real payment; packs and
+       coins stay behind the same gate the rest of what's being tried out
+       sits behind, so only that one account ever sees those two sections. -->
   <section id="shop" class="screen" hidden>
     <div class="tk-wrap">
       <div class="tk-head">
         <div>
           <h1 class="auth-brand">The <span>shop</span></h1>
-          <p class="auth-sub">Cars, packs and coins.</p>
+          <p class="auth-sub">Cars, for real money now.</p>
         </div>
         <div class="chips"><button class="chip" id="shBack">Back</button></div>
       </div>
-      <p class="sh-note">Nothing here takes payment yet — this is the shop being
-        built. The prices shown are what these will cost.</p>
+      <p class="sh-note">A car is yours for good once it's bought — sign in
+        first, so there's an account for it to belong to.</p>
       <h2 class="sh-h">Cars <span>Yours for good, once bought</span></h2>
       <div class="sh-grid" id="shCars"></div>
-      <h2 class="sh-h">Packs <span>Test mode — open as many as you like, free</span></h2>
-      <div class="sh-grid" id="shPacks"></div>
-      <div class="sh-pack-test">
-        <button class="chip" id="shPackTest">Simulate 500 openings</button>
-        <span id="shPackTally"></span>
+      <div id="shTestSection" hidden>
+        <h2 class="sh-h">Packs <span>Test mode — open as many as you like, free</span></h2>
+        <div class="sh-grid" id="shPacks"></div>
+        <div class="sh-pack-test">
+          <button class="chip" id="shPackTest">Simulate 500 openings</button>
+          <span id="shPackTally"></span>
+        </div>
+        <h2 class="sh-h">Coins <span>Still being priced</span></h2>
+        <div class="sh-grid sh-coins" id="shCoins"></div>
       </div>
-      <h2 class="sh-h">Coins <span>Still being priced</span></h2>
-      <div class="sh-grid sh-coins" id="shCoins"></div>
       <p class="sh-note" id="shSaid"></p>
     </div>
   </section>
@@ -4481,15 +4488,18 @@ const myTitle=()=>{ const k=myKit(); return (k&&k.title&&k.title.label)||""; };
 /* the ones anybody may drive, and whether a given account may drive a given
    one — the test cars answer to the same name the AI opponents do */
 const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
-/* the one account that sees things still being tried out */
+/* the one account that sees things still being tried out — packs, and the
+   test cars everywhere except the shop, which sells them now */
 const TEST_ACCOUNT="cosmo38";
-/* Everything still being tried out answers to this one question: the test
-   cars, the AI opponents, and now the shop. */
 function isTester(){ return acctIn()&&ACCT.user.name===TEST_ACCOUNT; }
+/* what the shop has actually sold this account — an empty list signed out
+   or before the relay has ever said otherwise */
+function myCars(){ return (acctIn()&&Array.isArray(ACCT.user.cars))?ACCT.user.cars:[]; }
 function carAllowed(k){
   if(!carTest(k)) return true;
   /* the daily hands one out for the day, and only for the day */
   if(DAILY.on&&k===dailyCar()) return true;
+  if(myCars().indexOf(k)>=0) return true;
   return isTester();
 }
 /* Multipliers on the shared physics constants. Because these change lap
@@ -9229,44 +9239,81 @@ function rollPack(){
   return rollItem();
 }
 function shopSay(t){ $("shSaid").textContent=t||""; }
+/* Bought once, kept for good — the button says which of those it's asking
+   for, and it's the only thing about a car's card that ever changes after
+   it's built, so it's the only thing kept separate from building it. */
+function shopCarsUI(){
+  const mine=myCars();
+  for(const b of document.querySelectorAll("#shCars .sh-card")){
+    const owned=mine.indexOf(b.dataset.car)>=0, btn=b.querySelector(".sh-buy button");
+    b.classList.toggle("owned",owned);
+    if(!btn)continue;
+    btn.disabled=owned; btn.textContent=owned?"Owned":"Buy";
+  }
+}
+/* Real money, so the price charged is never what this request claims one
+   is — the relay prices it again from its own table. This only starts the
+   checkout and hands the tab to Stripe; nothing here marks a car bought. */
+async function buyCar(carId,btn){
+  if(myCars().indexOf(carId)>=0)return;
+  if(!acctIn()){ shopSay("Sign in first, then come back and buy it."); AU_MODE="in"; showAuth(true); return; }
+  const was=btn.textContent; btn.disabled=true; btn.textContent="One moment…";
+  try{
+    const r=await api("/api/checkout/session",{method:"POST",token:ACCT.token,body:{carId}});
+    if(r&&r.url){ location.href=r.url; return; }
+    throw new Error("Couldn't start checkout just now.");
+  }catch(e){
+    shopSay(e.message||"Couldn't start checkout just now.");
+    btn.disabled=false; btn.textContent=was;
+  }
+}
 function shopBuild(){
-  const cars=$("shCars"); if(!cars||cars.dataset.built)return;
-  cars.dataset.built="1";
-  for(const it of SHOP_CARS){
-    const m=CAR_MODELS.find(x=>x.id===it.id), R=carRarity(it.id);
-    const b=document.createElement("div");
-    b.className="sh-card"; b.dataset.car=it.id;
-    if(R){ b.style.setProperty("--rar",R.colour);
-           b.style.setProperty("--rarDim",R.dim);
-           b.style.setProperty("--rarGlow",R.glow); }
-    b.innerHTML='<canvas width="360" height="220"></canvas>'+
-      '<em class="rar">'+(R?R.label:"")+'</em>'+
-      '<b></b><span></span>'+
-      '<div class="sh-buy"><i></i><button class="chip go">Buy</button></div>';
-    b.querySelector("b").textContent=m?m.label:it.id;
-    b.querySelector("span").textContent=it.blurb;
-    b.querySelector(".sh-buy i").textContent=money(it.price);
-    b.querySelector("button").addEventListener("click",()=>
-      shopSay("Checkout isn't connected yet — "+(m?m.label:it.id)+" would be "+money(it.price)+"."));
-    cars.appendChild(b);
+  const cars=$("shCars");
+  if(cars&&!cars.dataset.built){
+    cars.dataset.built="1";
+    for(const it of SHOP_CARS){
+      const m=CAR_MODELS.find(x=>x.id===it.id), R=carRarity(it.id);
+      const b=document.createElement("div");
+      b.className="sh-card"; b.dataset.car=it.id;
+      if(R){ b.style.setProperty("--rar",R.colour);
+             b.style.setProperty("--rarDim",R.dim);
+             b.style.setProperty("--rarGlow",R.glow); }
+      b.innerHTML='<canvas width="360" height="220"></canvas>'+
+        '<em class="rar">'+(R?R.label:"")+'</em>'+
+        '<b></b><span></span>'+
+        '<div class="sh-buy"><i></i><button class="chip go">Buy</button></div>';
+      b.querySelector("b").textContent=m?m.label:it.id;
+      b.querySelector("span").textContent=it.blurb;
+      b.querySelector(".sh-buy i").textContent=money(it.price);
+      b.querySelector("button").addEventListener("click",(e)=>buyCar(it.id,e.currentTarget));
+      cars.appendChild(b);
+    }
   }
-  for(const p of SHOP_PACKS){
-    const b=document.createElement("div");
-    b.className="sh-card";
-    b.innerHTML='<em class="rar">Pack</em><b></b><span></span>'+
-      '<div class="sh-buy"><i>Test — free</i><button class="chip go">Open</button></div>';
-    b.querySelector("b").textContent=p.name;
-    b.querySelector("span").textContent=p.blurb;
-    b.querySelector("button").addEventListener("click",()=>openPack());
-    $("shPacks").appendChild(b);
-  }
-  for(const c of SHOP_COINS){
-    const b=document.createElement("div");
-    b.className="sh-card soon coin";
-    b.innerHTML='<em class="rar">Coins</em><b></b>'+
-      '<div class="sh-buy"><i>Price to come</i></div>';
-    b.querySelector("b").textContent=c.n;
-    $("shCoins").appendChild(b);
+  shopCarsUI();
+  /* packs and coins stay behind the same gate the rest of what's still
+     being tried out sits behind — built once, for the one account that
+     will ever see them */
+  $("shTestSection").hidden=!isTester();
+  if(isTester()&&!$("shPacks").dataset.built){
+    $("shPacks").dataset.built="1";
+    for(const p of SHOP_PACKS){
+      const b=document.createElement("div");
+      b.className="sh-card";
+      b.innerHTML='<em class="rar">Pack</em><b></b><span></span>'+
+        '<div class="sh-buy"><i>Test — free</i><button class="chip go">Open</button></div>';
+      b.querySelector("b").textContent=p.name;
+      b.querySelector("span").textContent=p.blurb;
+      b.querySelector("button").addEventListener("click",()=>openPack());
+      $("shPacks").appendChild(b);
+    }
+    for(const c of SHOP_COINS){
+      const b=document.createElement("div");
+      b.className="sh-card soon coin";
+      b.innerHTML='<em class="rar">Coins</em><b></b>'+
+        '<div class="sh-buy"><i>Price to come</i></div>';
+      b.querySelector("b").textContent=c.n;
+      $("shCoins").appendChild(b);
+    }
   }
 }
 /* the pictures, drawn the once the shop is first opened */
@@ -9564,19 +9611,17 @@ function packSimulate(n){
   const parts=order.filter(k=>tally[k]).map(k=>k+": "+tally[k]+" ("+(100*tally[k]/n).toFixed(2)+"%)");
   $("shPackTally").textContent=parts.join("  ·  ");
 }
-/* The door on the home page. Open for the account trying it out; for
-   everybody else it stays exactly the grey "coming soon" it always was. */
+/* The door on the home page. Open to everyone now — packs and coins are
+   still behind the same gate as the rest of what's being tried out, but a
+   car is a real thing to buy for anybody who opens this. */
 function shopUI(){
   const card=$("hmShop"); if(!card)return;
-  const on=isTester();
-  card.classList.toggle("grey",!on);
-  card.classList.toggle("gold",on);
-  card.querySelector("span").textContent=on
+  card.classList.remove("grey"); card.classList.add("gold");
+  card.querySelector("span").textContent=isTester()
     ? "Cars, packs and coins. Being built — have a look."
-    : "Coming soon.";
+    : "Cars, for real money now.";
 }
 function showShop(on){
-  if(on&&!isTester())return;
   if(on){ shopBuild(); }
   $("shop").hidden=!on; baseShow(!on);
   document.body.classList.toggle("shopping",on);
@@ -9613,10 +9658,7 @@ $("hmDraw").addEventListener("click",goDraw);
 $("hmMulti").addEventListener("click",goMulti);
 $("hmDaily").addEventListener("click",goDaily);
 $("hmShop").addEventListener("click",()=>{
-  if(isTester()){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true); return; }
-  const b=$("hmShop").querySelector("span");
-  b.textContent="Coming soon — nothing to buy yet.";
-  setTimeout(()=>{ b.textContent="Coming soon."; },1800);
+  closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true);
 });
 $("shBack").addEventListener("click",goHome);
 $("packX").addEventListener("click",packOverlayClose);
@@ -9923,9 +9965,18 @@ function acctSave(){
   store.set("ad.checked",ACCT.checked);
 }
 function acctIn(){ return !!(ACCT.token&&ACCT.user); }
+/* Which test cars show for this account, one at a time rather than all
+   together the way aiok's blanket toggle shows them for cosmo38 — a car
+   bought from the shop is this account's whether or not it is that one. */
+function ownedCarsUI(){
+  const mine=myCars();
+  for(const c of document.querySelectorAll(".gar-card.test, .chips .chip.test"))
+    c.classList.toggle("owned",mine.indexOf(c.dataset.car)>=0);
+}
 function acctUI(){
   const on=acctIn(), chip=$("btnAccount");
   document.body.classList.toggle("aiok",on&&ACCT.user.name===TEST_ACCOUNT);
+  ownedCarsUI();
   shopUI();
   kitUI();
   /* Signing out of the account that has them puts you back in the GT
@@ -9957,6 +10008,27 @@ function acctUI(){
   }
   adminUI();                     // the controls exist only for the named few
   netUI();                       // the roster prints whatever this is now
+}
+/* The tab that comes back from Stripe. success_url carries the session id,
+   which /verify checks against Stripe itself rather than trusting the
+   query string alone — a driver could type ?checkout=success into the
+   address bar just as easily as Stripe could put it there. */
+async function checkoutReturn(){
+  const p=new URLSearchParams(location.search);
+  const status=p.get("checkout");
+  if(!status)return;
+  const sid=p.get("session_id");
+  history.replaceState(null,"",location.pathname+location.hash);
+  if(status!=="success"||!sid||!ACCT.token)return;
+  try{
+    const r=await api("/api/checkout/verify?session_id="+encodeURIComponent(sid),{token:ACCT.token});
+    if(r&&r.ok){
+      await acctVerify(true);
+      ownedCarsUI();
+      closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true);
+      shopSay("That one's yours now — it's in the garage.");
+    }
+  }catch(e){}
 }
 function acctOut(){
   ACCT.token=null; ACCT.user=null; ACCT.checked=0; acctSave();
@@ -12451,6 +12523,7 @@ $("pBack").addEventListener("click",()=>{
   pressGroup($("garCards"),"car",ED.opts.car); garLabel();
   fsUI();
   acctUI();                         // your own name, from the last visit
+  checkoutReturn();                 // the tab that comes back from paying for a car
   netUI();                          // settles the screen into solo before anything else
   /* Confirmed in the background, and only every few hours: a page load must
      not wait on a sleeping server, nor keep one awake for no reason. */

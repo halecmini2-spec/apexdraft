@@ -172,6 +172,9 @@ const publicUser = (u) => ({
      the account itself rather than being fetched, so it is in front of them
      the moment they are signed in and cannot be missed. */
   notice: u.notice || null,
+  /* What the shop has sold this account, comma-separated in the row and a
+     plain list of ids by the time the page sees it. */
+  cars: String(u.cars || "").split(",").map((s) => s.trim()).filter(Boolean),
 });
 
 function makeAuth(store) {

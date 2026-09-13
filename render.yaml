@@ -63,6 +63,16 @@ services:
       # deliberately no way to grant it from inside the game.
       - key: ADMIN_USERS
         sync: false
+      # The shop's Stripe account — the same one already live on the
+      # Slipstream Pitlane. Both are secrets set by hand in the dashboard,
+      # never in the repository. The webhook secret comes from whatever
+      # endpoint is added in the Stripe dashboard for this relay's own
+      # /api/checkout/webhook, which is a separate endpoint from Pitlane's
+      # even though the account behind it is the same one.
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
 
 # Free Postgres on Render expires 30 days after it is created. To keep the
 # accounts past that, make a database somewhere that doesn't expire (Neon's

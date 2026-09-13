@@ -83,6 +83,17 @@ function fileStore(file) {
       await save();
       return true;
     },
+    /* Only ever adds. A car bought twice — a webhook and a browser tab both
+       settling the same purchase — costs nothing the second time. */
+    async addCar(id, carId) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return false;
+      const set = new Set(String(u.cars || "").split(",").map((s) => s.trim()).filter(Boolean));
+      set.add(carId);
+      u.cars = [...set].join(",");
+      await save();
+      return true;
+    },
     async putSession(s) {
       db.sessions.push(s);
       await save();
@@ -314,6 +325,9 @@ function pgStore(url) {
       await pool.query(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_lower_key`);
       /* a word from an admin to the person whose account it is */
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS notice TEXT`);
+      /* cars bought from the shop, comma-separated — the same shape the
+         admin desk's own car list already uses */
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS cars TEXT`);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           token_hash TEXT PRIMARY KEY,
@@ -507,6 +521,14 @@ function pgStore(url) {
     async setNotice(id, text) {
       const r = await pool.query(`UPDATE users SET notice=$2 WHERE id=$1`, [id, text || null]);
       return r.rowCount > 0;
+    },
+    async addCar(id, carId) {
+      const u = await one(`SELECT cars FROM users WHERE id=$1`, [id]);
+      if (!u) return false;
+      const set = new Set(String(u.cars || "").split(",").map((s) => s.trim()).filter(Boolean));
+      set.add(carId);
+      await pool.query(`UPDATE users SET cars=$2 WHERE id=$1`, [id, [...set].join(",")]);
+      return true;
     },
     async users() {
       return (await pool.query(`
