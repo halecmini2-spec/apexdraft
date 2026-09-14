@@ -164,7 +164,7 @@ function makeLaps(store, userFor) {
     const C = geometry(circuit, body.track);
     if (!C) return refuse("circuit unknown");
     if (ms < lapBound(C, car) * 0.92) return refuse("quicker than the car can go");
-    const bad = checkTrace(C, body.ghost, ms);
+    const bad = checkTrace(C, body.ghost, ms, car);
     if (bad) return refuse(bad);
 
     /* Only an improvement is worth writing, and the board is what you wanted

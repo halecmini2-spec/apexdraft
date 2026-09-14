@@ -23,6 +23,7 @@ const PERF = {
   bike:    { power: 1.30, top: 1.22, grip: 1.26 },
   trike:   { power: 1.12, top: 1.04, grip: 1.08 },
   v12:     { power: 1.04, top: 1.5625, grip: 1.24 },
+  lmp1:    { power: 1.26, top: 1.20, grip: 1.30 },
 };
 const TOP = 64;          // m/s on tarmac, GT
 const GRIP = 21.4;       // m/s^2 of lateral grip, GT, at speed
@@ -68,13 +69,19 @@ function lapBound(C, car) {
 
 /* The trace, checked against the circuit. Returns null when it holds up,
    otherwise a short reason. */
-function checkTrace(C, trace, ms) {
+function checkTrace(C, trace, ms, car) {
   if (!Array.isArray(trace) || trace.length < 10) return "no trace of the lap";
   const want = ms / 100;
   if (trace.length < want * 0.6 || trace.length > want * 1.6 + 8) return "trace does not match the time";
   const t0 = +trace[0][0], tn = +trace[trace.length - 1][0];
   if (!(t0 <= 500) || tn < ms - 800 || tn > ms + 800) return "trace does not span the lap";
-  const vLimit = TOP * 1.32 + 3;              // the formula's top, and some
+  /* Was a flat ceiling sized for the formula's top and a little more — the
+     quickest thing here at the time it was written. The V12 alone outruns
+     it at its own advertised 360 km/h, which made a genuine flying lap in
+     the fastest car in the game indistinguishable from a spoofed one. This
+     has to be the car's own top, the same as the bound below uses, or the
+     fastest cars are the ones a real lap can never pass here. */
+  const vLimit = TOP * (PERF[car] || PERF.gt).top * 1.32 + 3;
   let hint = null, startI = null, progress = 0, lastI = null, off = 0, far = 0, backs = 0, gaps = 0, prevV = null, prevT = null, prevX = null, prevZ = null, jumps = 0;
   const N = C.N, sp = C.len / N;
   for (let n = 0; n < trace.length; n++) {
