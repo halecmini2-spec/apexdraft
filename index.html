@@ -10348,7 +10348,15 @@ async function lbPost(ms){
       }
     }
     timesUI();
-  }catch(e){ /* a lap is not worth interrupting a race over */ }
+  }catch(e){
+    /* Only the flash for "Fastest lap" is optimistic — it fires the moment
+       a lap beats your own local best, before the relay has said anything
+       at all. When the relay then refuses it, that gap between "personal
+       best" and "on the board" is exactly the thing a driver has no other
+       way to notice, so it is worth a flash of its own. */
+    console.error("lap not saved:",e&&e.message);
+    showFlash("Not saved to the board","#E8453C",e&&e.message||"Couldn't reach the relay.");
+  }
 }
 
 /* The order of the room, live, while you are still driving it. Peers send
