@@ -7248,13 +7248,21 @@ function cumSec(k){ let s=0; for(let i=0;i<=k;i++) s+=CAR.sectors[i]||0; return 
 
 function completeLap(ms){
   const T=G.T;
-  const improved = CAR.bestMs==null || ms<CAR.bestMs || (ms<=CAR.bestMs && !CAR.bestKept);
+  /* A lap time is thousands of dt-sized floating point additions, so two
+     laps that look the same to three decimal places almost never compare
+     equal underneath — waiting for an exact tie-or-beat of an unconfirmed
+     best could wait forever. Once the relay has never actually seen this
+     circuit from this account, every lap gets tried, not just the ones
+     that happen to land on the right side of a coin-flip of a rounding
+     error. */
+  const newBest = CAR.bestMs==null || ms<CAR.bestMs;
+  const shouldPost = newBest || !CAR.bestKept;
   CAR.lastMs=ms;
   for(let k=0;k<3;k++){
     if(CAR.sectors[k]!=null&&(CAR.bestSectors[k]==null||CAR.sectors[k]<CAR.bestSectors[k]))
       CAR.bestSectors[k]=CAR.sectors[k];
   }
-  if(improved){
+  if(newBest){
     CAR.bestMs=ms;
     CAR.bestKept=false;                         // not confirmed until lbPost hears back
     store.set("ad.best."+trackKey(T),ms);
@@ -7264,10 +7272,12 @@ function completeLap(ms){
     /* Only improvements travel. Everyone else is keeping your best, not a
        list of every lap you have driven. */
     if(NET.status==="in")netSend({t:"lap",ms,lap:CAR.lapNo});
-    GH.mine=GH.rec.slice(); GH.mine.push([Math.round(ms),+CAR.x.toFixed(2),+CAR.z.toFixed(2),+CAR.yaw.toFixed(3)]);
-    lbPost(ms);
   } else {
     showFlash("Lap "+CAR.lapNo,"#E6EEEC",fmtTime(ms));
+  }
+  if(shouldPost){
+    GH.mine=GH.rec.slice(); GH.mine.push([Math.round(ms),+CAR.x.toFixed(2),+CAR.z.toFixed(2),+CAR.yaw.toFixed(3)]);
+    lbPost(ms);
   }
   standingsUI();
   CAR.lapNo++;
@@ -10346,12 +10356,13 @@ async function lbPost(ms){
     if(!DAILY.on) body.track=trackData();               // the relay rebuilds the circuit to check the lap
     LB.ticket=null;
     const r=await api("/api/laps",{method:"POST",token:ACCT.token,body});
-    /* The relay has now definitely seen this lap, whether or not it beat
-       what it already had on file — so it is not owed another attempt. */
-    if(Math.round(ms)===CAR.bestMs){
-      CAR.bestKept=true;
-      try{ store.set("ad.bestKept."+trackKey(G.T),true); }catch(e){}
-    }
+    /* The relay has now definitely seen this circuit from this account —
+       proof enough that it is reachable and this driver's laps are being
+       kept, whether or not this particular one was the local best. Any
+       later lap that actually beats the local best still posts on its own
+       merits, unconditionally; this only stops chasing an exact float. */
+    CAR.bestKept=true;
+    try{ store.set("ad.bestKept."+trackKey(G.T),true); }catch(e){}
     if(LB.key===key){
       const hadWR=LB.board.length?LB.board[0].ms:null;
       LB.board=r.board||LB.board; LB.at=Date.now();
