@@ -6620,6 +6620,12 @@ function resetCar(toStart){
     if(rolling){ CAR.state="out"; CAR.lastP=T.S[i]/T.len; showFlash("Out lap","#E6EEEC","the clock starts at the line"); }
     CAR.bestMs=store.get("ad.best."+trackKey(T),null);
     CAR.bestSectors=store.get("ad.bsec."+trackKey(T),[null,null,null]);
+    /* Whether the relay has actually seen this best, or only this browser
+       has: a lap that never reached the board — the connection dropped,
+       the relay was still waking up, whatever it was — is not something a
+       driver can ever "improve on" by definition, so without this a lost
+       lap stays lost until a faster one comes along, maybe never. */
+    CAR.bestKept=store.get("ad.bestKept."+trackKey(T),false);
   }
 }
 function trackKey(T){
@@ -7242,7 +7248,7 @@ function cumSec(k){ let s=0; for(let i=0;i<=k;i++) s+=CAR.sectors[i]||0; return 
 
 function completeLap(ms){
   const T=G.T;
-  const improved = CAR.bestMs==null || ms<CAR.bestMs;
+  const improved = CAR.bestMs==null || ms<CAR.bestMs || (ms<=CAR.bestMs && !CAR.bestKept);
   CAR.lastMs=ms;
   for(let k=0;k<3;k++){
     if(CAR.sectors[k]!=null&&(CAR.bestSectors[k]==null||CAR.sectors[k]<CAR.bestSectors[k]))
@@ -7250,7 +7256,9 @@ function completeLap(ms){
   }
   if(improved){
     CAR.bestMs=ms;
+    CAR.bestKept=false;                         // not confirmed until lbPost hears back
     store.set("ad.best."+trackKey(T),ms);
+    store.set("ad.bestKept."+trackKey(T),false);
     store.set("ad.bsec."+trackKey(T),CAR.bestSectors);
     showFlash("Fastest lap","#B24FE8",fmtTime(ms));
     /* Only improvements travel. Everyone else is keeping your best, not a
@@ -10338,6 +10346,12 @@ async function lbPost(ms){
     if(!DAILY.on) body.track=trackData();               // the relay rebuilds the circuit to check the lap
     LB.ticket=null;
     const r=await api("/api/laps",{method:"POST",token:ACCT.token,body});
+    /* The relay has now definitely seen this lap, whether or not it beat
+       what it already had on file — so it is not owed another attempt. */
+    if(Math.round(ms)===CAR.bestMs){
+      CAR.bestKept=true;
+      try{ store.set("ad.bestKept."+trackKey(G.T),true); }catch(e){}
+    }
     if(LB.key===key){
       const hadWR=LB.board.length?LB.board[0].ms:null;
       LB.board=r.board||LB.board; LB.at=Date.now();
