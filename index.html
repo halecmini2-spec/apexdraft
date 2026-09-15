@@ -6535,43 +6535,58 @@ function bodyLMP1(b,M){
   const armM  =new THREE.MeshStandardMaterial({color:SRGB(0x1B2023),roughness:0.42,metalness:0.55});
   const vent  =new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.72,metalness:0.30});
 
-  /* the hourglass again, from scratch rather than patched — sixteen
-     stations in place of twelve, because the shape that actually reads as
-     "endurance prototype" rather than "narrow car with arches stuck on"
-     needs a real shoulder: the surface has to visibly crest hard over
-     each axle and pull just as hard back in behind it, twice, with the
-     rear crest pushed wider than the front the way a prototype's hips
-     always sit wider than its nose. Every height and width here is still
-     built around the same FR/RR/FZ/RZ/FX/RX the wheels answer to, so the
-     arches this feeds still land exactly on the tyres. */
+  /* the hourglass, rebuilt again, and rebuilt differently this time: the
+     first pass kept the axle crests wide but let the body pinch straight
+     back down to a narrow tub immediately behind each one, which is
+     exactly what reads as "narrow chassis with two wheel bumps" instead
+     of "wide prototype body" — an open-wheel car's own shape, whatever
+     the arches on top of it are doing. What a real LMP1's flanks actually
+     do is hold most of that width for a long stretch either side of the
+     tub, so the arches never stop being part of one continuous wide
+     surface. So: both crests pushed close enough to the tyre's own edge
+     that the body reads as wrapping it rather than sitting beside it, the
+     sidepods between them kept wide rather than tapered, and the waist —
+     there still has to be one, or there is nowhere for a driver to sit —
+     pinched a third as hard as it was, so the cockpit sits recessed into
+     a wide hull rather than perched on a narrow spine.
+
+     The height needed the same correction as the width, and for the same
+     reason: a crest that only bulges past a wheel's middle still leaves
+     its whole top half sitting bare above the bodywork, which is the
+     other half of why this read as open-wheel. Both crests now sit close
+     up under the tyre's own full height rather than its half, so the
+     tyre is genuinely capped rather than merely flanked. Every height and
+     width is still built around the same FR/RR/FZ/RZ/FX/RX the wheels
+     answer to, so the arches this feeds still land exactly on the tyres. */
   const shell=new THREE.Mesh(loft([
-    {z: 2.38,w:0.150,y0:0.050,y1:0.130,n:2.0},   // a true needle point
-    {z: 2.20,w:0.320,y0:0.042,y1:0.190,n:2.4},   // the headlight corners start here
-    {z: 1.96,w:0.620,y0:0.042,y1:0.260,n:2.8},   // the front arch beginning to flare
-    {z: 1.68,w:0.900,y0:0.048,y1:0.320,n:3.6},
-    {z: 1.50,w:0.980,y0:0.050,y1:0.350,n:4.0},   // the shoulder crest, over the front axle
-    {z: 1.24,w:0.860,y0:0.055,y1:0.380,n:3.8},   // pulled back in hard behind it
-    {z: 0.94,w:0.700,y0:0.062,y1:0.440,n:3.4},   // the sidepod's leading edge
-    {z: 0.60,w:0.540,y0:0.070,y1:0.490,n:3.0},   // the waist starting to pinch for the tub
-    {z: 0.10,w:0.460,y0:0.090,y1:0.560,n:2.6},   // the tub itself, at its narrowest
-    {z:-0.40,w:0.500,y0:0.088,y1:0.540,n:2.8},   // opening out again behind the driver
-    {z:-0.85,w:0.680,y0:0.082,y1:0.460,n:3.4},   // the sidepod's trailing edge
-    {z:-1.20,w:0.900,y0:0.080,y1:0.400,n:3.8},   // the rear arch beginning to flare
-    {z:-1.50,w:1.020,y0:0.085,y1:0.370,n:4.2},   // the rear crest, over the rear axle — the widest point on the car
-    {z:-1.85,w:0.780,y0:0.095,y1:0.320,n:3.4},   // pulled back in behind it
-    {z:-2.15,w:0.480,y0:0.110,y1:0.250,n:2.6},   // necking down for the tail
-    {z:-2.36,w:0.320,y0:0.125,y1:0.200,n:2.2}    // short and blunt — the diffuser and wing finish it
-  ],32),M.paint);
+    {z: 2.30,w:0.260,y0:0.055,y1:0.150,n:2.2},   // wide for a nose, not a needle
+    {z: 2.05,w:0.560,y0:0.048,y1:0.280,n:2.8},
+    {z: 1.80,w:0.860,y0:0.048,y1:0.460,n:3.4},   // most of the way to full width well ahead of the axle
+    {z: 1.55,w:1.040,y0:0.052,y1:0.560,n:4.0},
+    {z: 1.50,w:1.060,y0:0.052,y1:0.620,n:4.2},   // the front crest — both wide AND tall enough to actually cap the tyre, not just bulge past its middle
+    {z: 1.30,w:1.020,y0:0.058,y1:0.580,n:4.0},   // held high as well as wide, rather than pulled straight back down
+    {z: 1.00,w:0.920,y0:0.065,y1:0.540,n:3.6},   // the sidepod's leading edge, still wide
+    {z: 0.65,w:0.820,y0:0.072,y1:0.540,n:3.2},   // the sidepod proper — this is the width that used to be the waist
+    {z: 0.25,w:0.700,y0:0.085,y1:0.570,n:2.8},   // easing toward the cockpit, not pinching for it
+    {z:-0.15,w:0.660,y0:0.086,y1:0.570,n:2.8},   // the narrowest point — a recess in a wide hull, not a bare tub
+    {z:-0.55,w:0.720,y0:0.084,y1:0.550,n:3.0},   // opening out again behind the driver
+    {z:-0.95,w:0.860,y0:0.080,y1:0.560,n:3.4},   // the rear sidepod's leading edge
+    {z:-1.30,w:1.000,y0:0.078,y1:0.610,n:3.8},   // held high on the way to the rear crest
+    {z:-1.50,w:1.080,y0:0.082,y1:0.660,n:4.2},   // the rear crest — the widest AND (bar the canopy) the tallest point on the car, right up against the rear tyre's own height
+    {z:-1.75,w:0.980,y0:0.090,y1:0.600,n:3.8},   // held high behind it too
+    {z:-2.05,w:0.720,y0:0.100,y1:0.420,n:3.0},   // tapering for the tail
+    {z:-2.30,w:0.420,y0:0.115,y1:0.260,n:2.4}    // short and blunt — the diffuser and wing finish it
+  ],34),M.paint);
   shell.castShadow=true; b.add(shell);
 
   /* the bubble, not a greenhouse — one seat, sunk low, glassed only where
      a driver's head actually is, and faired into a spine running back to
      the engine intake rather than stopping dead behind the driver */
   const canopy=new THREE.Mesh(loft([
-    {z: 0.66,w:0.240,y0:0.460,y1:0.520,n:3.0},
-    {z: 0.30,w:0.310,y0:0.495,y1:0.730,n:3.4},
-    {z:-0.06,w:0.290,y0:0.515,y1:0.690,n:3.2},
-    {z:-0.36,w:0.220,y0:0.500,y1:0.570,n:2.6}
+    {z: 0.66,w:0.240,y0:0.560,y1:0.610,n:3.0},
+    {z: 0.30,w:0.310,y0:0.585,y1:0.790,n:3.4},
+    {z:-0.06,w:0.290,y0:0.600,y1:0.750,n:3.2},
+    {z:-0.36,w:0.220,y0:0.575,y1:0.630,n:2.6}
   ],18),M.glass);
   b.add(canopy);
   const spine=new THREE.Mesh(loft([
@@ -6604,8 +6619,14 @@ function bodyLMP1(b,M){
   wheelRim.position.set(0,0.300,0.62); wheelRim.rotation.x=Math.PI/2-0.35; b.add(wheelRim);
   tubeTo(b,[0,0.260,0.72],[0,0.300,0.62],0.016,wheelM,8);   // the column
 
-  addFenders(b,M,FZ,FR,0.375,FX,0.230);
-  addFenders(b,M,RZ,RR,0.400,RX,0.260);
+  /* GT and V12 both already know this: a crest has to clear a wheel's
+     full height, not its middle, or the top half of the tyre sits bare
+     above the fender regardless of how the rest of the body is shaped.
+     A high "sit" as well keeps the arch reading as one continuous piece
+     of bodywork along the tyre's whole length rather than a peak that
+     collapses back to a sliver at each end. */
+  addFenders(b,M,FZ,FR,0.700,FX,0.480);
+  addFenders(b,M,RZ,RR,0.760,RX,0.520);
   /* the detail an arch built for one specific car carries and a shared
      helper's own never does: a brake duct sunk into the outer face, and
      two heat-extraction louvres let into the top of it, both things an
@@ -6626,37 +6647,37 @@ function bodyLMP1(b,M){
      nothing at its own leading edge reads as a stripe painted on the
      side; the intake is what says the stripe is a passage air goes into. */
   for(const s of [-1,1]){
-    const intake=new THREE.Mesh(lens(0.150,0.190,0.045),vent);
-    intake.position.set(s*0.610,0.330,0.800); intake.rotation.y=s*(Math.PI/2-0.16); b.add(intake);
+    const intake=new THREE.Mesh(lens(0.170,0.220,0.050),vent);
+    intake.position.set(s*0.840,0.360,0.820); intake.rotation.y=s*(Math.PI/2-0.16); b.add(intake);
     const lip=new THREE.Mesh(loft([
-      {z: 0.60,w:0.052,y0:0.190,y1:0.430,n:3.2},
-      {z: 0.05,w:0.072,y0:0.175,y1:0.470,n:3.8},
-      {z:-0.55,w:0.062,y0:0.175,y1:0.445,n:3.4},
-      {z:-1.02,w:0.038,y0:0.190,y1:0.380,n:2.8}
+      {z: 0.62,w:0.058,y0:0.210,y1:0.480,n:3.2},
+      {z: 0.05,w:0.080,y0:0.195,y1:0.525,n:3.8},
+      {z:-0.55,w:0.068,y0:0.192,y1:0.495,n:3.4},
+      {z:-1.02,w:0.042,y0:0.205,y1:0.420,n:2.8}
     ],12),M.paint);
-    lip.position.x=s*0.560; b.add(lip);
+    lip.position.x=s*0.800; b.add(lip);
     const duct=new THREE.Mesh(loft([
-      {z: 0.52,w:0.030,y0:0.210,y1:0.400,n:3.0},
-      {z: 0.02,w:0.044,y0:0.198,y1:0.438,n:3.4},
-      {z:-0.52,w:0.036,y0:0.198,y1:0.412,n:3.2},
-      {z:-0.98,w:0.022,y0:0.210,y1:0.352,n:2.6}
+      {z: 0.54,w:0.034,y0:0.235,y1:0.445,n:3.0},
+      {z: 0.02,w:0.048,y0:0.220,y1:0.485,n:3.4},
+      {z:-0.52,w:0.040,y0:0.220,y1:0.458,n:3.2},
+      {z:-0.98,w:0.024,y0:0.232,y1:0.390,n:2.6}
     ],12),meshM);
-    duct.position.x=s*0.575; b.add(duct);
+    duct.position.x=s*0.815; b.add(duct);
   }
 
   /* front: a splitter, turning vanes stacked under the nose, and a canard
      on each corner — the assembly a Le Mans nose actually carries rather
      than a blade on its own */
-  const spl=new THREE.Mesh(lens(1.080,0.380,0.024),blackM);
-  spl.position.set(0,0.048,2.170); spl.rotation.x=Math.PI/2; b.add(spl);
+  const spl=new THREE.Mesh(lens(1.220,0.420,0.026),blackM);
+  spl.position.set(0,0.050,2.150); spl.rotation.x=Math.PI/2; b.add(spl);
   for(const s of [-1,1]){
-    const cn=new THREE.Mesh(lens(0.260,0.130,0.014),blackM);
-    cn.position.set(s*0.460,0.185,2.150); cn.rotation.set(0.10,s*0.32,0); b.add(cn);
-    const fin=new THREE.Mesh(panel([[0,-0.06],[0.30,-0.02],[0.30,0.08],[0,0.10]],0.012),blackM);
-    fin.position.set(s*0.640,0.130,1.980); fin.rotation.y=s*0.5; b.add(fin);
-    for(const yy of [0.095,0.140]){
-      const vane=new THREE.Mesh(new THREE.BoxGeometry(0.220,0.010,0.260),blackM);
-      vane.position.set(s*0.300,yy,2.080); b.add(vane);
+    const cn=new THREE.Mesh(lens(0.280,0.140,0.015),blackM);
+    cn.position.set(s*0.580,0.195,2.130); cn.rotation.set(0.10,s*0.32,0); b.add(cn);
+    const fin=new THREE.Mesh(panel([[0,-0.06],[0.32,-0.02],[0.32,0.08],[0,0.10]],0.012),blackM);
+    fin.position.set(s*0.780,0.135,1.940); fin.rotation.y=s*0.5; b.add(fin);
+    for(const yy of [0.100,0.148]){
+      const vane=new THREE.Mesh(new THREE.BoxGeometry(0.240,0.010,0.280),blackM);
+      vane.position.set(s*0.380,yy,2.060); b.add(vane);
     }
   }
   /* the signature: not one wraparound lamp but four narrow strips stacked
@@ -6668,11 +6689,11 @@ function bodyLMP1(b,M){
     emissiveIntensity:1.15,roughness:0.16,metalness:0.10});
   const lampSurroundM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.5});
   for(const s of [-1,1]){
-    const sur=new THREE.Mesh(lens(0.300,0.220,0.030),lampSurroundM);
-    sur.position.set(s*0.330,0.225,2.305); sur.rotation.set(0,s*0.20,s*0.10); b.add(sur);
+    const sur=new THREE.Mesh(lens(0.320,0.230,0.032),lampSurroundM);
+    sur.position.set(s*0.420,0.230,2.285); sur.rotation.set(0,s*0.20,s*0.10); b.add(sur);
     for(let i=0;i<4;i++){
       const l=new THREE.Mesh(new THREE.BoxGeometry(0.026,0.150,0.016),lampM);
-      l.position.set(s*(0.240+i*0.052),0.170+i*0.036,2.322);
+      l.position.set(s*(0.330+i*0.052),0.175+i*0.036,2.302);
       l.rotation.set(0,s*0.20,s*0.10-0.16); b.add(l);
     }
   }
