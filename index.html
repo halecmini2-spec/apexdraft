@@ -6732,17 +6732,20 @@ function bodyLMP1(b,M){
     {z:-1.86,w:0.100,y0:0.460,y1:0.510,n:2.8}
   ],32),domeRoofM);
   roof.castShadow=true; b.add(roof);
-  /* the spine: one continuous bar running from the top middle of the
-     dome itself back over the roof — a real bar, wide enough to read
-     as one, but its base tracks the canopy's and roof's own surface
-     height the whole way so it stays visibly attached at every
-     station instead of arcing up into a separate hump that reads as
-     a disconnected loop floating over the roof. */
+  /* the spine: raised all the way up into one straight line now — top
+     running dead straight from the peak of the dome to the leading
+     top edge of the wing itself, rather than following the dips and
+     rises of the roofline underneath it. Its base still tracks the
+     canopy's and roof's own surface height the whole way, so it
+     visibly grows out of the bodywork rather than floating clear of
+     it, but the top edge no longer wanders with the roof — it reads
+     as a single strut the whole way back instead of a bar that keeps
+     changing height along its own length. */
   {
-    const spZ=[0.05,-0.25,-0.45,-0.78,-1.15,-1.52,-1.86,-2.00];
-    const base=[1.020,0.880,0.720,0.700,0.635,0.562,0.510,0.500];
-    const top =[1.040,0.910,0.755,0.740,0.680,0.610,0.560,0.555];
-    const half=[0.030,0.045,0.050,0.052,0.048,0.040,0.030,0.022];
+    const spZ=[0.05,-0.25,-0.45,-0.78,-1.15,-1.52,-1.86,-2.03];
+    const base=[1.020,0.880,0.720,0.700,0.635,0.562,0.510,0.495];
+    const top =[1.020,1.003,0.991,0.972,0.951,0.929,0.910,0.900];
+    const half=[0.030,0.045,0.050,0.052,0.048,0.042,0.036,0.028];
     for(let i=0;i<spZ.length-1;i++){
       const za=spZ[i], zc=spZ[i+1];
       const ta=top[i], tc=top[i+1], ba=base[i], bc=base[i+1], wa=half[i], wc=half[i+1];
