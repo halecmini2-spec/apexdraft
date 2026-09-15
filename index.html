@@ -6534,161 +6534,142 @@ function bodyLMP1(b,M){
   const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x06080A),roughness:0.80,metalness:0.20});
   const armM  =new THREE.MeshStandardMaterial({color:SRGB(0x1B2023),roughness:0.42,metalness:0.55});
   const vent  =new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.72,metalness:0.30});
+  /* Every pass before this one retuned the same three meshes — a loft
+     for the hull, a loft for each wheel arch, a loft for the canopy —
+     and every retune came back with the same three complaints. The
+     meshes themselves were the ceiling: a loft is a superellipse swept
+     smoothly along a spline, which is a genuinely different SHAPE
+     LANGUAGE from what a moulded carbon body actually is — flat-ish
+     panels meeting at creases — no matter how far the exponent gets
+     pushed. So the wheel arches below are not a loft at all this time.
+     They are hand-built from flat quads, a handful a side, each one
+     a separate mesh — which is what actually guarantees a visible
+     edge between them regardless of shading, because Three only
+     smooths normals within one mesh, never across two. Doublesided,
+     so which way a quad winds stops being something to get right by
+     hand. */
+  M.paint.side=THREE.DoubleSide;
 
-  /* Third pass at the shell, and this time the fix is what the shell is
-     NOT asked to do any more: cap the wheel on its own. Making the hull
-     itself rise almost to the tyre's own height at each axle — right,
-     for reading as "enclosed" — also made the hull the only thing doing
-     any work there, which swallowed the wheel whole and, worse, erased
-     the seam between "chassis" and "fender arch" that is what a real
-     prototype's wheel housing actually reads as. Two separate surfaces
-     meeting is what looks purpose-built; one surface ballooning out to
-     wheel height is what looks like a generic bulbous pod.
-
-     So: the hull's own crests are pulled back down — low enough that the
-     fender (below) is doing the visible work of arching over each tyre,
-     with the hull underneath it merely wide rather than tall. The
-     sidepod between the axles is now the widest THE SHELL ITSELF gets,
-     a deliberate reversal from the last pass, so it reads as the major
-     component it is rather than a saddle between two taller humps. And
-     the nose is sharpened back down to an actual point at its very tip —
-     wide is what the car needs to be by the time it reaches the wheels,
-     not at the first few centimetres of it. */
-  /* Every exponent below climbed again, on top of the pass that already
-     sharpened the nose alone: the whole hull was still reading as an
-     inflated, organic shape rather than an engineered one, and that is
-     what a low superellipse exponent gives you no matter how the widths
-     and heights are tuned — a low n is a balloon; a high one is a panel
-     with a rolled edge. Pushing it up everywhere, not just at the nose,
-     is what gets the whole car off "smooth blob" and onto "surfaces
-     that meet at something like a line". */
-  const shell=new THREE.Mesh(loft([
-    {z: 2.32,w:0.140,y0:0.048,y1:0.095,n:2.8},
-    {z: 2.08,w:0.440,y0:0.044,y1:0.190,n:3.8},
-    {z: 1.82,w:0.780,y0:0.048,y1:0.320,n:4.6},
-    {z: 1.56,w:0.910,y0:0.052,y1:0.400,n:5.0},
-    {z: 1.50,w:0.940,y0:0.052,y1:0.440,n:5.0},   // the front crest — wide, but low: the fender above this does the capping now
-    {z: 1.30,w:0.900,y0:0.058,y1:0.460,n:4.8},
-    {z: 1.00,w:0.880,y0:0.065,y1:0.500,n:4.4},   // the sidepod's leading edge
-    {z: 0.65,w:0.860,y0:0.072,y1:0.540,n:4.2},   // the sidepod itself — now the widest the hull gets, on purpose
-    {z: 0.25,w:0.760,y0:0.085,y1:0.560,n:3.6},
-    {z:-0.15,w:0.720,y0:0.086,y1:0.560,n:3.6},   // still a recess for the cockpit, not a bare tub
-    {z:-0.55,w:0.780,y0:0.084,y1:0.550,n:3.8},
-    {z:-0.95,w:0.900,y0:0.080,y1:0.510,n:4.2},   // the rear sidepod's leading edge
-    {z:-1.30,w:0.940,y0:0.078,y1:0.480,n:4.8},
-    {z:-1.50,w:0.960,y0:0.082,y1:0.460,n:5.0},   // the rear crest — same reversal as the front
-    {z:-1.75,w:0.900,y0:0.090,y1:0.440,n:4.4},
-    {z:-2.05,w:0.680,y0:0.100,y1:0.380,n:3.6},   // tapering for the tail
-    {z:-2.30,w:0.380,y0:0.115,y1:0.240,n:2.6}    // short and blunt — the diffuser and wing finish it
-  ],34),M.paint);
+  /* The hull: wide through its whole middle length rather than crested
+     at the axles, because the axle crests are the wheel arches' job
+     now, built separately below — this only has to be a low, wide,
+     flat-topped tub for them to sit on. Stored as data, not just fed
+     straight to loft(), because the arches need to sample this same
+     surface's own width and height to start from exactly where the
+     hull leaves off — no seam to hide because there is no gap to
+     begin with. */
+  const SH=[
+    {z: 2.28,w:0.190,y0:0.045,y1:0.100,n:3.0},   // the point
+    {z: 2.00,w:0.540,y0:0.042,y1:0.200,n:4.0},
+    {z: 1.72,w:0.780,y0:0.045,y1:0.300,n:4.6},
+    {z: 1.44,w:0.860,y0:0.050,y1:0.370,n:5.0},
+    {z: 1.10,w:0.860,y0:0.058,y1:0.440,n:5.0},
+    {z: 0.72,w:0.840,y0:0.065,y1:0.500,n:4.8},   // the sidepod, near its widest
+    {z: 0.32,w:0.720,y0:0.078,y1:0.540,n:4.2},
+    {z:-0.10,w:0.680,y0:0.080,y1:0.540,n:4.2},   // the cockpit recess — still wide, not a bare tub
+    {z:-0.50,w:0.740,y0:0.076,y1:0.520,n:4.4},
+    {z:-0.88,w:0.840,y0:0.070,y1:0.490,n:4.8},   // the rear sidepod
+    {z:-1.32,w:0.860,y0:0.066,y1:0.440,n:5.0},
+    {z:-1.66,w:0.840,y0:0.074,y1:0.400,n:4.8},
+    {z:-1.98,w:0.660,y0:0.088,y1:0.340,n:4.0},
+    {z:-2.24,w:0.380,y0:0.108,y1:0.230,n:3.0}    // short and blunt — diffuser and wing finish it
+  ];
+  function shAt(z,key){
+    if(z>=SH[0].z)return SH[0][key];
+    if(z<=SH[SH.length-1].z)return SH[SH.length-1][key];
+    for(let i=0;i<SH.length-1;i++){
+      const a=SH[i],c=SH[i+1];
+      if(z<=a.z&&z>=c.z){ const f=(a.z-z)/(a.z-c.z); return a[key]+f*(c[key]-a[key]); }
+    }
+    return SH[SH.length-1][key];
+  }
+  const wAt=(z)=>shAt(z,'w'), y1At=(z)=>shAt(z,'y1');
+  const shell=new THREE.Mesh(loft(SH,34),M.paint);
   shell.castShadow=true; b.add(shell);
-  /* the shoulder line the sidepod needs to read as a built thing rather
-     than a panel: a raised edge running the length of it, roughly where
-     the flank's own curve is highest, the same job a crease pressed into
-     real bodywork does */
+
+  /* a flat quad from four corners, given in order round the edge —
+     used everywhere below a smooth loft is the wrong tool: the wheel
+     arches, the hood crease, the arch's own lip. Not shared with
+     anything else, on purpose — this car's own answer to "the body
+     needs a hard edge here", not a general-purpose helper other cars
+     would end up leaning on for the wrong reasons. */
+  function quadMesh(p1,p2,p3,p4,mat){
+    const pos=new Float32Array([
+      p1[0],p1[1],p1[2], p2[0],p2[1],p2[2], p3[0],p3[1],p3[2],
+      p1[0],p1[1],p1[2], p3[0],p3[1],p3[2], p4[0],p4[1],p4[2]
+    ]);
+    const g=new THREE.BufferGeometry();
+    g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+    g.computeVertexNormals();
+    const m=new THREE.Mesh(g,mat); m.castShadow=true; return m;
+  }
+
+  /* the shoulder line: a raised edge the length of the sidepod, the
+     same job a pressed crease does on a real panel */
   {
     const shoulder=trimKit();
     for(const s of [-1,1])
-      shoulder.box(0.022,0.030,2.20,s*0.870,0.430,-0.10,0x0A0C0D);
+      shoulder.box(0.022,0.030,2.10,s*0.850,0.420,-0.08,0x0A0C0D);
     b.add(shoulder.mesh());
   }
-
-  /* The bubble the last pass built was still the wrong shape entirely: a
-     dome, raised well clear of the shell, is a sports car's greenhouse —
-     what a prototype's own actually is is a long, low, RAKED slot, only
-     a little proud of the bodywork at any point along it, narrow enough
-     that "recessed inside the hull" is true rather than said. Five
-     stations in place of four buys the raked profile a windscreen needs
-     — low where it meets the nose, climbing at an angle rather than
-     stepping straight up to a dome, peaking low, then easing back down
-     into the roof rather than the roof having to pick the height back up
-     from a taller peak. */
-  const canopy=new THREE.Mesh(loft([
-    {z: 0.85,w:0.230,y0:0.560,y1:0.600,n:2.8},   // the raked screen's own base, barely proud of the shell
-    {z: 0.50,w:0.280,y0:0.585,y1:0.700,n:2.6},
-    {z: 0.15,w:0.270,y0:0.600,y1:0.720,n:2.6},   // the peak — low, not a dome
-    {z:-0.20,w:0.230,y0:0.585,y1:0.660,n:2.8},
-    {z:-0.45,w:0.190,y0:0.570,y1:0.610,n:2.8}    // already easing down toward the roof
-  ],22),M.glass);
-  b.add(canopy);
-  /* the roof: an actual panel, painted rather than glazed, picking up
-     exactly where the windscreen's glass leaves off — width and height
-     both matched at the seam — and running back, narrowing the whole
-     way, to where the wing's own pylons meet the deck. */
-  const roof=new THREE.Mesh(loft([
-    {z:-0.45,w:0.190,y0:0.575,y1:0.610,n:2.8},
-    {z:-0.75,w:0.200,y0:0.570,y1:0.630,n:3.0},   // a slight widen into the engine cover before it tapers back
-    {z:-1.15,w:0.170,y0:0.540,y1:0.590,n:3.0},
-    {z:-1.55,w:0.125,y0:0.500,y1:0.545,n:2.8},
-    {z:-1.85,w:0.085,y0:0.460,y1:0.500,n:2.6}
-  ],22),M.paint);
-  roof.castShadow=true; b.add(roof);
-
-  /* ---- the cockpit ----
-     Mostly hidden under a tinted canopy, the way a real one actually
-     reads from outside — a seat, a wheel and something for a head to be,
-     rather than an empty tub, so what the glass does give away at a
-     glancing angle is a cockpit and not a hole in the bodywork. */
-  const seatM=new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.78,metalness:0.05});
-  const wheelM=new THREE.MeshStandardMaterial({color:SRGB(0x16181A),roughness:0.40,metalness:0.32});
-  const seat=new THREE.Mesh(loft([
-    {z: 0.24,w:0.135,y0:0.130,y1:0.310,n:3.2},   // the seat back, tall enough to read as one
-    {z: 0.00,w:0.150,y0:0.115,y1:0.175,n:3.6},   // the base, low in the tub
-    {z:-0.22,w:0.130,y0:0.120,y1:0.170,n:3.2}
-  ],14),seatM);
-  b.add(seat);
-  /* a driver's position rather than a driver: a helmet-height mass is
-     enough to say somebody is sitting there without modelling a figure
-     this little of the car will ever actually show */
-  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.115,14,10),seatM);
-  helmet.position.set(0,0.410,0.20); b.add(helmet);
-  const wheelRim=new THREE.Mesh(new THREE.TorusGeometry(0.095,0.014,8,18),wheelM);
-  wheelRim.position.set(0,0.300,0.62); wheelRim.rotation.x=Math.PI/2-0.35; b.add(wheelRim);
-  tubeTo(b,[0,0.260,0.72],[0,0.300,0.62],0.016,wheelM,8);   // the column
-
-  /* Longer reach fixed the seam, but not the deeper problem: a loft's
-     cross-section is a superellipse, and a low exponent swept smoothly
-     along a gently-domed width curve is exactly what reads as a ball —
-     organic, inflated, the one shape language every real panel on an
-     actual LMP1 is not. Two changes, not one, chase that down. First,
-     the width now holds close to its full value for most of the arch's
-     length and only pulls in sharply right at the two ends — a plateau
-     with a defined edge, not a dome that is always tapering — done by
-     raising the falloff's own exponent rather than touching the reach
-     again. Second, the cross-section itself is pushed hard toward flat:
-     an exponent this high reads as a panel with a rolled-over edge, the
-     way real bodywork actually is, not a tube. A thin trim line along
-     the crest — the one sharp edge a moulded arch's lip always shows,
-     that no amount of smooth loft geometry can put there on its own —
-     is what finally sells "sculpted panel" over "inflated pod". */
-  function lmpArch(zw,R,px,crest,sit){
-    const gap=R*0.17, Ro=R+gap, reach=Ro+0.42, st=[], N=24;
-    for(let i=0;i<=N;i++){
-      const t=-1+2*i/N, z=zw+t*reach, d=Math.abs(z-zw), u=Math.abs(t);
-      const arc=d<Ro ? R+Math.sqrt(Ro*Ro-d*d)*0.995 : R-(d-Ro)*1.1;
-      const y1=crest-(crest-sit)*Math.pow(u,1.6);
-      const fade=Math.pow(Math.max(0,1-u*u),1.8);
-      const y0=Math.max(Math.min(arc,y1-0.03),y1-0.03-0.50*fade);
-      st.push({z,w:Math.max(0.02,(R*0.56)*fade),y0,y1,n:4.6+2.6*fade});
-    }
-    for(const sx of [-px,px]){
-      const f=new THREE.Mesh(loft(st,24),M.paint);
-      f.position.x=sx; f.castShadow=true; b.add(f);
-      /* the lip: three straight-ish runs tracing the crest rather than
-         one smooth curve, so it reads as a folded edge rather than a
-         wire laid over a dome */
-      const li=Math.round(N*0.28), lc=Math.round(N/2), lo=Math.round(N*0.72);
-      const lipM=armM;
-      tubeTo(b,[sx,st[li].y1,st[li].z],[sx,st[lc].y1,st[lc].z],0.010,lipM,6);
-      tubeTo(b,[sx,st[lc].y1,st[lc].z],[sx,st[lo].y1,st[lo].z],0.010,lipM,6);
+  /* the hood crease: two flat panels meeting at a shallow ridge down
+     the nose's own centreline, standing barely proud of the hull —
+     the one line more than any other that says "moulded panel" on a
+     modern prototype's nose rather than "rounded lump" */
+  {
+    const hz=[2.18,1.85,1.50,1.12], ridge=0.028, hw=0.150;
+    for(let i=0;i<hz.length-1;i++){
+      const za=hz[i], zc=hz[i+1];
+      const ya=y1At(za)+ridge, yc=y1At(zc)+ridge;
+      const ea=y1At(za)+0.006, ec=y1At(zc)+0.006;
+      for(const s of [-1,1])
+        b.add(quadMesh([0,ya,za],[s*hw,ea,za],[s*hw,ec,zc],[0,yc,zc],M.paint));
     }
   }
-  lmpArch(FZ,FR,FX,0.520,0.440);
-  lmpArch(RZ,RR,RX,0.560,0.460);
-  /* heat-extraction louvres let into the top of the front arch — the one
-     thing an endurance car's front arch is never actually without, kept
-     up on the bodywork rather than down where they would sit over the
-     tyre itself */
+
+  /* ---- the wheel arches ----
+     Not a loft: a strip of flat quads a side, each a separate mesh, so
+     the edge between one facet and the next is an actual edge rather
+     than something a smooth normal blends away. Six rows, sampled from
+     -1 to 1 across the arch's own span; the inboard edge of every row
+     is read straight off the hull's own surface (wAt/y1At above) so
+     there is no gap for a "seam" to exist in — the quad's own inner
+     edge IS the hull's surface at that point. The outboard edge rises
+     and flares out toward the crest, a flat lip strip standing under
+     it to give the arch some visible depth rather than reading as a
+     single paper-thin sheet. */
+  function facetArch(zw,crestY,flareOut,halfSpan){
+    const ts=[-1,-0.62,-0.22,0.22,0.62,1];
+    const rows=ts.map(t=>{
+      const z=zw+t*halfSpan, u=Math.abs(t);
+      const rise=Math.pow(Math.max(0,1-u*u),1.3);
+      const wS=wAt(z), y1S=y1At(z);
+      const yTop=y1S+0.015+(crestY-y1S-0.015)*rise;
+      const xOut=wS+(flareOut-wS)*rise;
+      const yBot=yTop-0.02-0.05*rise;
+      return {z,xIn:wS,xOut,yTop,yBot};
+    });
+    for(const sx of [-1,1]){
+      for(let i=0;i<rows.length-1;i++){
+        const a=rows[i], c=rows[i+1];
+        const aIn=[sx*a.xIn,a.yTop,a.z], aOut=[sx*a.xOut,a.yTop,a.z];
+        const cIn=[sx*c.xIn,c.yTop,c.z], cOut=[sx*c.xOut,c.yTop,c.z];
+        b.add(quadMesh(aIn,aOut,cOut,cIn,M.paint));
+        const aOutB=[sx*a.xOut,a.yBot,a.z], cOutB=[sx*c.xOut,c.yBot,c.z];
+        b.add(quadMesh(aOut,aOutB,cOutB,cOut,M.paint));
+      }
+      /* the lip: the folded edge a moulded arch's own rim always has,
+         traced as two straight-ish runs rather than left for a smooth
+         curve to suggest */
+      const p1=rows[1], p2=rows[2], p3=rows[3], p4=rows[4];
+      tubeTo(b,[sx*p1.xOut,p1.yTop,p1.z],[sx*p2.xOut,p2.yTop,p2.z],0.010,armM,6);
+      tubeTo(b,[sx*p2.xOut,p2.yTop,p2.z],[sx*p3.xOut,p3.yTop,p3.z],0.010,armM,6);
+      tubeTo(b,[sx*p3.xOut,p3.yTop,p3.z],[sx*p4.xOut,p4.yTop,p4.z],0.010,armM,6);
+    }
+  }
+  facetArch(FZ,0.560,FX+0.160,0.62);
+  facetArch(RZ,0.600,RX+0.150,0.62);
+  /* heat-extraction louvres let into the top of the front arch */
   for(const s of [-1,1]){
     for(const off of [-0.085,0.085]){
       const lv=new THREE.Mesh(new THREE.BoxGeometry(0.150,0.014,0.060),vent);
@@ -6696,42 +6677,75 @@ function bodyLMP1(b,M){
     }
   }
 
-  /* the duct along each flank, cut in rather than laid on — a lip standing
-     proud of the bodywork, a dark mouth sunk behind it, and — ahead of
-     that mouth, where the air is actually still moving forward when it
-     meets the car — the intake the duct is feeding from. A slot with
-     nothing at its own leading edge reads as a stripe painted on the
-     side; the intake is what says the stripe is a passage air goes into. */
+  /* The bubble a windscreen must never be on this car: long, low and
+     raked instead — barely proud of the hull at any single point along
+     it, narrow enough that "recessed inside the hull" reads as true.
+     Low where it meets the nose, climbing at an angle rather than
+     stepping straight up to a dome, peaking low, easing back down into
+     the roof. */
+  const canopy=new THREE.Mesh(loft([
+    {z: 0.85,w:0.230,y0:0.560,y1:0.600,n:2.8},
+    {z: 0.50,w:0.280,y0:0.585,y1:0.700,n:2.6},
+    {z: 0.15,w:0.270,y0:0.600,y1:0.720,n:2.6},   // the peak — low, not a dome
+    {z:-0.20,w:0.230,y0:0.585,y1:0.660,n:2.8},
+    {z:-0.45,w:0.190,y0:0.570,y1:0.610,n:2.8}
+  ],22),M.glass);
+  b.add(canopy);
+  /* the roof: a painted panel picking up exactly where the glass leaves
+     off, running back and narrowing the whole way to where the wing's
+     own pylons meet the deck */
+  const roof=new THREE.Mesh(loft([
+    {z:-0.45,w:0.190,y0:0.575,y1:0.610,n:2.8},
+    {z:-0.75,w:0.200,y0:0.570,y1:0.630,n:3.0},
+    {z:-1.15,w:0.170,y0:0.540,y1:0.590,n:3.0},
+    {z:-1.55,w:0.125,y0:0.500,y1:0.545,n:2.8},
+    {z:-1.85,w:0.085,y0:0.460,y1:0.500,n:2.6}
+  ],22),M.paint);
+  roof.castShadow=true; b.add(roof);
+
+  /* ---- the cockpit ---- */
+  const seatM=new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.78,metalness:0.05});
+  const wheelM=new THREE.MeshStandardMaterial({color:SRGB(0x16181A),roughness:0.40,metalness:0.32});
+  const seat=new THREE.Mesh(loft([
+    {z: 0.24,w:0.135,y0:0.130,y1:0.310,n:3.2},
+    {z: 0.00,w:0.150,y0:0.115,y1:0.175,n:3.6},
+    {z:-0.22,w:0.130,y0:0.120,y1:0.170,n:3.2}
+  ],14),seatM);
+  b.add(seat);
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.115,14,10),seatM);
+  helmet.position.set(0,0.410,0.20); b.add(helmet);
+  const wheelRim=new THREE.Mesh(new THREE.TorusGeometry(0.095,0.014,8,18),wheelM);
+  wheelRim.position.set(0,0.300,0.62); wheelRim.rotation.x=Math.PI/2-0.35; b.add(wheelRim);
+  tubeTo(b,[0,0.260,0.72],[0,0.300,0.62],0.016,wheelM,8);
+
+  /* the duct along each flank: a lip standing proud, a dark mouth sunk
+     behind it, and an intake ahead of the mouth for the air to
+     actually be entering rather than the slot reading as a stripe */
   for(const s of [-1,1]){
     const intake=new THREE.Mesh(lens(0.170,0.220,0.050),vent);
-    intake.position.set(s*0.840,0.360,0.820); intake.rotation.y=s*(Math.PI/2-0.16); b.add(intake);
+    intake.position.set(s*0.820,0.360,0.780); intake.rotation.y=s*(Math.PI/2-0.16); b.add(intake);
     const lip=new THREE.Mesh(loft([
-      {z: 0.62,w:0.058,y0:0.210,y1:0.480,n:3.2},
-      {z: 0.05,w:0.080,y0:0.195,y1:0.525,n:3.8},
-      {z:-0.55,w:0.068,y0:0.192,y1:0.495,n:3.4},
-      {z:-1.02,w:0.042,y0:0.205,y1:0.420,n:2.8}
+      {z: 0.58,w:0.058,y0:0.210,y1:0.470,n:3.2},
+      {z: 0.02,w:0.080,y0:0.195,y1:0.510,n:3.8},
+      {z:-0.55,w:0.068,y0:0.192,y1:0.485,n:3.4},
+      {z:-1.00,w:0.042,y0:0.205,y1:0.410,n:2.8}
     ],12),M.paint);
-    lip.position.x=s*0.800; b.add(lip);
+    lip.position.x=s*0.790; b.add(lip);
     const duct=new THREE.Mesh(loft([
-      {z: 0.54,w:0.034,y0:0.235,y1:0.445,n:3.0},
-      {z: 0.02,w:0.048,y0:0.220,y1:0.485,n:3.4},
-      {z:-0.52,w:0.040,y0:0.220,y1:0.458,n:3.2},
-      {z:-0.98,w:0.024,y0:0.232,y1:0.390,n:2.6}
+      {z: 0.50,w:0.034,y0:0.235,y1:0.435,n:3.0},
+      {z: 0.00,w:0.048,y0:0.220,y1:0.475,n:3.4},
+      {z:-0.52,w:0.040,y0:0.220,y1:0.448,n:3.2},
+      {z:-0.96,w:0.024,y0:0.232,y1:0.380,n:2.6}
     ],12),meshM);
-    duct.position.x=s*0.815; b.add(duct);
+    duct.position.x=s*0.805; b.add(duct);
   }
-  /* a small stability fin ahead of each rear arch — a real prototype's
-     own answer to a gust catching the tail at speed, and small enough
-     that it reads as instrumentation rather than another wing */
+  /* a small stability fin ahead of each rear arch */
   for(const s of [-1,1]){
     const fin=new THREE.Mesh(panel([[0,-0.02],[0.26,0.01],[0.26,0.10],[0,0.14]],0.010),blackM);
-    fin.position.set(s*0.870,0.470,-1.020); fin.rotation.y=s*0.10; b.add(fin);
+    fin.position.set(s*0.860,0.460,-1.020); fin.rotation.y=s*0.10; b.add(fin);
   }
 
-  /* front: a splitter and a canard on each corner — the stacked vanes
-     the nose carried before this pass are gone; on a wedge this sharp
-     they read as loose panels rather than aero, and a modern prototype
-     nose is cleaner than that, not busier */
+  /* front: a wide splitter and a canard on each corner */
   const spl=new THREE.Mesh(lens(1.220,0.420,0.026),blackM);
   spl.position.set(0,0.050,2.150); spl.rotation.x=Math.PI/2; b.add(spl);
   for(const s of [-1,1]){
@@ -6740,11 +6754,8 @@ function bodyLMP1(b,M){
     const fin=new THREE.Mesh(panel([[0,-0.06],[0.32,-0.02],[0.32,0.08],[0,0.10]],0.012),blackM);
     fin.position.set(s*0.680,0.135,1.940); fin.rotation.y=s*0.5; b.add(fin);
   }
-  /* the signature: not one wraparound lamp but four narrow strips stacked
-     on the diagonal in a shared dark housing, the way a modern prototype's
-     lighting actually reads from any distance — a run of separate bright
-     elements rather than one lit blob, which is the detail that most says
-     "endurance racer" rather than "car with headlights on it". */
+  /* the signature: four narrow LED strips stacked on the diagonal in a
+     shared dark housing rather than one wraparound lamp */
   const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
     emissiveIntensity:1.15,roughness:0.16,metalness:0.10});
   const lampSurroundM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.5});
@@ -6758,28 +6769,20 @@ function bodyLMP1(b,M){
     }
   }
 
-  /* rear deck: louvres over the engine, because six hours of it needs the
-     heat out, and the diffuser and wing that end the car */
+  /* rear deck: louvres over the engine */
   const k=trimKit();
   for(let i=0;i<4;i++) k.box(0.520,0.028,0.075,0,0.485+i*0.010,-0.90-i*0.13,0x0A0C0E,-0.10);
   b.add(k.mesh());
-  /* pushrod suspension, front and rear — the wishbones a Formula shows in
-     the open, faired in here but still real rods rather than a flat box
-     standing in for one: an actual strut reads as a strut from every
-     angle a flat panel only ever reads as one from square-on. Two a
-     corner, an upper and a pushrod proper, both aimed from out at the
-     hub back in to a rocker mount on the tub — the same V a real one is
-     built as. */
+  /* pushrod suspension, front and rear: real rods, not a flat box
+     standing in for one */
   for(const sx of [-1,1]){
     tubeTo(b,[sx*FX,FR*1.05,FZ+0.10],[sx*0.520,0.430,FZ-0.20],0.014,armM,8);
     tubeTo(b,[sx*FX,FR*0.55,FZ-0.05],[sx*0.500,0.360,FZ-0.38],0.014,armM,8);
     tubeTo(b,[sx*RX,RR*1.05,RZ-0.10],[sx*0.540,0.410,RZ+0.22],0.014,armM,8);
     tubeTo(b,[sx*RX,RR*0.55,RZ+0.05],[sx*0.520,0.340,RZ+0.40],0.014,armM,8);
   }
-  /* mirrors, on stalks rather than the flanks — there is nowhere else to
-     hang them with the ducts occupying the sides. Built apart from the
-     trim kit, whose boxes only ever tilt about the car's own width: a
-     stalk standing upright needs its length in the other axis entirely. */
+  /* mirrors, on stalks — there is nowhere else to hang them with the
+     ducts occupying the sides */
   const mirrorM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.4});
   for(const sx of [-1,1]){
     const stalk=new THREE.Mesh(new THREE.CylinderGeometry(0.011,0.011,0.20,8),blackM);
@@ -6794,23 +6797,13 @@ function bodyLMP1(b,M){
     const strake=new THREE.Mesh(new THREE.BoxGeometry(0.016,0.200,0.400),blackM);
     strake.position.set(s*0.130,0.225,-2.190); strake.rotation.x=-0.26; b.add(strake);
   }
-  /* the crash structure the diffuser sits either side of on a real car —
-     a squared-off box low in the tail, under the wing supports, rather
-     than the diffuser appearing to be the very last thing back there
-     with nothing for it to be attached to */
   const crash=new THREE.Mesh(new THREE.BoxGeometry(0.220,0.150,0.120),blackM);
   crash.position.set(0,0.190,-2.320); crash.castShadow=true; b.add(crash);
-  /* the wing itself, low and wide, carried on a swan-neck: the arm meets
-     it from above and curves down to the deck, so nothing hangs beneath
-     the aerofoil to disturb the air the endplates are shaping */
+  /* the wing, low and wide, on a swan-neck */
   const wing=new THREE.Mesh(aerofoil(1.720,0.400,0.062),blackM);
   wing.position.set(0,0.860,-2.030); wing.rotation.x=-0.13;
   wing.castShadow=true; b.add(wing);
   for(const s of [-1,1]){
-    /* the endplate itself, and a second, smaller panel stepped in front of
-       it — a Gurney-style lip a single flat plate can't carry, and the
-       one detail that stops a wing's end reading as a plate hung off the
-       side rather than a shaped piece of bodywork in its own right */
     const ep=new THREE.Mesh(panel([[0.20,-0.11],[0.20,0.12],[-0.18,0.13],[-0.18,-0.09]],0.018),M.carbon);
     ep.position.set(s*0.840,0.875,-2.030); b.add(ep);
     const epStep=new THREE.Mesh(panel([[0.15,-0.07],[0.15,0.09],[-0.13,0.10],[-0.13,-0.06]],0.014),blackM);
@@ -6825,15 +6818,6 @@ function bodyLMP1(b,M){
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
-/* ---- GOLF KART: a golf cart somebody has turned into a racing machine ----
-   The proportions of the thing it started as — short, tall, two seats
-   under a flat roof on four thin posts — kept honest rather than stretched
-   into a car, and everything that says "modified" layered on top of that:
-   wider tyres than it was ever sold with, sat lower on its own springs,
-   a painted body rather than bare plastic, and a front bumper that reads
-   as a bar bolted on rather than bodywork it was moulded with.
-   2.70 long, 1.22 across the arches, 1.50 tall to the roof, on a 1.75
-   wheelbase. */
 function bodyGolfKart(b,M){
   const FR=0.280, RR=0.300;
   const FZ=0.850, RZ=-0.900;
