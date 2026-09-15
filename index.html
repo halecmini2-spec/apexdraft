@@ -6533,24 +6533,35 @@ function bodyLMP1(b,M){
   const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x121517),roughness:0.50,metalness:0.28});
   const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x06080A),roughness:0.80,metalness:0.20});
   const armM  =new THREE.MeshStandardMaterial({color:SRGB(0x1B2023),roughness:0.42,metalness:0.55});
+  const vent  =new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.72,metalness:0.30});
 
-  /* the hourglass, pushed further than the first go at it — the waist
-     pinched in tighter and both flares pushed out harder, which is the
-     one line that says "endurance prototype" before anything else does */
+  /* the hourglass again, from scratch rather than patched — sixteen
+     stations in place of twelve, because the shape that actually reads as
+     "endurance prototype" rather than "narrow car with arches stuck on"
+     needs a real shoulder: the surface has to visibly crest hard over
+     each axle and pull just as hard back in behind it, twice, with the
+     rear crest pushed wider than the front the way a prototype's hips
+     always sit wider than its nose. Every height and width here is still
+     built around the same FR/RR/FZ/RZ/FX/RX the wheels answer to, so the
+     arches this feeds still land exactly on the tyres. */
   const shell=new THREE.Mesh(loft([
-    {z: 2.36,w:0.200,y0:0.055,y1:0.145,n:2.2},   // a needle nose
-    {z: 2.14,w:0.400,y0:0.045,y1:0.215,n:2.6},
-    {z: 1.86,w:0.700,y0:0.045,y1:0.280,n:3.0},   // the front arch starts to flare
-    {z: 1.50,w:0.930,y0:0.050,y1:0.335,n:3.8},   // widest over the front wheels
-    {z: 1.14,w:0.780,y0:0.055,y1:0.370,n:3.8},   // pinched back in behind them
-    {z: 0.68,w:0.520,y0:0.070,y1:0.470,n:3.0},
-    {z: 0.08,w:0.460,y0:0.090,y1:0.560,n:2.8},   // the tub, at its narrowest
-    {z:-0.55,w:0.520,y0:0.090,y1:0.520,n:3.0},   // opening out again over the engine
-    {z:-1.05,w:0.820,y0:0.085,y1:0.430,n:3.8},
-    {z:-1.54,w:0.960,y0:0.090,y1:0.375,n:4.0},   // widest point, over the rear wheels
-    {z:-1.98,w:0.680,y0:0.100,y1:0.300,n:3.0},
-    {z:-2.30,w:0.400,y0:0.120,y1:0.220,n:2.4}    // short and blunt — there is a diffuser to fit
-  ],28),M.paint);
+    {z: 2.38,w:0.150,y0:0.050,y1:0.130,n:2.0},   // a true needle point
+    {z: 2.20,w:0.320,y0:0.042,y1:0.190,n:2.4},   // the headlight corners start here
+    {z: 1.96,w:0.620,y0:0.042,y1:0.260,n:2.8},   // the front arch beginning to flare
+    {z: 1.68,w:0.900,y0:0.048,y1:0.320,n:3.6},
+    {z: 1.50,w:0.980,y0:0.050,y1:0.350,n:4.0},   // the shoulder crest, over the front axle
+    {z: 1.24,w:0.860,y0:0.055,y1:0.380,n:3.8},   // pulled back in hard behind it
+    {z: 0.94,w:0.700,y0:0.062,y1:0.440,n:3.4},   // the sidepod's leading edge
+    {z: 0.60,w:0.540,y0:0.070,y1:0.490,n:3.0},   // the waist starting to pinch for the tub
+    {z: 0.10,w:0.460,y0:0.090,y1:0.560,n:2.6},   // the tub itself, at its narrowest
+    {z:-0.40,w:0.500,y0:0.088,y1:0.540,n:2.8},   // opening out again behind the driver
+    {z:-0.85,w:0.680,y0:0.082,y1:0.460,n:3.4},   // the sidepod's trailing edge
+    {z:-1.20,w:0.900,y0:0.080,y1:0.400,n:3.8},   // the rear arch beginning to flare
+    {z:-1.50,w:1.020,y0:0.085,y1:0.370,n:4.2},   // the rear crest, over the rear axle — the widest point on the car
+    {z:-1.85,w:0.780,y0:0.095,y1:0.320,n:3.4},   // pulled back in behind it
+    {z:-2.15,w:0.480,y0:0.110,y1:0.250,n:2.6},   // necking down for the tail
+    {z:-2.36,w:0.320,y0:0.125,y1:0.200,n:2.2}    // short and blunt — the diffuser and wing finish it
+  ],32),M.paint);
   shell.castShadow=true; b.add(shell);
 
   /* the bubble, not a greenhouse — one seat, sunk low, glassed only where
@@ -6593,12 +6604,30 @@ function bodyLMP1(b,M){
   wheelRim.position.set(0,0.300,0.62); wheelRim.rotation.x=Math.PI/2-0.35; b.add(wheelRim);
   tubeTo(b,[0,0.260,0.72],[0,0.300,0.62],0.016,wheelM,8);   // the column
 
-  addFenders(b,M,FZ,FR,0.360,FX,0.230);
+  addFenders(b,M,FZ,FR,0.375,FX,0.230);
   addFenders(b,M,RZ,RR,0.400,RX,0.260);
+  /* the detail an arch built for one specific car carries and a shared
+     helper's own never does: a brake duct sunk into the outer face, and
+     two heat-extraction louvres let into the top of it, both things an
+     endurance car's front arch is never actually without. */
+  for(const s of [-1,1]){
+    const bd=new THREE.Mesh(lens(0.160,0.120,0.040),vent);
+    bd.position.set(s*(FX+0.220),0.200,FZ+0.040); bd.rotation.y=s*(Math.PI/2-0.12); b.add(bd);
+    for(const off of [-0.085,0.085]){
+      const lv=new THREE.Mesh(new THREE.BoxGeometry(0.150,0.014,0.060),vent);
+      lv.position.set(s*(FX+0.040),0.372,FZ+off); lv.rotation.y=s*0.20; b.add(lv);
+    }
+  }
 
   /* the duct along each flank, cut in rather than laid on — a lip standing
-     proud of the bodywork, a dark mouth sunk behind it */
+     proud of the bodywork, a dark mouth sunk behind it, and — ahead of
+     that mouth, where the air is actually still moving forward when it
+     meets the car — the intake the duct is feeding from. A slot with
+     nothing at its own leading edge reads as a stripe painted on the
+     side; the intake is what says the stripe is a passage air goes into. */
   for(const s of [-1,1]){
+    const intake=new THREE.Mesh(lens(0.150,0.190,0.045),vent);
+    intake.position.set(s*0.610,0.330,0.800); intake.rotation.y=s*(Math.PI/2-0.16); b.add(intake);
     const lip=new THREE.Mesh(loft([
       {z: 0.60,w:0.052,y0:0.190,y1:0.430,n:3.2},
       {z: 0.05,w:0.072,y0:0.175,y1:0.470,n:3.8},
@@ -6630,31 +6659,42 @@ function bodyLMP1(b,M){
       vane.position.set(s*0.300,yy,2.080); b.add(vane);
     }
   }
-  /* a thin wraparound signature rather than two separate lamps — the light
-     itself, and a dark surround it sits inside the way a real lens does */
+  /* the signature: not one wraparound lamp but four narrow strips stacked
+     on the diagonal in a shared dark housing, the way a modern prototype's
+     lighting actually reads from any distance — a run of separate bright
+     elements rather than one lit blob, which is the detail that most says
+     "endurance racer" rather than "car with headlights on it". */
   const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
-    emissiveIntensity:1.05,roughness:0.16,metalness:0.10});
+    emissiveIntensity:1.15,roughness:0.16,metalness:0.10});
   const lampSurroundM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.5});
   for(const s of [-1,1]){
-    const sur=new THREE.Mesh(lens(0.340,0.075,0.024),lampSurroundM);
-    sur.position.set(s*0.330,0.235,2.315); sur.rotation.set(0,s*0.16,s*0.05); b.add(sur);
-    const l=new THREE.Mesh(lens(0.280,0.038,0.020),lampM);
-    l.position.set(s*0.330,0.238,2.328); l.rotation.set(0,s*0.16,s*0.05); b.add(l);
+    const sur=new THREE.Mesh(lens(0.300,0.220,0.030),lampSurroundM);
+    sur.position.set(s*0.330,0.225,2.305); sur.rotation.set(0,s*0.20,s*0.10); b.add(sur);
+    for(let i=0;i<4;i++){
+      const l=new THREE.Mesh(new THREE.BoxGeometry(0.026,0.150,0.016),lampM);
+      l.position.set(s*(0.240+i*0.052),0.170+i*0.036,2.322);
+      l.rotation.set(0,s*0.20,s*0.10-0.16); b.add(l);
+    }
   }
 
   /* rear deck: louvres over the engine, because six hours of it needs the
      heat out, and the diffuser and wing that end the car */
   const k=trimKit();
   for(let i=0;i<4;i++) k.box(0.520,0.028,0.075,0,0.485+i*0.010,-0.90-i*0.13,0x0A0C0E,-0.10);
-  /* pushrod suspension, front and rear — the wishbones a Formula shows in
-     the open, faired in here but still worth a line each */
-  for(const sx of [-1,1]){
-    k.box(0.340,0.032,0.045,sx*0.560,0.360,FZ+0.05,0x171B1E);
-    k.box(0.340,0.032,0.045,sx*0.560,0.300,FZ-0.32,0x171B1E);
-    k.box(0.340,0.032,0.045,sx*0.580,0.340,RZ+0.32,0x171B1E);
-    k.box(0.340,0.032,0.045,sx*0.580,0.280,RZ-0.05,0x171B1E);
-  }
   b.add(k.mesh());
+  /* pushrod suspension, front and rear — the wishbones a Formula shows in
+     the open, faired in here but still real rods rather than a flat box
+     standing in for one: an actual strut reads as a strut from every
+     angle a flat panel only ever reads as one from square-on. Two a
+     corner, an upper and a pushrod proper, both aimed from out at the
+     hub back in to a rocker mount on the tub — the same V a real one is
+     built as. */
+  for(const sx of [-1,1]){
+    tubeTo(b,[sx*FX,FR*1.05,FZ+0.10],[sx*0.520,0.430,FZ-0.20],0.014,armM,8);
+    tubeTo(b,[sx*FX,FR*0.55,FZ-0.05],[sx*0.500,0.360,FZ-0.38],0.014,armM,8);
+    tubeTo(b,[sx*RX,RR*1.05,RZ-0.10],[sx*0.540,0.410,RZ+0.22],0.014,armM,8);
+    tubeTo(b,[sx*RX,RR*0.55,RZ+0.05],[sx*0.520,0.340,RZ+0.40],0.014,armM,8);
+  }
   /* mirrors, on stalks rather than the flanks — there is nowhere else to
      hang them with the ducts occupying the sides. Built apart from the
      trim kit, whose boxes only ever tilt about the car's own width: a
@@ -6667,12 +6707,18 @@ function bodyLMP1(b,M){
     head.position.set(sx*0.560,0.600,0.60); head.rotation.y=sx*0.30; b.add(head);
   }
 
-  const dif=new THREE.Mesh(lens(0.920,0.380,0.024),blackM);
-  dif.position.set(0,0.128,-2.160); dif.rotation.x=Math.PI/2-0.24; b.add(dif);
-  for(const s of [-2,-1,0,1,2]){
-    const strake=new THREE.Mesh(new THREE.BoxGeometry(0.018,0.180,0.360),blackM);
-    strake.position.set(s*0.170,0.220,-2.180); strake.rotation.x=-0.24; b.add(strake);
+  const dif=new THREE.Mesh(lens(0.960,0.420,0.026),blackM);
+  dif.position.set(0,0.132,-2.170); dif.rotation.x=Math.PI/2-0.26; b.add(dif);
+  for(const s of [-3,-2,-1,0,1,2,3]){
+    const strake=new THREE.Mesh(new THREE.BoxGeometry(0.016,0.200,0.400),blackM);
+    strake.position.set(s*0.130,0.225,-2.190); strake.rotation.x=-0.26; b.add(strake);
   }
+  /* the crash structure the diffuser sits either side of on a real car —
+     a squared-off box low in the tail, under the wing supports, rather
+     than the diffuser appearing to be the very last thing back there
+     with nothing for it to be attached to */
+  const crash=new THREE.Mesh(new THREE.BoxGeometry(0.220,0.150,0.120),blackM);
+  crash.position.set(0,0.190,-2.320); crash.castShadow=true; b.add(crash);
   /* the wing itself, low and wide, carried on a swan-neck: the arm meets
      it from above and curves down to the deck, so nothing hangs beneath
      the aerofoil to disturb the air the endplates are shaping */
@@ -6680,8 +6726,14 @@ function bodyLMP1(b,M){
   wing.position.set(0,0.860,-2.030); wing.rotation.x=-0.13;
   wing.castShadow=true; b.add(wing);
   for(const s of [-1,1]){
+    /* the endplate itself, and a second, smaller panel stepped in front of
+       it — a Gurney-style lip a single flat plate can't carry, and the
+       one detail that stops a wing's end reading as a plate hung off the
+       side rather than a shaped piece of bodywork in its own right */
     const ep=new THREE.Mesh(panel([[0.20,-0.11],[0.20,0.12],[-0.18,0.13],[-0.18,-0.09]],0.018),M.carbon);
     ep.position.set(s*0.840,0.875,-2.030); b.add(ep);
+    const epStep=new THREE.Mesh(panel([[0.15,-0.07],[0.15,0.09],[-0.13,0.10],[-0.13,-0.06]],0.014),blackM);
+    epStep.position.set(s*0.870,0.870,-1.960); b.add(epStep);
     tubeTo(b,[s*0.620,0.860,-2.070],[s*0.460,0.620,-1.760],0.024,armM,8);
   }
 
