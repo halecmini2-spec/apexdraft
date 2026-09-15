@@ -4544,12 +4544,21 @@ const KITS={
        with time on top. Done as a finish they came out white, because at
        high metalness the base colour only tints a reflection and a bright
        sky washes it out — a rainbow you cannot see is not a rainbow. */
-    /* Pearl, not rainbow. Wide slow bands at half saturation on a satin
-       finish: it shifts as you move round it and it is plainly special, but
-       it is a paint. The one below is not a paint, and that is the point of
-       the gap between them. */
+    /* Pearl, not rainbow, but still a colour on the car rather than a
+       polite hint of one: too few bands and too much white in the mix
+       left this reading as a plain pale car with the odd flash rather
+       than a shifting one, so both are turned up from where this started
+       — several bands visible across the body at once, and mostly hue
+       rather than white in each of them. Pulled back a step short of
+       Prismatic Chrome below on every number that separates them, not
+       just one: fewer, wider bands, a slower shift, less saturated, less
+       lit, mixed in rather than fully replacing the paint, and — the
+       one that matters most, because it holds even in a single still
+       frame rather than only over time — a satin finish carrying the
+       colour rather than Prismatic Chrome's true mirror. Softer and
+       calmer everywhere, not just dimmer. */
     {id:"holo",  label:"Holographic",      rarity:"legendary", metal:0.45,rough:0.30,env:1.4,
-      iri:{bands:1.9, speed:0.11, mix:0.74, glow:0.28, sat:0.62}},
+      iri:{bands:4.0, speed:0.09, mix:0.66, glow:0.26, sat:0.60}},
     /* A mirror with a spectrum stepped across it, moving fast enough to
        see. Nothing else here is allowed to look like this. */
     {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
@@ -4563,29 +4572,48 @@ const KITS={
        fine, near-neutral iridescent band read by viewing angle rather than
        by a UV — is the same trick a woven surface actually plays with
        light, so it is reused rather than a new, riskier shader chasing a
-       literal weave. Low sat keeps it a sparkle rather than a colour. */
+       literal weave.
+
+       The first two goes at this both left mix above zero, on the theory
+       that blending a little of the band colour into the paint would help
+       it read — it does the opposite. At low saturation that band colour
+       is itself mostly white, so any mix at all just pales the dark base
+       toward grey, which is exactly the flat, wrong-coloured "doesn't look
+       like carbon fibre" it was trying to fix. Flake has this right: mix
+       stays at zero, so the dark base is never touched, and moderate
+       saturation (enough for real light/dark contrast band to band, not so
+       much it reads as a rainbow) is what turns tight, dense bands of
+       pure glow into something with a visible grain rather than a uniform
+       sparkle over a paled-out car. */
     {id:"carbon-fibre", label:"Carbon Fibre Paint", rarity:"epic", metal:0.55,rough:0.22,env:1.7,tint:0x0C0F11,
-      iri:{bands:34.0, speed:0.05, mix:0.10, glow:0.10, sat:0.08, hard:true}},
+      iri:{bands:60.0, speed:0.06, mix:0.00, glow:0.24, sat:0.45, hard:true}},
     /* The weave above, on a mirror rather than a satin clearcoat — the
        "premium combination" is the two finishes stacked, not a third
        effect of its own. */
     {id:"carbon-chrome", label:"Carbon + Chrome Paint", rarity:"legendary", metal:0.90,rough:0.05,env:2.5,tint:0x0A0C0E,
-      iri:{bands:34.0, speed:0.05, mix:0.10, glow:0.20, sat:0.08, hard:true}},
+      iri:{bands:60.0, speed:0.06, mix:0.00, glow:0.30, sat:0.45, hard:true}},
     /* No tint: a pearl shifts over whatever colour was chosen rather than
-       replacing it, wide and slow rather than banded, and nowhere near
-       full saturation — tasteful, the way an actual pearl coat reads,
-       against Holographic's much harder shift below. */
+       replacing it, softer and slower than Holographic above on every
+       number that separates the two of them — fewer, wider bands, a
+       gentler shift, less saturated, less mixed in — the gap between
+       them kept deliberately wide now that Holographic has been pulled
+       in a step of its own, so the two do not end up sat on top of each
+       other again. Still enough of each number to read as a colour
+       moving rather than a white car with a flash in it. */
     {id:"pearlescent", label:"Pearlescent Paint", rarity:"epic", metal:0.30,rough:0.18,env:1.6,
-      iri:{bands:1.2, speed:0.06, mix:0.55, glow:0.20, sat:0.30}},
+      iri:{bands:2.2, speed:0.05, mix:0.48, glow:0.18, sat:0.40}},
     /* Extreme smoothness, no tint beyond a bright neutral silver — because
        a liquid does not have a colour of its own, only whatever it is
        reflecting — and, on top of that, the one thing a still silver paint
        cannot have and an actual liquid always does: a highlight that
        visibly runs across the surface rather than sitting still on it. No
        hue in it, only brightness, so it reads as mercury rather than as a
-       plain grey or white car. */
-    {id:"liquid-metal", label:"Liquid Metal Paint", rarity:"legendary", metal:1.00,rough:0.02,env:2.8,tint:0xC7CBCC,
-      iri:{bands:40.0, speed:0.12, mix:0.00, glow:0.22, sat:0.00, hard:true}},
+       plain grey or white car. First pass at this was too fine and too
+       faint to actually see — wide, slow-rolling bands and real glow
+       behind them read as a highlight sweeping across wet metal; forty
+       tight, dim ones just read as noise, which is to say as dull. */
+    {id:"liquid-metal", label:"Liquid Metal Paint", rarity:"legendary", metal:1.00,rough:0.02,env:3.0,tint:0xC7CBCC,
+      iri:{bands:18.0, speed:0.16, mix:0.00, glow:0.42, sat:0.00, hard:true}},
     /* The same mirror smoothness as Liquid Metal, dark rather than bright
        — still fully metallic, which is what keeps a near-black finish
        reading as chrome instead of quietly becoming flat black paint —
@@ -4866,8 +4894,15 @@ function carMats(bodyColor,kit){
     if(r.emit){
       /* only the spokes and the ring light: a wheel glowing all over is a
          lamp, and what reads as neon is a dark rim with bright edges */
-      for(const m of [M.spoke,M.lip,M.face]){ m.emissive=SRGB(r.emit); m.emissiveIntensity=1.5; }
+      for(const m of [M.spoke,M.lip,M.face]){ m.emissive=SRGB(r.emit); m.emissiveIntensity=2.2; }
       M.kitNeon=[M.spoke,M.lip,M.face];
+      /* Emissive alone is a lit surface, not a light — there is no bloom
+         pass here to spread a bright pixel out past its own edges, so
+         without something extra "neon" only ever reads as "bright paint".
+         buildWheels() below reads this to hang an actual soft-edged glow
+         disc off each wheel, the same faked-light trick the underglow
+         already uses on the ground. */
+      M.neonColor=r.emit;
     }
   }
   return M;
@@ -5013,12 +5048,18 @@ function glowTick(t){
 function iridescent(mat,I){
   const u={value:0};
   mat.userData.iriTime=u;
+  /* sat is allowed to genuinely be 0 — Liquid Metal's whole point is a
+     highlight with no hue in it at all — so this cannot be "I.sat||1":
+     0 is falsy in JS, and that default was silently promoting every
+     sat:0 finish to sat:1, a full rainbow, which is exactly the colour
+     a "no hue in it" paint was written to not have. */
+  const sat=I.sat!=null?I.sat:1;
   /* Three keeps compiled programs in a cache keyed by what it knows about
      the material, and it knows nothing about source injected here — so two
      paints built the same way but with different numbers in them are handed
      the same compiled shader, and the second one silently renders as the
      first. This is what tells them apart. */
-  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,I.sat||1,I.hard?1:0].join(",");
+  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,sat,I.hard?1:0].join(",");
   mat.onBeforeCompile=sh=>{
     sh.uniforms.iriTime=u;
     sh.fragmentShader=
@@ -5032,7 +5073,7 @@ function iridescent(mat,I){
         "float iriF = 1.0 - clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0);\n"+
         "float iriH = fract(iriF * "+I.bands.toFixed(2)+" + iriTime * "+I.speed.toFixed(3)+");\n"+
         (I.hard?"iriH = floor(iriH*7.0)/7.0 + 0.07;\n":"")+
-        "vec3 iriC = mix(vec3(1.0), iriHue(iriH), "+(I.sat||1).toFixed(2)+");\n"+
+        "vec3 iriC = mix(vec3(1.0), iriHue(iriH), "+sat.toFixed(2)+");\n"+
         "diffuseColor.rgb = mix(diffuseColor.rgb, iriC, "+I.mix.toFixed(2)+");\n"+
         "totalEmissiveRadiance += iriC * "+I.glow.toFixed(2)+" * (0.35 + 0.65*iriF);\n");
   };
@@ -5050,6 +5091,14 @@ function kitPaintTick(t){
     for(const mm of neon){
       if(it&&it.cycle) mm.emissive.setHSL((t*0.22)%1,0.95,0.58);
       mm.emissiveIntensity=1.35+0.35*Math.sin(t*3.1);
+    }
+  }
+  const halo=g.userData.kitHalo;
+  if(halo){
+    const it=myKit()&&myKit().rims;
+    for(const hm of halo){
+      if(it&&it.cycle) hm.color.setHSL((t*0.22)%1,0.95,0.58);
+      hm.opacity=0.42+0.22*Math.sin(t*3.1);
     }
   }
 }
@@ -5185,6 +5234,18 @@ function buildWheels(g,M,spec){
   const F=set(spec.r,spec.tw,spec.race);
   const R=(spec.twR||spec.rR)?set(spec.rR||spec.r,spec.twR||spec.tw,spec.race):F;
   const wheels=[];
+  /* One soft-edged disc behind each wheel, the same texture and additive
+     blending the ground pool of light under the sills already draws
+     itself with — a material can be bright, but only a faked light like
+     this actually looks like it is glowing rather than just lit. */
+  const haloMats=[];
+  const addHalo=(w,r)=>{
+    const hm=new THREE.MeshBasicMaterial({map:glowTexture(),color:SRGB(M.neonColor),
+      transparent:true,opacity:0.6,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide});
+    const halo=new THREE.Mesh(new THREE.PlaneGeometry(r*2.7,r*2.7),hm);
+    halo.rotation.y=Math.PI/2;             // face along the axle, like the wheel itself
+    w.add(halo); haloMats.push(hm);
+  };
   /* how many of the leading wheels are on the front axle: two by default,
      one on anything with a single wheel out in front */
   const nF=spec.front==null?2:spec.front;
@@ -5226,10 +5287,12 @@ function buildWheels(g,M,spec){
         const sp=new THREE.Mesh(k.sg,M.face); sp.rotation.x=s/5*TAU; w.add(sp);
       }
     }
+    if(M.neonColor) addHalo(w,k.rr||k.r);
     w.position.set(p[0],k.r,p[1]);
     g.add(w); wheels.push(w);
   });
   g.userData.steerN=nF;
+  g.userData.kitHalo=haloMats.length?haloMats:null;
   return wheels;
 }
 
