@@ -6647,7 +6647,12 @@ function bodyLMP1(b,M){
     const ts=[-1,-0.62,-0.22,0.22,0.62,1];
     const rows=ts.map(t=>{
       const z=zw+t*halfSpan, u=Math.abs(t);
-      const rise=Math.pow(Math.max(0,1-u*u),1.3);
+      /* a sharper falloff than the last pass's — 2.0 rather than 1.3 —
+         so the arch reads as a distinct, well-defined cap sitting over
+         the wheel rather than a shallow bulge blended a long way into
+         the sidepod either side of it. Covers the top of the wheel;
+         nothing further out along the body is this arch's job. */
+      const rise=Math.pow(Math.max(0,1-u*u),2.0);
       const wS=wAt(z), y1S=y1At(z);
       const yTop=y1S+0.015+(crestY-y1S-0.015)*rise;
       const xOut=wS+(flareOut-wS)*rise;
@@ -6672,8 +6677,12 @@ function bodyLMP1(b,M){
       tubeTo(b,[sx*p3.xOut,p3.yTop,p3.z],[sx*p4.xOut,p4.yTop,p4.z],0.010,armM,6);
     }
   }
-  facetArch(FZ,0.560,FX+0.160,0.62);
-  facetArch(RZ,0.600,RX+0.150,0.62);
+  /* Taller — crest pulled up close under each tyre's own full height
+     (2*FR=0.670, 2*RR=0.720) rather than well short of it — and a
+     shorter span so the arch stays a cap over the wheel rather than a
+     shape half the sidepod's own length. */
+  facetArch(FZ,0.640,FX+0.160,0.40);
+  facetArch(RZ,0.690,RX+0.150,0.40);
   /* heat-extraction louvres let into the top of the front arch */
   for(const s of [-1,1]){
     for(const off of [-0.085,0.085]){
