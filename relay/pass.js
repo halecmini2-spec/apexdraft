@@ -309,6 +309,23 @@ function makePass(store, userFor, dailyMod) {
       return json(res, 200, { granted, xp: granted ? xp : Number(user.pass_xp) || 0 }), true;
     }
 
+    /* A test-only shortcut: everything in the pool, on the shelf, at once —
+       so every reward can be eyeballed without playing to it. Runs through
+       the same grantItem as a real claim, so anything already owned just
+       pays out its coin value instead of a second copy, and a level claimed
+       afterwards behaves exactly as it would have before this ran: the
+       reward is still rolled, it is just already a duplicate. Touches
+       nothing about xp, claimed levels or coins beyond that. */
+    if (url.pathname === "/api/pass/grant-all") {
+      if (overRate("gaa:" + user.id, 5, 60 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
+      const results = [];
+      for (const [slot, id] of ITEM_POOL) {
+        try { results.push(await grantItem(user.id, slot, id)); }
+        catch (e) { console.error("grant-all:", slot, id, e && e.message); }
+      }
+      return json(res, 200, { granted: results.length }), true;
+    }
+
     return json(res, 404, { error: "No such endpoint." }), true;
   }
 

@@ -2020,6 +2020,7 @@ body.daily .gar-arrow{display:none}
         </div>
         <div class="chips">
           <span class="pass-coins"><i>🪙</i><b id="passCoins">0</b></span>
+          <button class="chip" id="passGrantAll" hidden>Own everything (test)</button>
           <button class="chip" id="passBack">Back</button>
         </div>
       </div>
@@ -9652,6 +9653,7 @@ function passPacksUI(){
 function passUI(){
   const card=$("hmPass"); if(card) card.hidden=!(acctIn()&&isTester());
   if(!acctIn()||!isTester())return;
+  $("passGrantAll").hidden=false;
   passBuild();
   $("passCoins").textContent=PASS.coins.toLocaleString();
   $("passLevelTxt").textContent="Level "+PASS.level+" / 50";
@@ -9705,6 +9707,24 @@ async function passClaim(level){
       showFlash("Level "+level+" claimed","#B24FE8",rr.label);
   }catch(e){
     showFlash("Couldn't claim that","#E8453C",e&&e.message||"");
+  }
+}
+/* Test-only: everything in the pool, owned at once, so it can all be
+   looked at without playing up to it. The pass itself is untouched —
+   xp, level and claimed levels carry on exactly as they were, so
+   claiming a level afterwards still works; an item level just pays out
+   as a duplicate, in coins, because by then it already is one. */
+async function passGrantAll(){
+  if(!acctIn())return;
+  const btn=$("passGrantAll"); if(btn)btn.disabled=true;
+  try{
+    const r=await api("/api/pass/grant-all",{method:"POST",token:ACCT.token,body:{}});
+    await acctVerify(true);
+    showFlash("Test mode","#2ED47A","Every item and car granted ("+r.granted+")");
+  }catch(e){
+    showFlash("Couldn't grant those","#E8453C",e&&e.message||"");
+  }finally{
+    if(btn)btn.disabled=false;
   }
 }
 /* Turns what /api/pass/packs/open answered with into exactly the shape
@@ -10419,6 +10439,7 @@ $("hmShop").addEventListener("click",()=>{
 $("shBack").addEventListener("click",goHome);
 $("hmPass").addEventListener("click",goPass);
 $("passBack").addEventListener("click",goHome);
+$("passGrantAll").addEventListener("click",passGrantAll);
 $("packX").addEventListener("click",packOverlayClose);
 $("pcClose").addEventListener("click",packOverlayClose);
 $("pcAgain").addEventListener("click",()=>openPack());
