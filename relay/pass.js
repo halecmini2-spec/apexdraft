@@ -235,6 +235,12 @@ function makePass(store, userFor, dailyMod) {
     if (!isPassTester(user)) return json(res, 404, { error: "No such endpoint." }), true;
 
     if (url.pathname === "/api/pass/state" && req.method === "GET") {
+      /* Playtime XP is retired. This is where it is actually taken back
+         off an account — the first time its pass is opened after the
+         change, and a no-op every time after that, since by then nothing
+         is left for it to find. */
+      const undone = await store.takePlaytimeXp(user.id);
+      if (undone.removed) user.pass_xp = undone.xp;
       const [claimed, owned, packs] = await Promise.all([
         store.claimedLevels(user.id, SEASON), store.ownedItems(user.id), store.packsFor(user.id),
       ]);
@@ -285,15 +291,14 @@ function makePass(store, userFor, dailyMod) {
       return json(res, 200, { packType: pack.pack_type, rolledRarity: rarity, result }), true;
     }
 
-    /* The events the relay has no other way to see for itself: playtime
-       heartbeats, and a race/overtake a driver reports having just done.
-       Rate-limited and only ever paid out once per key, which is the most
-       a relay that cannot watch a race itself can promise. */
+    /* The events the relay has no other way to see for itself: a
+       race/overtake a driver reports having just done. Rate-limited and
+       only ever paid out once per key, which is the most a relay that
+       cannot watch a race itself can promise. */
     if (url.pathname === "/api/pass/xp") {
       if (overRate("px:" + user.id, 40, 10 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
       const event = String(body.event || "");
       const XP_TABLE = {
-        playtime: { amount: (b) => Number(b.amount) || 0, max: 1000 },
         overtake: { amount: () => 10, max: 10 },
         race1: { amount: () => 150, max: 150 },
         race3: { amount: () => 400, max: 400 },

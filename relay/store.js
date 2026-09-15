@@ -19,6 +19,19 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 
+/* Playtime XP has been retired — see takePlaytimeXp below on both stores.
+ * This is only what is needed to work out how much a still-open tab
+ * already banked under the old "playtime:<session>:<mins>" key shape,
+ * so it can be taken back out once, the first time each account's pass
+ * state is next asked for. */
+function playtimeAmount(mins) {
+  if (mins === 10) return 500;
+  if (mins === 20) return 750;
+  if (mins === 30) return 900;
+  if (mins >= 60) return 1000;
+  return 0;
+}
+
 /* ---------- file ---------- */
 
 function fileStore(file) {
@@ -130,6 +143,19 @@ function fileStore(file) {
       db.xpGrants.push({ user_id: id, key, at: Date.now() });
       const xp = await this.addXp(id, amount);
       return { granted: true, xp };
+    },
+    /* Retiring playtime XP: finds every grant this account still has under
+       the old "playtime:<session>:<mins>" key, removes them, and hands
+       back what they added up to so it can be taken back off pass_xp. Once
+       run for an account there is nothing left for a second call to find. */
+    async takePlaytimeXp(id) {
+      const mine = db.xpGrants.filter((g) => g.user_id === id && g.key.startsWith("playtime:"));
+      if (!mine.length) return { removed: 0, xp: null };
+      db.xpGrants = db.xpGrants.filter((g) => !(g.user_id === id && g.key.startsWith("playtime:")));
+      let total = 0;
+      for (const g of mine) total += playtimeAmount(Number(g.key.split(":")[2]));
+      const xp = await this.addXp(id, -total);
+      return { removed: total, xp };
     },
     /* ---- owned cosmetics ----
        Whether a car or a kit item, one shelf: item_key is "<slot>:<id>".
@@ -674,6 +700,20 @@ function pgStore(url) {
       if (r.rowCount === 0) return { granted: false, xp: null };
       const xp = await this.addXp(id, amount);
       return { granted: true, xp };
+    },
+    /* Retiring playtime XP: finds every grant this account still has under
+       the old "playtime:<session>:<mins>" key, removes them, and hands
+       back what they added up to so it can be taken back off pass_xp. Once
+       run for an account there is nothing left for a second call to find. */
+    async takePlaytimeXp(id) {
+      const rows = (await pool.query(
+        `DELETE FROM xp_grants WHERE user_id=$1 AND key LIKE 'playtime:%' RETURNING key`, [id]
+      )).rows;
+      if (!rows.length) return { removed: 0, xp: null };
+      let total = 0;
+      for (const row of rows) total += playtimeAmount(Number(String(row.key).split(":")[2]));
+      const xp = await this.addXp(id, -total);
+      return { removed: total, xp };
     },
     /* ---- owned cosmetics ----
        Whether a car or a kit item, one shelf: item_key is "<slot>:<id>".
