@@ -4446,6 +4446,11 @@ const RARITY={
   legendary:{label:"Legendary", colour:"#E8B32A", dim:"#6B5316", glow:"rgba(232,179,42,.10)"},
   mythic:   {label:"Mythic",    colour:"#E8453C", dim:"#6E2420", glow:"rgba(232,69,60,.10)"}
 };
+/* The order a shelf of items reads in, rarest last — worked out once here
+   rather than by hand-ordering every KITS array, so an item added to the
+   middle of a list later still lands in the right place on the shelf. */
+const RARITY_ORDER=["rare","epic","legendary","mythic"];
+const byRarity=(a,b)=>RARITY_ORDER.indexOf(a.rarity)-RARITY_ORDER.indexOf(b.rarity);
 const CAR_MODELS=[
   {id:"gt",     label:"GT",      rarity:"epic"},
   {id:"formula",label:"Formula", rarity:"legendary"},
@@ -4550,11 +4555,6 @@ const KITS={
        literal weave. Low sat keeps it a sparkle rather than a colour. */
     {id:"carbon-fibre", label:"Carbon Fibre Paint", rarity:"epic", metal:0.55,rough:0.22,env:1.7,tint:0x0C0F11,
       iri:{bands:34.0, speed:0.05, mix:0.10, glow:0.10, sat:0.08, hard:true}},
-    /* Chopped and irregular rather than woven — fewer, coarser bands, a
-       shade lighter grey than the woven finish above, and left satin
-       rather than glossed over. */
-    {id:"forged-carbon", label:"Forged Carbon Paint", rarity:"epic", metal:0.45,rough:0.30,env:1.5,tint:0x16181C,
-      iri:{bands:14.0, speed:0.04, mix:0.14, glow:0.14, sat:0.05, hard:true}},
     /* The weave above, on a mirror rather than a satin clearcoat — the
        "premium combination" is the two finishes stacked, not a third
        effect of its own. */
@@ -4599,10 +4599,6 @@ const KITS={
        above already do it. */
     {id:"racing", label:"Racing Wheels", rarity:"rare", rim:0x24282B,metal:0.55,rough:0.32,
       spoke:0x3A4044, hub:0x101214, lip:0xD8DEE1, lipRough:0.10},
-    {id:"chrome-racing", label:"Chrome Racing Wheels", rarity:"epic", rim:0xE8EDEF,metal:1.00,rough:0.03,
-      spoke:0xF2F6F7, hub:0x74797C, lip:0xFFFFFF, lipRough:0.015},
-    {id:"gold-racing", label:"Gold Racing Wheels", rarity:"epic", rim:0xC49A34,metal:1.00,rough:0.15,
-      spoke:0xE6BE5C, hub:0x2E2412, lip:0xF4D98A, lipRough:0.05},
     /* A bright accent lip rather than more chrome — the thing that reads
        as "a tier above the others" from a distance, the same job Neon's
        glow does above. */
@@ -9119,7 +9115,7 @@ function kitItems(){
   if(box.dataset.slot===KIT_TAB)return;         // already showing these
   box.dataset.slot=KIT_TAB;
   box.textContent="";
-  for(const it of KITS[KIT_TAB].items) box.appendChild(kitChip(KIT_TAB,it));
+  for(const it of KITS[KIT_TAB].items.slice().sort(byRarity)) box.appendChild(kitChip(KIT_TAB,it));
 }
 function kitUI(){
   const on=isTester(), box=$("garKit");
@@ -9164,7 +9160,7 @@ function hornUI(){
 function titleBuild(){
   const box=$("auTitleChips"); if(!box||box.dataset.built)return;
   box.dataset.built="1";
-  for(const it of KITS.title.items){
+  for(const it of KITS.title.items.slice().sort(byRarity)){
     const b=document.createElement("button");
     b.className="kit-chip"; b.dataset.item=it.id;
     const R=RARITY[it.rarity];
@@ -9532,7 +9528,7 @@ const APEX_PASS_FREE=[
   {level:12, kind:"item",  slot:"paint", id:"pearlescent"},
   {level:13, kind:"coins", amount:250},
   {level:14, kind:"item",  slot:"title", id:"speedster"},
-  {level:15, kind:"item",  slot:"rims",  id:"chrome-racing"},
+  {level:15, kind:"item",  slot:"rims",  id:"chrome"},
   {level:16, kind:"coins", amount:300},
   {level:17, kind:"item",  slot:"paint", id:"holo"},
   {level:18, kind:"item",  slot:"glow",  id:"purple"},
@@ -9540,10 +9536,10 @@ const APEX_PASS_FREE=[
   {level:20, kind:"pack",  packType:"rare", major:true},
   {level:21, kind:"item",  slot:"title", id:"roadwarrior"},
   {level:22, kind:"coins", amount:300},
-  {level:23, kind:"item",  slot:"paint", id:"forged-carbon"},
+  {level:23, kind:"item",  slot:"paint", id:"flake"},
   {level:24, kind:"coins", amount:350},
   {level:25, kind:"item",  slot:"title", id:"drifter"},
-  {level:26, kind:"item",  slot:"rims",  id:"gold-racing"},
+  {level:26, kind:"item",  slot:"rims",  id:"carbon"},
   {level:27, kind:"coins", amount:400},
   {level:28, kind:"item",  slot:"paint", id:"liquid-metal"},
   {level:29, kind:"coins", amount:450},
@@ -9940,14 +9936,11 @@ const ITEM_BLURB={
   "title:racinglegend":"A name the board already knows.",
   "title:destroyer":"Nothing survives a lap with this one.",
   "paint:carbon-fibre":"Woven, not painted — the light finds the weave in it.",
-  "paint:forged-carbon":"Irregular on purpose. No two panels the same.",
   "paint:carbon-chrome":"Carbon under a mirror. The premium end of both.",
   "paint:pearlescent":"Shifts soft and slow, whatever colour it's over.",
   "paint:liquid-metal":"Not painted silver — poured.",
   "paint:black-chrome":"Dark enough to read as black, mirror enough to know it isn't.",
   "rims:racing":"Light, direct, built to be driven rather than looked at.",
-  "rims:chrome-racing":"The same wheel, mirrored.",
-  "rims:gold-racing":"Gold that means it, not yellow standing in.",
   "rims:elite-racing":"A step up from the rest of the shelf.",
   "rims:diamond-racing":"The smoothest edge a wheel here has ever had.",
   "glow:neon":"The first light under the sills — everyone's own is one of these.",
