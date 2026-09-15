@@ -24,6 +24,7 @@ const PERF = {
   trike:   { power: 1.12, top: 1.04, grip: 1.08 },
   v12:     { power: 1.04, top: 1.5625, grip: 1.24 },
   lmp1:    { power: 1.26, top: 1.20, grip: 1.30 },
+  golfkart:{ power: 0.85, top: 0.62, grip: 1.05 },
 };
 const TOP = 64;          // m/s on tarmac, GT
 const GRIP = 21.4;       // m/s^2 of lateral grip, GT, at speed

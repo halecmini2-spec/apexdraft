@@ -166,6 +166,10 @@ const ADMINS = new Set(
    admin listing has only name. */
 const isAdmin = (u) => !!u && ADMINS.has(u.name_lower || String(u.name || "").toLowerCase());
 
+/* 1,000 XP a level, fifty of them — the level is worked out from the XP
+   total rather than stored beside it, so the two can never disagree. */
+const passLevel = (xp) => Math.min(50, Math.floor(Math.max(0, xp | 0) / 1000) + 1);
+
 const publicUser = (u) => ({
   name: u.name, email: u.email, created: Number(u.created), admin: isAdmin(u),
   /* Anything an admin has left for this account to read. It rides along with
@@ -175,6 +179,14 @@ const publicUser = (u) => ({
   /* What the shop has sold this account, comma-separated in the row and a
      plain list of ids by the time the page sees it. */
   cars: String(u.cars || "").split(",").map((s) => s.trim()).filter(Boolean),
+  /* The Apex Pass, in the shape the account desk already answers with —
+     cheap enough off the same row that a driver's own balance and level
+     are in front of them the moment they sign in, same as their cars.
+     Anything heavier (what they own, what is still unopened) is its own
+     endpoint rather than riding along on every sign-in. */
+  coins: Number(u.coins) || 0,
+  passXp: Number(u.pass_xp) || 0,
+  passLevel: passLevel(u.pass_xp),
 });
 
 function makeAuth(store) {
@@ -275,6 +287,10 @@ function makeAuth(store) {
            the unique index caught what the check above could not. */
         return json(res, 409, { error: "That username is taken." }), true;
       }
+      /* the one Apex Pass event that happens here rather than in pass.js —
+         an account made is an account made, nothing left to verify */
+      const { granted, xp } = await store.grantXpOnce(user.id, "account:created", 500);
+      if (granted) user.pass_xp = xp;
       const token = await startSession(user);
       return json(res, 200, { token, user: publicUser(user) }), true;
     }
@@ -315,4 +331,7 @@ module.exports = {
   /* shared with the saved-circuit routes, which answer on the same server
      and so have to answer the same way */
   json, readBody, cors, clientIp, overRate,
+  /* shared with the Apex Pass routes, so a level means the same thing
+     everywhere it is asked about */
+  publicUser, passLevel,
 };

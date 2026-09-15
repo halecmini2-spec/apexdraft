@@ -728,6 +728,44 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
   .sh-card b{font-size:12.5px}
   .sh-card span{font-size:10.5px}
 }
+/* ---- the Apex Pass ---- */
+#passScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
+.pass-head .chips{align-items:center}
+.pass-coins{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:14px;color:var(--amber);
+  border:1px solid var(--amber-deep);background:var(--amber-glow);border-radius:14px;padding:5px 12px}
+.pass-coins i{font-style:normal}
+.pass-progress{margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pass-progress b{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+.pass-bar{flex:1 1 160px;height:8px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);overflow:hidden}
+.pass-bar i{display:block;height:100%;width:0%;background:var(--purple);transition:width .3s ease}
+#passXpTxt{font-family:var(--mono);font-size:11.5px;color:var(--faint);white-space:nowrap}
+.pass-track-wrap{margin-top:18px;overflow-x:auto;padding-bottom:6px}
+.pass-track{display:flex;gap:10px;min-width:min-content}
+.pass-card{flex:0 0 148px;background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:3px;
+  padding:9px 10px 10px;display:flex;flex-direction:column;gap:4px;opacity:.55}
+.pass-card.major{flex-basis:190px}
+.pass-card.available{opacity:1;box-shadow:inset 0 0 0 1px var(--rar,var(--amber))}
+.pass-card.claimed{opacity:.85}
+.pass-card .lv{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em}
+.pass-card .rar{font-style:normal;font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--rar,var(--faint))}
+.pass-card b{font-size:13px;color:var(--ink);line-height:1.25}
+.pass-card .mystery{color:var(--faint);letter-spacing:.06em}
+.pass-card button{margin-top:auto;padding:7px 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--rar,var(--amber));background:var(--rarGlow,var(--amber-glow));color:var(--rar,var(--amber));
+  border-radius:2px;font-weight:700}
+.pass-card button:disabled{opacity:.5}
+.pass-card .got{font-size:10.5px;color:var(--green);letter-spacing:.06em;text-transform:uppercase;text-align:center}
+.pass-premium{margin-top:26px;padding:14px;border:1px dashed var(--line);border-radius:3px;color:var(--faint);
+  display:flex;gap:10px;align-items:baseline;letter-spacing:.08em}
+.pass-premium b{color:var(--dim)}
+@media (max-width:760px){ .pass-card{flex-basis:122px} .pass-card.major{flex-basis:150px} }
+/* small, corner, out of the way — see the comment on the element itself */
+.xp-toast{position:fixed;top:calc(14px + var(--sat));right:calc(14px + var(--sar));z-index:60;
+  display:flex;align-items:center;gap:7px;background:rgba(12,19,20,.92);border:1px solid var(--purple);
+  border-radius:14px;padding:7px 14px;font-family:var(--mono);font-size:13px;color:var(--purple);
+  pointer-events:none;opacity:0;transform:translateY(-6px);transition:opacity .25s ease,transform .25s ease}
+.xp-toast.on{opacity:1;transform:translateY(0)}
+.xp-toast small{font-family:var(--ui);font-size:10px;color:var(--faint);letter-spacing:.04em}
 /* ---- opening a pack: a pass over the pad, then the card ----
    The canvas is the whole screen and stays put throughout — the car and
    the mark it leaves are drawn close in, at a size measured off the
@@ -767,6 +805,10 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .pack-tags i::before{content:"·";margin-right:8px;color:var(--dim)}
 .pack-card b{font-size:19px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink)}
 .pack-card span{font-size:12px;color:var(--dim)}
+/* the find itself did not change — the name still names it — only the
+   coin line underneath is worth making louder than the rest of the card */
+.pack-card.duplicate b{color:var(--red)}
+.pack-card.duplicate span{color:var(--amber);font-family:var(--mono);font-size:14px;font-weight:700}
 .pack-card-btns{margin-top:10px;display:flex;gap:10px}
 .sh-pack-test{margin:4px 0 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sh-pack-test span{font-size:11.5px;color:var(--faint)}
@@ -792,6 +834,7 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .dailybox .g{color:var(--faint);font-size:10px}
 body.daily .rail-scroll .grp:not(.grp-daily){opacity:.45;pointer-events:none}
 .gar-card.locked{opacity:.32;pointer-events:none}
+.kit-chip.locked{opacity:.32;pointer-events:none}
 /* Being tried out: shown to one account and to nobody else, the same way
    the AI opponents are. Hidden outright rather than greyed, so there is
    nothing on the page for anyone else to wonder about. */
@@ -1898,6 +1941,11 @@ body.daily .gar-arrow{display:none}
         <button class="home-card red" id="hmMulti"><i></i><b>Multiplayer</b><span>Host or join a party and race friends live, on a circuit you draw or one you saved.</span></button>
         <button class="home-card purple" id="hmDaily"><i></i><b>Daily time trial</b><span>Today's circuit, the world's times, your ranking, and a ghost to chase.</span></button>
         <button class="home-card grey" id="hmShop"><i></i><b>Shop</b><span>Coming soon.</span></button>
+        <!-- Test mode only, same gate as the shop's own packs/coins section
+             — cosmo38 is the only account the Apex Pass answers anything
+             to yet, so this stays out of the grid entirely for everyone
+             else rather than showing and refusing them. -->
+        <button class="home-card purple" id="hmPass" hidden><i></i><b>Apex Pass</b><span id="hmPassSub">Season 1 — Free track.</span></button>
       </div>
       <!-- The account, sold rather than mentioned: it is free and takes a
            moment, and it is what puts your name on your car and your laps
@@ -1931,7 +1979,10 @@ body.daily .gar-arrow{display:none}
           <h1 class="auth-brand">The <span>shop</span></h1>
           <p class="auth-sub">Cars, for real money now.</p>
         </div>
-        <div class="chips"><button class="chip" id="shBack">Back</button></div>
+        <div class="chips">
+          <span class="pass-coins" id="shCoinBal" hidden><i>🪙</i><b>0</b></span>
+          <button class="chip" id="shBack">Back</button>
+        </div>
       </div>
       <p class="sh-note">A car is yours for good once it's bought — sign in
         first, so there's an account for it to belong to.</p>
@@ -1950,6 +2001,45 @@ body.daily .gar-arrow{display:none}
       <p class="sh-note" id="shSaid"></p>
     </div>
   </section>
+
+  <!-- XP, wherever it is earned: a corner note rather than a flash across
+       the middle of the screen, because a lap counts whether or not you
+       are looking at it, and this is not the thing that should be holding
+       up your eyes off the road to read. -->
+  <div id="xpToast" class="xp-toast" hidden></div>
+
+  <!-- Fifty levels, one free track for now — Premium is architected here
+       (the header has a place for it) but nothing sells it yet. Reachable
+       only from the home card above, which is reachable only by cosmo38. -->
+  <section id="passScreen" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head pass-head">
+        <div>
+          <h1 class="auth-brand">Apex <span>Pass</span></h1>
+          <p class="auth-sub">Season 1 — Free</p>
+        </div>
+        <div class="chips">
+          <span class="pass-coins"><i>🪙</i><b id="passCoins">0</b></span>
+          <button class="chip" id="passBack">Back</button>
+        </div>
+      </div>
+      <div class="pass-progress">
+        <b id="passLevelTxt">Level 1 / 50</b>
+        <div class="pass-bar"><i id="passBarFill"></i></div>
+        <span id="passXpTxt"></span>
+      </div>
+      <div class="pass-track-wrap">
+        <div class="pass-track" id="passTrack"></div>
+      </div>
+      <h2 class="sh-h">Packs <span>Won, not yet opened — the odds are on each one</span></h2>
+      <div class="sh-grid" id="passPacks"></div>
+      <p class="sh-note" id="passPacksNote">Nothing unopened right now.</p>
+      <div class="pass-premium">
+        <b>PREMIUM</b><span>— COMING SOON</span>
+      </div>
+    </div>
+  </section>
+
   <!-- A pack opening: the GT crosses the pad top-down, marking the ground
        the colour of whatever it left the truck with, and then the card
        says what that was. Reachable only from the shop, which is reachable
@@ -2256,6 +2346,7 @@ body.daily .gar-arrow{display:none}
         <button class="gar-card test" data-car="trike"><canvas width="360" height="220"></canvas><b>Rocket Trike</b><span>240+ km/h, 210 kg. Three wheels, very twitchy.</span></button>
         <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span><b class="big">360 km/h</b><i>Far and away the fastest thing here. 1,450 kg, heavy and stable.</i></span></button>
         <button class="gar-card test" data-car="lmp1"><canvas width="360" height="220"></canvas><b>LMP1 Prototype</b><span>275+ km/h, 875 kg. Built to hold that pace for hours, not one lap.</span></button>
+        <button class="gar-card test" data-car="golfkart"><canvas width="360" height="220"></canvas><b>Golf Kart</b><span>A golf cart somebody has turned into a racing machine.</span></button>
         </div>
         <button class="gar-arrow" id="garNext" aria-label="The car after this one">›</button>
       </div>
@@ -2371,6 +2462,7 @@ body.daily .gar-arrow{display:none}
             <button class="chip test" data-car="trike">Rocket Trike</button>
             <button class="chip test" data-car="v12">V12 Monster</button>
             <button class="chip test" data-car="lmp1">LMP1 Prototype</button>
+            <button class="chip test" data-car="golfkart">Golf Kart</button>
           </div>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
           <!-- A car's own music, made in the browser as it plays. The row
@@ -4365,7 +4457,11 @@ const CAR_MODELS=[
   {id:"bike",   label:"Superbike X", test:true, rarity:"epic"},
   {id:"trike",  label:"Rocket Trike",test:true, rarity:"epic"},
   {id:"v12",    label:"V12 Monster", test:true, rarity:"mythic"},
-  {id:"lmp1",   label:"LMP1 Prototype", test:true, rarity:"legendary"}
+  {id:"lmp1",   label:"LMP1 Prototype", test:true, rarity:"legendary"},
+  /* the Apex Pass's own Level 30 — not for sale, only ever handed over by
+     the pass itself, so it stays gated the same way the others are until
+     there is a real way to grant it outside a shop purchase */
+  {id:"golfkart",label:"Golf Kart",  test:true, rarity:"epic"}
 ];
 const carRarity=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return (m&&RARITY[m.rarity])||null; };
 
@@ -4385,7 +4481,15 @@ const KITS={
     {id:"backmarker",label:"Backmarker",     rarity:"rare"},
     {id:"apex",      label:"Apex Hunter",    rarity:"epic"},
     {id:"unbeaten",  label:"Unbeaten",       rarity:"legendary"},
-    {id:"king",      label:"The King",       rarity:"mythic"}
+    {id:"king",      label:"The King",       rarity:"mythic"},
+    /* the Apex Pass's own titles, Season 1 — rookie through legend */
+    {id:"rookie",      label:"Rookie",         rarity:"rare"},
+    {id:"speedster",   label:"Speedster",      rarity:"rare"},
+    {id:"roadwarrior", label:"Road Warrior",   rarity:"epic"},
+    {id:"drifter",     label:"Drifter",        rarity:"epic"},
+    {id:"elitedriver", label:"Elite",          rarity:"epic"},
+    {id:"racinglegend",label:"Racing Legend",  rarity:"legendary"},
+    {id:"destroyer",   label:"The Destroyer",  rarity:"legendary"}
   ]},
   /* metal/rough/env go straight onto the paint material; tint overrides the
      colour chosen on the swatches, which only the ones that are a material
@@ -4432,7 +4536,43 @@ const KITS={
     /* A mirror with a spectrum stepped across it, moving fast enough to
        see. Nothing else here is allowed to look like this. */
     {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
-      iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}}
+      iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}},
+
+    /* ---- the Apex Pass's own finishes, Season 1 ----
+       A woven carbon look with no geometry to hang a texture off — loft()
+       builds shells with no UVs at all, so a mapped weave would sample one
+       texel and read as flat black, which is the one thing this is not
+       allowed to be. What "Midnight Flake" already does instead — a very
+       fine, near-neutral iridescent band read by viewing angle rather than
+       by a UV — is the same trick a woven surface actually plays with
+       light, so it is reused rather than a new, riskier shader chasing a
+       literal weave. Low sat keeps it a sparkle rather than a colour. */
+    {id:"carbon-fibre", label:"Carbon Fibre Paint", rarity:"epic", metal:0.55,rough:0.22,env:1.7,tint:0x0C0F11,
+      iri:{bands:34.0, speed:0.05, mix:0.10, glow:0.10, sat:0.08, hard:true}},
+    /* Chopped and irregular rather than woven — fewer, coarser bands, a
+       shade lighter grey than the woven finish above, and left satin
+       rather than glossed over. */
+    {id:"forged-carbon", label:"Forged Carbon Paint", rarity:"epic", metal:0.45,rough:0.30,env:1.5,tint:0x16181C,
+      iri:{bands:14.0, speed:0.04, mix:0.14, glow:0.14, sat:0.05, hard:true}},
+    /* The weave above, on a mirror rather than a satin clearcoat — the
+       "premium combination" is the two finishes stacked, not a third
+       effect of its own. */
+    {id:"carbon-chrome", label:"Carbon + Chrome Paint", rarity:"legendary", metal:0.90,rough:0.05,env:2.5,tint:0x0A0C0E,
+      iri:{bands:34.0, speed:0.05, mix:0.10, glow:0.20, sat:0.08, hard:true}},
+    /* No tint: a pearl shifts over whatever colour was chosen rather than
+       replacing it, wide and slow rather than banded, and nowhere near
+       full saturation — tasteful, the way an actual pearl coat reads,
+       against Holographic's much harder shift below. */
+    {id:"pearlescent", label:"Pearlescent Paint", rarity:"epic", metal:0.30,rough:0.18,env:1.6,
+      iri:{bands:1.2, speed:0.06, mix:0.55, glow:0.20, sat:0.30}},
+    /* Extreme smoothness and nothing else — no shift, no tint beyond a
+       bright neutral silver — because a liquid does not have a colour of
+       its own, only whatever it is reflecting. */
+    {id:"liquid-metal", label:"Liquid Metal Paint", rarity:"legendary", metal:1.00,rough:0.02,env:2.8,tint:0xC7CBCC},
+    /* The same mirror smoothness as Liquid Metal, dark rather than bright
+       — still fully metallic, which is what keeps a near-black finish
+       reading as chrome instead of quietly becoming flat black paint. */
+    {id:"black-chrome", label:"Black Chrome Paint", rarity:"legendary", metal:1.00,rough:0.025,env:2.7,tint:0x0A0B0D}
   ]},
   /* rim is the barrel, spoke the face, hub the middle and lip the machined
      ring round the edge — the dearer ones set all four rather than painting
@@ -4448,14 +4588,41 @@ const KITS={
     {id:"gold",   label:"Gold Rims",   rarity:"legendary", rim:0xB8902A,metal:1.00,rough:0.13,
       spoke:0xE8C24E, hub:0x2A2113, lip:0xFFE79A, lipRough:0.04},
     {id:"neon",   label:"Neon Rims",   rarity:"mythic",    rim:0x0D1014,metal:0.55,rough:0.40,
-      spoke:0x141A20, hub:0x080A0C, lip:0x1A2028, lipMetal:0.5, lipRough:0.30, emit:0x28E0FF, cycle:true}
+      spoke:0x141A20, hub:0x080A0C, lip:0x1A2028, lipMetal:0.5, lipRough:0.30, emit:0x28E0FF, cycle:true},
+
+    /* ---- the Apex Pass's own wheels, Season 1 ----
+       A lighter, more direct set than Bronze/Carbon/Chrome/Gold/Neon above
+       — the shape underneath is the same rim buildWheels() always builds,
+       so "more premium" is carried by how the metal and the machined lip
+       actually behave rather than by a name alone, the same way the tiers
+       above already do it. */
+    {id:"racing", label:"Racing Wheels", rarity:"rare", rim:0x24282B,metal:0.55,rough:0.32,
+      spoke:0x3A4044, hub:0x101214, lip:0xD8DEE1, lipRough:0.10},
+    {id:"chrome-racing", label:"Chrome Racing Wheels", rarity:"epic", rim:0xE8EDEF,metal:1.00,rough:0.03,
+      spoke:0xF2F6F7, hub:0x74797C, lip:0xFFFFFF, lipRough:0.015},
+    {id:"gold-racing", label:"Gold Racing Wheels", rarity:"epic", rim:0xC49A34,metal:1.00,rough:0.15,
+      spoke:0xE6BE5C, hub:0x2E2412, lip:0xF4D98A, lipRough:0.05},
+    /* A bright accent lip rather than more chrome — the thing that reads
+       as "a tier above the others" from a distance, the same job Neon's
+       glow does above. */
+    {id:"elite-racing", label:"Elite Racing Wheels", rarity:"legendary", rim:0x14171A,metal:0.85,rough:0.06,
+      spoke:0x2A2E32, hub:0x0A0C0D, lip:0x9FF2E0, lipMetal:1.0, lipRough:0.02},
+    /* The smoothest rim there is — past Chrome Racing's own polish rather
+       than level with it, which is what a diamond-cut edge is asking for. */
+    {id:"diamond-racing", label:"Diamond Racing Wheels", rarity:"legendary", rim:0xEFF6F7,metal:1.00,rough:0.008,
+      spoke:0xFFFFFF, hub:0xB7C4C6, lip:0xFFFFFF, lipRough:0.005}
   ]},
   glow:{label:"Underglow", none:"None", items:[
     {id:"ice",    label:"Ice Blue",    rarity:"rare",      colour:0x63D6FF},
     {id:"violet", label:"Violet",      rarity:"epic",      colour:0xA868FF},
     {id:"toxic",  label:"Toxic Green", rarity:"epic",      colour:0x4BE86B},
     {id:"ember",  label:"Ember Red",   rarity:"legendary", colour:0xFF4A32},
-    {id:"rain",   label:"Rainbow",     rarity:"mythic",    cycle:true}
+    {id:"rain",   label:"Rainbow",     rarity:"mythic",    cycle:true},
+    /* the Apex Pass's own four, Season 1 */
+    {id:"neon",     label:"Neon Underglow",        rarity:"rare",      colour:0x33F0FF},
+    {id:"purple",   label:"Purple Neon Underglow", rarity:"rare",      colour:0x9B30FF},
+    {id:"gold-glow",label:"Gold Underglow",        rarity:"epic",      colour:0xE8C24E},
+    {id:"platinum", label:"Platinum Underglow",    rarity:"legendary", colour:0xE9EEF0}
   ]},
   /* a horn is a couple of notes and how long they last; the tune is the
      item, so a new one is a new row rather than new code */
@@ -4466,10 +4633,17 @@ const KITS={
     {id:"cuca",   label:"La Cucaracha", rarity:"legendary", wave:"square",
       notes:[[523,0,0.13],[523,0.15,0.13],[523,0.30,0.13],[698,0.45,0.30],[880,0.80,0.40]]},
     {id:"train",  label:"Train Horn",   rarity:"mythic",    wave:"sawtooth",
-      notes:[[110,0,1.5],[147,0,1.5],[185,0,1.5],[220,0,1.5]]}
+      notes:[[110,0,1.5],[147,0,1.5],[185,0,1.5],[220,0,1.5]]},
+    /* a clean fifth, sharper and shorter than Classic — the Apex Pass's own */
+    {id:"sport",  label:"Sport Horn",   rarity:"rare",      wave:"square",  notes:[[493,0,0.35],[659,0,0.35]]}
+  ]},
+  /* A badge sits by the name, not on the car — no car-facing fields at
+     all, only what the Pass gives it to say and how bright it reads. */
+  badge:{label:"Badge", none:null, items:[
+    {id:"champion", label:"Apex Champion", rarity:"legendary"}
   ]}
 };
-const KIT_SLOTS=["title","paint","rims","glow","horn"];
+const KIT_SLOTS=["title","paint","rims","glow","horn","badge"];
 /* the ones that are the car, which are the ones the garage offers */
 const KIT_CAR_SLOTS=["paint","rims","glow","horn"];
 const kitItem=(slot,id)=>{ const g=KITS[slot]; return (g&&id&&g.items.find(i=>i.id===id))||null; };
@@ -4502,6 +4676,28 @@ function carAllowed(k){
   if(myCars().indexOf(k)>=0) return true;
   return isTester();
 }
+/* ---- the Apex Pass ----
+   Coins, XP and level ride along with the account itself (ACCT.user), the
+   same way cars do; what is actually owned and still unopened is heavier
+   and asked for on its own, only once the pass screen or the kit drawer
+   is actually open. */
+const PASS={loaded:false,coins:0,xp:0,level:1,season:"s1",claimed:[],owned:[],packs:[],packOdds:null};
+function myItems(){ return (acctIn()&&Array.isArray(PASS.owned))?PASS.owned:[]; }
+/* Whether this account can put a given cosmetic on — the six plain colours
+   and "nothing on" are free, same as they always were; everything else now
+   has to have actually been won, which nothing checked before this. No
+   isTester() fallback here on purpose: cosmo38 is the one account that can
+   even open this drawer, and a bypass would mean the one account able to
+   try the Apex Pass could never see its own gate holding. */
+function kitAllowed(slot,id){
+  if(!id) return true;
+  const it=kitItem(slot,id);
+  if(it&&it.std) return true;
+  return myItems().indexOf(slot+":"+id)>=0;
+}
+/* passRefresh() and passUI() are defined together further down, by the
+   rest of the Apex Pass screen — this is only the account-shaped state
+   they both read and write. */
 /* Multipliers on the shared physics constants. Because these change lap
    times, the car is part of the best-lap key — a Formula lap and a Yaris lap
    around the same circuit are not the same record. */
@@ -4530,7 +4726,11 @@ const CAR_PERF={
      prototype rather than an open-wheeler, so the same straight-line
      figures as the Formula sit on a heavier, less flighty car: still
      quick into a corner, just not thrown at one. */
-  lmp1:   {power:1.26, top:1.20, grip:1.30, turnin:1.55, front:1.35}   // 275+, matches Formula for speed
+  lmp1:   {power:1.26, top:1.20, grip:1.30, turnin:1.55, front:1.35},  // 275+, matches Formula for speed
+  /* Golf-cart proportions rather than a car's: nowhere near the top end
+     of anything above it, but a short wheelbase and a wheel that answers
+     straight away, so it is quick to place even if it is not quick. */
+  golfkart:{power:0.85, top:0.62, grip:1.05, turnin:1.05, front:0.95}
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -4574,7 +4774,7 @@ function hitbox(kind){
    compressed scale the kart already sits on: a 165 kg bike is not a
    seventh of a GT to lean on, only a good deal less than one. */
 const CAR_MASS={gt:1.00, formula:0.78, yaris:0.92, kart:0.42,
-                bike:0.46, trike:0.54, v12:1.12, lmp1:0.86};
+                bike:0.46, trike:0.54, v12:1.12, lmp1:0.86, golfkart:0.50};
 const carMass=k=>CAR_MASS[k]||1;
 const openWheel=k=>k==="formula"||k==="kart"||k==="bike"||k==="trike";
 /* the circles of one car, in the world */
@@ -4704,7 +4904,17 @@ function glowShadows(car,on){
    world rather than to the car — the car only says where it is and which
    way it faces. It cannot be buried, on any car, over any ground, because
    there is nowhere for it to be buried into. */
-const GLOW_N=8;                       // squares across the grid
+const GLOW_N=16;                      // squares along the length — enough to taper smoothly
+/* How wide the light is, at a point running from -1 (tail) to 1 (nose).
+   A rectangle read as a ring lit round the edges because every row was
+   exactly as wide as the last one; this narrows it toward each end the
+   way the car's own bodywork does, so the patch on the ground reads as
+   the car's own shape rather than a box it happens to be standing in. */
+function glowWidthProfile(t){
+  if(t>0.72) return Math.max(0.18,1-(t-0.72)/0.28*0.82);   // the nose, tapering to a point
+  if(t<-0.62) return Math.max(0.30,1-(-t-0.62)/0.38*0.70); // the tail, blunter than the nose
+  return 1;
+}
 function glowBuild(car){
   const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
   box.getSize(sz);
@@ -4717,8 +4927,10 @@ function glowBuild(car){
   const idx=[];
   for(let j=0;j<w;j++)for(let i=0;i<w;i++){
     const k=j*w+i, u=i/n, v=j/n;
-    base[k*2]  =(u-0.5)*2*hw;         // metres across, in the car's own frame
-    base[k*2+1]=(v-0.5)*2*hl;         // metres along
+    const t=(v-0.5)*2;                // -1 tail .. 1 nose
+    const rowW=hw*glowWidthProfile(t);
+    base[k*2]  =(u-0.5)*2*rowW;       // metres across, narrowed toward each end
+    base[k*2+1]=t*hl;                 // metres along
     uv[k*2]=u; uv[k*2+1]=v;
   }
   for(let j=0;j<n;j++)for(let i=0;i<n;i++){
@@ -6277,6 +6489,28 @@ function bodyLMP1(b,M){
   ],14),M.paint);
   b.add(spine);
 
+  /* ---- the cockpit ----
+     Mostly hidden under a tinted canopy, the way a real one actually
+     reads from outside — a seat, a wheel and something for a head to be,
+     rather than an empty tub, so what the glass does give away at a
+     glancing angle is a cockpit and not a hole in the bodywork. */
+  const seatM=new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.78,metalness:0.05});
+  const wheelM=new THREE.MeshStandardMaterial({color:SRGB(0x16181A),roughness:0.40,metalness:0.32});
+  const seat=new THREE.Mesh(loft([
+    {z: 0.24,w:0.135,y0:0.130,y1:0.310,n:3.2},   // the seat back, tall enough to read as one
+    {z: 0.00,w:0.150,y0:0.115,y1:0.175,n:3.6},   // the base, low in the tub
+    {z:-0.22,w:0.130,y0:0.120,y1:0.170,n:3.2}
+  ],14),seatM);
+  b.add(seat);
+  /* a driver's position rather than a driver: a helmet-height mass is
+     enough to say somebody is sitting there without modelling a figure
+     this little of the car will ever actually show */
+  const helmet=new THREE.Mesh(new THREE.SphereGeometry(0.115,14,10),seatM);
+  helmet.position.set(0,0.410,0.20); b.add(helmet);
+  const wheelRim=new THREE.Mesh(new THREE.TorusGeometry(0.095,0.014,8,18),wheelM);
+  wheelRim.position.set(0,0.300,0.62); wheelRim.rotation.x=Math.PI/2-0.35; b.add(wheelRim);
+  tubeTo(b,[0,0.260,0.72],[0,0.300,0.62],0.016,wheelM,8);   // the column
+
   addFenders(b,M,FZ,FR,0.360,FX,0.230);
   addFenders(b,M,RZ,RR,0.400,RX,0.260);
 
@@ -6376,6 +6610,101 @@ function bodyLMP1(b,M){
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
+/* ---- GOLF KART: a golf cart somebody has turned into a racing machine ----
+   The proportions of the thing it started as — short, tall, two seats
+   under a flat roof on four thin posts — kept honest rather than stretched
+   into a car, and everything that says "modified" layered on top of that:
+   wider tyres than it was ever sold with, sat lower on its own springs,
+   a painted body rather than bare plastic, and a front bumper that reads
+   as a bar bolted on rather than bodywork it was moulded with.
+   2.70 long, 1.22 across the arches, 1.50 tall to the roof, on a 1.75
+   wheelbase. */
+function bodyGolfKart(b,M){
+  const FR=0.280, RR=0.300;
+  const FZ=0.850, RZ=-0.900;
+  const FX=0.580, RX=0.580;
+  const chassisM=new THREE.MeshStandardMaterial({color:SRGB(0x1A1E21),roughness:0.45,metalness:0.60});
+  const postM    =new THREE.MeshStandardMaterial({color:SRGB(0x24282B),roughness:0.42,metalness:0.55});
+  const seatM    =new THREE.MeshStandardMaterial({color:SRGB(0x15181A),roughness:0.72,metalness:0.08});
+  const wheelM   =new THREE.MeshStandardMaterial({color:SRGB(0x1C1F21),roughness:0.40,metalness:0.30});
+  const bumperM  =new THREE.MeshStandardMaterial({color:SRGB(0x17191B),roughness:0.55,metalness:0.15});
+
+  /* the body: short, tall in the middle, rounded at both ends rather than
+     a box with corners knocked off it */
+  const shell=new THREE.Mesh(loft([
+    {z: 1.30,w:0.260,y0:0.130,y1:0.320,n:2.6},   // a rounded nose
+    {z: 1.05,w:0.520,y0:0.110,y1:0.420,n:3.2},   // the hood widening out
+    {z: 0.78,w:0.600,y0:0.100,y1:0.460,n:3.6},   // over the front wheels
+    {z: 0.40,w:0.610,y0:0.100,y1:0.480,n:3.8},   // into the footwell
+    {z: 0.00,w:0.600,y0:0.100,y1:0.500,n:3.8},   // under the seats
+    {z:-0.45,w:0.610,y0:0.100,y1:0.480,n:3.8},   // the rear deck
+    {z:-0.85,w:0.600,y0:0.105,y1:0.440,n:3.6},   // over the rear wheels
+    {z:-1.20,w:0.420,y0:0.120,y1:0.360,n:2.8},   // a short rounded tail
+    {z:-1.40,w:0.220,y0:0.140,y1:0.260,n:2.2}
+  ],24),M.paint);
+  shell.castShadow=true; b.add(shell);
+
+  /* a small raked windscreen — not full height, a golf cart's own never
+     was, just enough to say the open cabin behind it has a front to it */
+  const wind=new THREE.Mesh(new THREE.BoxGeometry(0.520,0.360,0.018),M.glass);
+  wind.position.set(0,0.660,0.600); wind.rotation.x=-0.55; wind.castShadow=true; b.add(wind);
+
+  /* the roof: four thin posts holding up one flat panel, which is the
+     one silhouette that says "golf cart" before anything else does */
+  const roofY=1.420;
+  for(const [sx,sz] of [[-0.560,0.520],[0.560,0.520],[-0.560,-0.560],[0.560,-0.560]])
+    tubeTo(b,[sx,0.470,sz],[sx*0.90,roofY,sz*0.92],0.022,postM,8);
+  const roof=new THREE.Mesh(loft([
+    {z: 0.72,w:0.560,y0:roofY-0.028,y1:roofY+0.028,n:3.4},
+    {z: 0.10,w:0.600,y0:roofY-0.020,y1:roofY+0.048,n:3.6},
+    {z:-0.65,w:0.600,y0:roofY-0.020,y1:roofY+0.048,n:3.6},
+    {z:-0.95,w:0.520,y0:roofY-0.028,y1:roofY+0.020,n:3.2}
+  ],16),M.paint);
+  roof.castShadow=true; b.add(roof);
+
+  /* two proper seats, side by side, rather than a bench standing in for
+     both of them */
+  for(const sx of [-1,1]){
+    const seat=new THREE.Mesh(loft([
+      {z: 0.10,w:0.130,y0:0.300,y1:0.560,n:3.0},   // the seat back
+      {z:-0.14,w:0.150,y0:0.290,y1:0.360,n:3.4},   // the base, low
+      {z:-0.35,w:0.130,y0:0.295,y1:0.350,n:3.0}
+    ],12),seatM);
+    seat.position.x=sx*0.230; seat.castShadow=true; b.add(seat);
+  }
+  /* a small wheel on a short column — a golf cart's own is never much
+     bigger than this */
+  const wheelRim=new THREE.Mesh(new THREE.TorusGeometry(0.085,0.012,8,16),wheelM);
+  wheelRim.position.set(0,0.620,0.420); wheelRim.rotation.x=Math.PI/2-0.30; b.add(wheelRim);
+  tubeTo(b,[0,0.520,0.660],[0,0.620,0.420],0.015,wheelM,8);
+
+  /* headlights let into the nose, and a bumper bar standing proud of it —
+     bolted on, the way a modified cart's actually is, not moulded in */
+  const hlm=new THREE.MeshStandardMaterial({
+    color:SRGB(0xF6EFE0),emissive:SRGB(0xE8D6AC),emissiveIntensity:0.6,roughness:0.16,metalness:0.1});
+  for(const sx of [-0.440,0.440]){
+    const hl=new THREE.Mesh(lens(0.130,0.130,0.05),hlm);
+    hl.position.set(sx,0.290,1.300); b.add(hl);
+  }
+  const bumper=new THREE.Mesh(lens(0.680,0.140,0.06),bumperM);
+  bumper.position.set(0,0.200,1.320); bumper.rotation.x=Math.PI/2; bumper.castShadow=true; b.add(bumper);
+
+  /* lowered springs: a strut running from the chassis down to each hub,
+     which is what "sat lower on its own suspension" actually looks like
+     rather than just being said about it */
+  for(const [sx,z] of [[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]])
+    tubeTo(b,[sx*0.82,0.340,z],[sx,0.190,z],0.018,chassisM,6);
+
+  addFenders(b,M,FZ,FR,0.420,FX,0.230);
+  addFenders(b,M,RZ,RR,0.440,RX,0.240);
+
+  const tailMats=addLamps(b,null,{w:0.140,h:0.050,y:0.310,z:-1.400,x:[-0.360,0.360]});
+  return {tailMats,
+    wheels:{race:true,
+            r:FR,tw:0.190, rR:RR,twR:0.210,
+            pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
+}
+
 function buildCar(bodyColor,kind,kit){
   const g=new THREE.Group();
   const b=new THREE.Group();
@@ -6390,7 +6719,8 @@ function buildCar(bodyColor,kind,kit){
             :kind==="bike"   ?bodySuperbike
             :kind==="trike"  ?bodyTrike
             :kind==="v12"    ?bodyV12
-            :kind==="lmp1"   ?bodyLMP1:bodyGT;
+            :kind==="lmp1"   ?bodyLMP1
+            :kind==="golfkart"?bodyGolfKart:bodyGT;
   const spec=make(b,M);
   g.userData.body=b;
   g.userData.wheels=buildWheels(g,M,spec.wheels);
@@ -7615,6 +7945,7 @@ const ENGINE={
   trike:  {pitch:0.70, sub:0.62, hi:0.14, cut:1.10, gears:4}, // a blown V8, all lump
   v12:    {pitch:1.52, sub:0.03, hi:0.55, cut:1.50, gears:7}, // even, high and smooth
   lmp1:   {pitch:1.10, sub:0.24, hi:0.26, cut:1.15, gears:7}, // a turbo hybrid, closed in by the bodywork
+  golfkart:{pitch:0.98, sub:0.20, hi:0.05, cut:0.70, gears:2}, // small, modest, never far from idle
 };
 const engineVoice=k=>ENGINE[k]||ENGINE.gt;
 
@@ -8720,6 +9051,7 @@ function showRaceSet(on){
    are already on track, the car you are driving — there is no use in a
    paint you have to leave the session to see. */
 function kitSet(slot,id){
+  if(id&&!kitAllowed(slot,id))return;         // not owned — nothing to put on
   ED.opts.kit=ED.opts.kit||{};
   const it=kitItem(slot,id);
   if(it&&it.std){
@@ -8765,6 +9097,7 @@ function kitChip(slot,it){
   /* a plain colour shows the colour it is, which says more than its name */
   if(it.std){ const d=document.createElement("i"); d.className="dot";
               d.style.background=it.std; b.insertBefore(d,b.firstChild); }
+  if(!kitAllowed(slot,it.id)){ b.classList.add("locked"); b.disabled=true; }
   b.addEventListener("click",()=>kitSet(slot,it.id));
   return b;
 }
@@ -8804,6 +9137,10 @@ function kitUI(){
     const lit=(it&&it.std)? (!k.paint&&ED.opts.color===it.std)
                           : (k[b.dataset.slot]===b.dataset.item);
     b.setAttribute("aria-pressed",String(lit));
+    /* built once, but ownership changes later — a level claimed or a pack
+       opened has to unlock the chip here, not just at first build */
+    const owned=kitAllowed(b.dataset.slot,b.dataset.item);
+    b.classList.toggle("locked",!owned); b.disabled=!owned;
   }
   const worn=KIT_CAR_SLOTS.map(sl=>kitItem(sl,k[sl])).filter(Boolean);
   hornUI();
@@ -8836,6 +9173,7 @@ function titleBuild(){
     b.innerHTML='<em></em><span></span>';
     b.querySelector("em").textContent=R?R.label:"";
     b.querySelector("span").textContent=it.label;
+    if(!kitAllowed("title",it.id)){ b.classList.add("locked"); b.disabled=true; }
     b.addEventListener("click",()=>kitSet("title",it.id));
     box.appendChild(b);
   }
@@ -8845,8 +9183,11 @@ function titleUI(){
   const row=$("auTitleRow"); if(row)row.hidden=!on;
   if(on) titleBuild();
   const k=(ED.opts&&ED.opts.kit)||{};
-  for(const b of document.querySelectorAll("#auTitleChips .kit-chip"))
+  for(const b of document.querySelectorAll("#auTitleChips .kit-chip")){
     b.setAttribute("aria-pressed",String(k.title===b.dataset.item));
+    const owned=kitAllowed("title",b.dataset.item);
+    b.classList.toggle("locked",!owned); b.disabled=!owned;
+  }
   const t=myTitle();
   const it=myKit()&&myKit().title;
   const R=it&&RARITY[it.rarity];
@@ -9160,8 +9501,305 @@ function baseShow(v){
   else { $("home").hidden=true; $("editor").hidden=!v; if(v)fitPad(); }
 }
 function closeScreens(){
-  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet","shop"]) $(id).hidden=true;
-  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting","shopping"]) document.body.classList.remove(c);
+  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet","shop","passScreen"]) $(id).hidden=true;
+  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting","shopping","passing"]) document.body.classList.remove(c);
+}
+
+/* ---- the Apex Pass ----
+   Fifty levels, data rather than markup: a level says what kind of thing
+   it gives and, for a cosmetic, which slot and id out of KITS (or, for a
+   car, out of CAR_MODELS) — never the label or the rarity a second time,
+   both of which already live on the item itself. Changing a reward later
+   is changing one line here, not the screen that shows it.
+
+   Level 46 pays 1,600 rather than the 650 first sketched out for it: the
+   eighteen coin levels as first written summed to 6,550 against the
+   7,500 the season is meant to total, and this is the one number that
+   closes that gap without moving the other seventeen. */
+const APEX_PASS_FREE=[
+  {level:1,  kind:"coins", amount:250},
+  {level:2,  kind:"item",  slot:"title", id:"rookie"},
+  {level:3,  kind:"coins", amount:150},
+  {level:4,  kind:"item",  slot:"horn",  id:"sport"},
+  {level:5,  kind:"item",  slot:"paint", id:"carbon-fibre", major:true},
+  {level:6,  kind:"coins", amount:200},
+  {level:7,  kind:"item",  slot:"rims",  id:"racing"},
+  {level:8,  kind:"item",  slot:"glow",  id:"neon"},
+  {level:9,  kind:"coins", amount:250},
+  {level:10, kind:"item",  slot:"car",   id:"lmp1", major:true},
+  {level:11, kind:"coins", amount:200},
+  {level:12, kind:"item",  slot:"paint", id:"pearlescent"},
+  {level:13, kind:"coins", amount:250},
+  {level:14, kind:"item",  slot:"title", id:"speedster"},
+  {level:15, kind:"item",  slot:"rims",  id:"chrome-racing"},
+  {level:16, kind:"coins", amount:300},
+  {level:17, kind:"item",  slot:"paint", id:"holo"},
+  {level:18, kind:"item",  slot:"glow",  id:"purple"},
+  {level:19, kind:"coins", amount:300},
+  {level:20, kind:"pack",  packType:"rare", major:true},
+  {level:21, kind:"item",  slot:"title", id:"roadwarrior"},
+  {level:22, kind:"coins", amount:300},
+  {level:23, kind:"item",  slot:"paint", id:"forged-carbon"},
+  {level:24, kind:"coins", amount:350},
+  {level:25, kind:"item",  slot:"title", id:"drifter"},
+  {level:26, kind:"item",  slot:"rims",  id:"gold-racing"},
+  {level:27, kind:"coins", amount:400},
+  {level:28, kind:"item",  slot:"paint", id:"liquid-metal"},
+  {level:29, kind:"coins", amount:450},
+  {level:30, kind:"item",  slot:"car",   id:"golfkart", major:true},
+  {level:31, kind:"coins", amount:400},
+  {level:32, kind:"item",  slot:"title", id:"elitedriver"},
+  {level:33, kind:"item",  slot:"paint", id:"black-chrome"},
+  {level:34, kind:"coins", amount:450},
+  {level:35, kind:"item",  slot:"glow",  id:"gold-glow"},
+  {level:36, kind:"item",  slot:"rims",  id:"elite-racing"},
+  {level:37, kind:"coins", amount:500},
+  {level:38, kind:"item",  slot:"title", id:"racinglegend"},
+  {level:39, kind:"item",  slot:"paint", id:"prism"},
+  {level:40, kind:"pack",  packType:"epic", major:true},
+  {level:41, kind:"coins", amount:550},
+  {level:42, kind:"item",  slot:"title", id:"destroyer"},
+  {level:43, kind:"item",  slot:"paint", id:"carbon-chrome"},
+  {level:44, kind:"coins", amount:600},
+  {level:45, kind:"item",  slot:"rims",  id:"diamond-racing"},
+  {level:46, kind:"coins", amount:1600},
+  {level:47, kind:"item",  slot:"title", id:"king"},
+  {level:48, kind:"item",  slot:"glow",  id:"platinum"},
+  {level:49, kind:"item",  slot:"badge", id:"champion"},
+  {level:50, kind:"mystery-car", major:true}
+];
+/* Season 1, the only one there is yet — premium is null rather than
+   missing, so the screen has somewhere to say "coming soon" from data
+   rather than a hardcoded line, and a real premium track later is adding
+   one field here rather than rebuilding what already reads it. */
+const SEASONS={s1:{id:"s1",label:"Season 1",free:APEX_PASS_FREE,premium:null}};
+
+const PASS_COINS_VALUE={rare:100,epic:200,legendary:500,mythic:1000};
+
+function xpToast(amount,total){
+  const el=$("xpToast"); if(!el)return;
+  el.innerHTML="";
+  const b=document.createElement("b"); b.textContent="+"+amount+" XP";
+  el.appendChild(b);
+  if(total!=null){ const s=document.createElement("small"); s.textContent=passLevel(total)+" / 50 · "+(total%1000)+"/1,000"; el.appendChild(s); }
+  el.hidden=false;
+  requestAnimationFrame(()=>el.classList.add("on"));
+  clearTimeout(xpToast._t);
+  xpToast._t=setTimeout(()=>{ el.classList.remove("on"); setTimeout(()=>{ el.hidden=true; },260); },2400);
+}
+/* the level a total XP counts as — the relay works this out the same way,
+   from the same 1,000-a-level rule, so the two can never disagree */
+function passLevel(xp){ return Math.min(50,Math.floor(Math.max(0,xp|0)/1000)+1); }
+
+/* What a level's entry actually gives, in words: the label and rarity are
+   never stored on the entry itself, only looked up from wherever they
+   really live — CAR_MODELS for a car, KITS for anything else. */
+function passReward(entry){
+  if(entry.kind==="coins") return {label:entry.amount.toLocaleString()+" Apex Coins",rarity:null};
+  if(entry.kind==="pack"){ const R=RARITY[entry.packType]; return {label:(R?R.label:entry.packType)+" Pack",rarity:entry.packType}; }
+  if(entry.kind==="mystery-car") return {label:"??? Legendary Car",rarity:"legendary",mystery:true};
+  if(entry.slot==="car"){ const m=CAR_MODELS.find(x=>x.id===entry.id); return {label:m?m.label:entry.id,rarity:m?m.rarity:"epic"}; }
+  const it=kitItem(entry.slot,entry.id);
+  return {label:it?it.label:entry.id,rarity:it?it.rarity:"rare"};
+}
+function passBuild(){
+  const track=$("passTrack"); if(!track||track.dataset.built)return;
+  track.dataset.built="1";
+  for(const entry of APEX_PASS_FREE){
+    const r=passReward(entry), R=r.rarity&&RARITY[r.rarity];
+    const b=document.createElement("div");
+    b.className="pass-card"+(entry.major?" major":"");
+    b.dataset.level=entry.level;
+    if(R){ b.style.setProperty("--rar",R.colour); b.style.setProperty("--rarDim",R.dim); b.style.setProperty("--rarGlow",R.glow); }
+    b.innerHTML='<span class="lv"></span><em class="rar"></em><b></b><span class="got" hidden>Claimed</span><button>Claim</button>';
+    b.querySelector(".lv").textContent="LEVEL "+entry.level;
+    b.querySelector(".rar").textContent=r.mystery?"":(R?R.label:"");
+    b.querySelector("b").textContent=r.mystery?"???":r.label;
+    if(r.mystery){
+      const sub=document.createElement("span"); sub.className="mystery"; sub.textContent="Legendary car — yet to be announced";
+      b.insertBefore(sub,b.querySelector("button"));
+      b.querySelector("button").remove();
+    }else{
+      b.querySelector("button").addEventListener("click",()=>passClaim(entry.level));
+    }
+    track.appendChild(b);
+  }
+}
+function passPacksUI(){
+  const box=$("passPacks"),note=$("passPacksNote"); if(!box)return;
+  box.innerHTML="";
+  const packs=PASS.packs||[];
+  note.hidden=packs.length>0;
+  for(const p of packs){
+    const R=RARITY[p.pack_type];
+    const odds=(PASS.packOdds&&PASS.packOdds[p.pack_type])||[];
+    const b=document.createElement("div");
+    b.className="sh-card";
+    if(R){ b.style.setProperty("--rar",R.colour); b.style.setProperty("--rarDim",R.dim); b.style.setProperty("--rarGlow",R.glow); }
+    b.innerHTML='<em class="rar"></em><b></b><span></span><div class="sh-buy"><i></i><button class="chip go">Open</button></div>';
+    b.querySelector(".rar").textContent=R?R.label:p.pack_type;
+    b.querySelector("b").textContent=(R?R.label:p.pack_type)+" Pack";
+    b.querySelector("span").textContent="Chances: "+odds.map(([rar,ch])=>(RARITY[rar]?RARITY[rar].label:rar)+" "+Math.round(ch*100)+"%").join(" · ");
+    b.querySelector(".sh-buy i").textContent="Unopened";
+    const btn=b.querySelector("button");
+    btn.addEventListener("click",()=>passOpenPack(p,btn));
+    box.appendChild(b);
+  }
+}
+/* the screen's own refresh — called after every fetch of /api/pass/state,
+   and safe to call before one has ever happened (everything just reads
+   as level 1, nothing claimed) */
+function passUI(){
+  const card=$("hmPass"); if(card) card.hidden=!(acctIn()&&isTester());
+  if(!acctIn()||!isTester())return;
+  passBuild();
+  $("passCoins").textContent=PASS.coins.toLocaleString();
+  $("passLevelTxt").textContent="Level "+PASS.level+" / 50";
+  const inLevel=PASS.xp%1000, done=PASS.level>=50;
+  $("passBarFill").style.width=(done?100:inLevel/10)+"%";
+  $("passXpTxt").textContent=done?PASS.xp.toLocaleString()+" XP total — max level":inLevel+" / 1,000 XP to next level";
+  for(const b of document.querySelectorAll("#passTrack .pass-card")){
+    const level=Number(b.dataset.level);
+    const claimed=PASS.claimed.indexOf(level)>=0, available=level<=PASS.level;
+    b.classList.toggle("available",available&&!claimed);
+    b.classList.toggle("claimed",claimed);
+    const btn=b.querySelector("button"), got=b.querySelector(".got");
+    if(btn){ btn.hidden=claimed; btn.disabled=!available; btn.textContent=available?"Claim":"Locked"; }
+    if(got) got.hidden=!claimed;
+  }
+  passPacksUI();
+  /* ownership or balance may just have changed under it — the kit
+     drawer's locks and the shop's own coin chip both read off PASS,
+     so both hear about it rather than waiting for their own screen to
+     be the next thing opened */
+  kitUI();
+  shopUI();
+  $("hmPassSub").textContent="Season 1 — Level "+PASS.level+" / 50, "+PASS.coins.toLocaleString()+" coins";
+}
+async function passRefresh(){
+  if(!acctIn()||!isTester()){ PASS.loaded=false; passUI(); return; }
+  try{
+    const r=await api("/api/pass/state",{token:ACCT.token});
+    PASS.loaded=true; PASS.coins=r.coins; PASS.xp=r.xp; PASS.level=r.level; PASS.season=r.season;
+    PASS.claimed=r.claimed||[]; PASS.owned=r.owned||[]; PASS.packs=r.packs||[]; PASS.packOdds=r.packOdds||null;
+    passUI();
+  }catch(e){ /* the pass is not worth interrupting anything over */ }
+}
+async function passClaim(level){
+  if(!acctIn())return;
+  const entry=APEX_PASS_FREE.find(x=>x.level===level); if(!entry)return;
+  try{
+    const r=await api("/api/pass/claim",{method:"POST",token:ACCT.token,body:{level}});
+    /* A claimed level can be a car, which carAllowed()/myCars() only ever
+       read off ACCT.user — a pass-only refresh would leave the garage
+       still showing it locked until something else happened to force a
+       fresh /api/me. acctVerify(true) pulls both back in step, at the
+       cost of one redundant pass fetch alongside its own. */
+    await acctVerify(true);
+    const rr=passReward(entry);
+    if(r.result&&r.result.kind==="duplicate")
+      showFlash("Duplicate!","#E8453C","+"+r.result.amount+" Apex Coins");
+    else if(rr.mystery)
+      showFlash("Level "+level,"#E8B32A","Legendary car — yet to be announced");
+    else
+      showFlash("Level "+level+" claimed","#B24FE8",rr.label);
+  }catch(e){
+    showFlash("Couldn't claim that","#E8453C",e&&e.message||"");
+  }
+}
+/* Turns what /api/pass/packs/open answered with into exactly the shape
+   packRoll()/packReveal() already know how to play and draw — the same
+   animation and the same card a free test-roll always used, just fed a
+   result that came from the relay's own roll instead of Math.random()
+   run right here. */
+function passAdaptPackResult(r){
+  const res=r.result, isDup=res.kind==="duplicate";
+  if(res.slot==="car"){
+    const m=CAR_MODELS.find(x=>x.id===res.id);
+    return {kind:isDup?"duplicate":"car", rarity:res.rarity, label:m?m.label:res.id,
+      sub:isDup?("+"+res.amount+" Apex Coins"):(CAR_BLURB[res.id]||"A car for the garage."),
+      carId:res.id};
+  }
+  const it=kitItem(res.slot,res.id);
+  return {kind:isDup?"duplicate":"item", rarity:res.rarity, label:it?it.label:res.id,
+    sub:isDup?("+"+res.amount+" Apex Coins"):itemBlurb(res.slot,res.id),
+    slot:res.slot, item:it};
+}
+async function passOpenPack(pack,btn){
+  if(PACK_BUSY)return;
+  if(btn)btn.disabled=true;
+  try{
+    const r=await api("/api/pass/packs/open",{method:"POST",token:ACCT.token,body:{packId:pack.id}});
+    await acctVerify(true);               // the pack is off the shelf; a car or coins may have moved
+    packRoll(passAdaptPackResult(r));
+  }catch(e){
+    if(btn)btn.disabled=false;
+    showFlash("Couldn't open that","#E8453C",e&&e.message||"");
+  }
+}
+function showPass(on){
+  if(on&&!(acctIn()&&isTester()))return;
+  if(on){ passBuild(); passRefresh(); }
+  $("passScreen").hidden=!on; baseShow(!on);
+  document.body.classList.toggle("passing",on);
+  if(!on) fitPad();
+}
+function goPass(){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showPass(true); }
+
+/* ---- Apex Pass: playtime XP ----
+   A genuinely unbroken session: backgrounding the tab or going quiet for
+   a while does not pause the clock, it zeroes it, exactly as asked for —
+   the next milestone is earned again from the top, not resumed. cosmo38
+   only, same as the rest of the pass; nobody else's clock ever starts. */
+const PLAYTIME={startedAt:null,sessionId:null,lastInput:Date.now(),got:new Set()};
+const PLAYTIME_IDLE_MS=90_000;
+const PLAYTIME_STEPS=[[10,500],[20,750],[30,900],[60,1000],[120,1000]];
+function playtimeMark(){ PLAYTIME.lastInput=Date.now(); }
+addEventListener("mousemove",playtimeMark,{passive:true});
+addEventListener("keydown",playtimeMark,{passive:true});
+addEventListener("pointerdown",playtimeMark,{passive:true});
+addEventListener("touchstart",playtimeMark,{passive:true});
+function playtimeReset(){
+  /* only worth a word if there was a real streak to lose — a session that
+     never got anywhere resetting silently is not a surprise to anybody */
+  if(PLAYTIME.startedAt&&Date.now()-PLAYTIME.startedAt>5*60_000)
+    showFlash("Playtime streak reset","#E6EEEC","Away or idle too long — starting over.");
+  PLAYTIME.startedAt=null; PLAYTIME.sessionId=null; PLAYTIME.got=new Set();
+}
+function playtimeStep(){
+  if(!acctIn()||!isTester()){ if(PLAYTIME.startedAt)playtimeReset(); return; }
+  const idle=document.hidden||(Date.now()-PLAYTIME.lastInput>PLAYTIME_IDLE_MS);
+  if(idle){ if(PLAYTIME.startedAt)playtimeReset(); return; }
+  if(!PLAYTIME.startedAt){
+    PLAYTIME.startedAt=Date.now();
+    PLAYTIME.sessionId=Math.random().toString(36).slice(2)+Date.now().toString(36);
+    PLAYTIME.got=new Set();
+  }
+  const minutes=(Date.now()-PLAYTIME.startedAt)/60000;
+  const steps=PLAYTIME_STEPS.slice();
+  /* every further 60 minutes keeps paying 1,000, the rate the spec's own
+     table had already settled into by the time it said "etc" rather than
+     a number guessed at from nothing */
+  for(let extra=180;extra<=minutes+60&&extra<=1440;extra+=60) steps.push([extra,1000]);
+  for(const [mins,amount] of steps){
+    if(minutes<mins||PLAYTIME.got.has(mins))continue;
+    PLAYTIME.got.add(mins);
+    passReportXp("playtime",PLAYTIME.sessionId+":"+mins,amount);
+  }
+}
+setInterval(playtimeStep,5000);
+addEventListener("visibilitychange",()=>{ if(document.hidden&&PLAYTIME.startedAt)playtimeReset(); });
+
+/* ---- Apex Pass: the events the relay has no way to verify for itself ----
+   Playtime, an overtake, a race actually finished — self-reported, rate
+   limited and only ever paid out once per key on the relay's own side.
+   Not as trustworthy as a lap, which the relay checks the trace of; the
+   most a relay that cannot watch a race itself can promise. */
+function passReportXp(event,key,amount){
+  if(!acctIn()||!isTester())return;
+  api("/api/pass/xp",{method:"POST",token:ACCT.token,body:{event,key,amount}})
+    .then(r=>{ if(r&&r.granted){ PASS.xp=r.xp; PASS.level=passLevel(r.xp); xpToast(amount,r.xp); passUI(); } })
+    .catch(()=>{});
 }
 /* ---- the shop ----
    The cars are the three still being tried out, priced. Rarity comes off
@@ -9237,7 +9875,8 @@ const CAR_BLURB={
   bike:"280+ km/h, 165 kg. Leans into the corner with the rider. Unforgiving.",
   trike:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back.",
   v12:"360 km/h — far and away the fastest thing here. 1,450 kg of it.",
-  lmp1:"275+ km/h, 875 kg. Built to hold that pace for hours, not one lap."
+  lmp1:"275+ km/h, 875 kg. Built to hold that pace for hours, not one lap.",
+  golfkart:"A golf cart somebody has turned into a racing machine. Wider tyres, lower springs, more nerve than sense."
 };
 const ITEM_BLURB={
   "title:trackday":"For the ones who turn up on a Tuesday and mean it.",
@@ -9271,7 +9910,32 @@ const ITEM_BLURB={
   "horn:air":"Three notes, and everyone on the circuit hears it.",
   "horn:truck":"Deep enough that it shouldn't fit in the car.",
   "horn:cuca":"The tune everyone knows, and nobody expects on a racetrack.",
-  "horn:train":"Four low notes — the kind that means get out of the way."
+  "horn:train":"Four low notes — the kind that means get out of the way.",
+  /* the Apex Pass's own, Season 1 */
+  "title:rookie":"Everyone starts somewhere.",
+  "title:speedster":"Quick, and no secret about it.",
+  "title:roadwarrior":"Every circuit, every condition, still turning up.",
+  "title:drifter":"More interested in the exit than the apex.",
+  "title:elitedriver":"Above the ordinary, and it shows.",
+  "title:racinglegend":"A name the board already knows.",
+  "title:destroyer":"Nothing survives a lap with this one.",
+  "paint:carbon-fibre":"Woven, not painted — the light finds the weave in it.",
+  "paint:forged-carbon":"Irregular on purpose. No two panels the same.",
+  "paint:carbon-chrome":"Carbon under a mirror. The premium end of both.",
+  "paint:pearlescent":"Shifts soft and slow, whatever colour it's over.",
+  "paint:liquid-metal":"Not painted silver — poured.",
+  "paint:black-chrome":"Dark enough to read as black, mirror enough to know it isn't.",
+  "rims:racing":"Light, direct, built to be driven rather than looked at.",
+  "rims:chrome-racing":"The same wheel, mirrored.",
+  "rims:gold-racing":"Gold that means it, not yellow standing in.",
+  "rims:elite-racing":"A step up from the rest of the shelf.",
+  "rims:diamond-racing":"The smoothest edge a wheel here has ever had.",
+  "glow:neon":"The first light under the sills — everyone's own is one of these.",
+  "glow:purple":"Purple, under the sills, at night.",
+  "glow:gold-glow":"A warm line of light, low to the ground.",
+  "glow:platinum":"White light, cold and clean.",
+  "horn:sport":"A clean fifth, sharp and short.",
+  "badge:champion":"Apex Drawn's own crown, worn small."
 };
 const itemBlurb=(slot,id)=>ITEM_BLURB[slot+":"+id]||"";
 /* the item half of the wheel, on its own so a car rarity with nothing
@@ -9611,7 +10275,9 @@ function packBuildImage(reward){
   const box=$("pcImg"); box.innerHTML=""; box.className="pack-img";
   const R=RARITY[reward.rarity];
   const canvasIn=()=>{ const cv=document.createElement("canvas"); cv.width=360; cv.height=220; box.appendChild(cv); return cv; };
-  if(reward.kind==="car"){
+  /* carId rather than kind==="car": a duplicate car still has one to draw,
+     it just goes on to say so underneath rather than adding a second copy */
+  if(reward.carId){
     try{ renderCarPreview(canvasIn(),reward.carId,ED.opts.color||"#E2482B",null); }catch(e){}
     return;
   }
@@ -9656,12 +10322,16 @@ function packReveal(reward){
   card.style.setProperty("--rar",R.colour);
   card.style.setProperty("--rarDim",R.dim);
   card.style.setProperty("--rarGlow",R.glow);
+  card.classList.toggle("duplicate",reward.kind==="duplicate");
   packBuildImage(reward);
   $("pcRar").textContent=R.label;
   /* what a reward is, in the same word the kit drawer already uses for its
      slot — a car has no slot of its own, so it is just "Car" */
-  $("pcCat").textContent=reward.kind==="car"?"Car":(KITS[reward.slot]&&KITS[reward.slot].label)||"";
-  $("pcName").textContent=reward.label;
+  $("pcCat").textContent=reward.carId?"Car":(KITS[reward.slot]&&KITS[reward.slot].label)||"";
+  /* Already owned turns the name into the fact that mattered more than the
+     name did — nothing new sits in the inventory for finding this twice,
+     only the coins it turned into. */
+  $("pcName").textContent=(reward.kind==="duplicate"?"DUPLICATE! ":"")+reward.label;
   $("pcSub").textContent=reward.sub;
   card.hidden=false;
   PACK_BUSY=false;
@@ -9700,6 +10370,8 @@ function shopUI(){
   card.querySelector("span").textContent=on
     ? "Cars, packs and coins. Being built — have a look."
     : "Coming soon.";
+  const bal=$("shCoinBal");
+  if(bal){ bal.hidden=!on; if(on) bal.querySelector("b").textContent=PASS.coins.toLocaleString(); }
 }
 function showShop(on){
   if(on&&!isTester())return;
@@ -9745,6 +10417,8 @@ $("hmShop").addEventListener("click",()=>{
   setTimeout(()=>{ b.textContent="Coming soon."; },1800);
 });
 $("shBack").addEventListener("click",goHome);
+$("hmPass").addEventListener("click",goPass);
+$("passBack").addEventListener("click",goHome);
 $("packX").addEventListener("click",packOverlayClose);
 $("pcClose").addEventListener("click",packOverlayClose);
 $("pcAgain").addEventListener("click",()=>openPack());
@@ -10063,6 +10737,7 @@ function acctUI(){
   ownedCarsUI();
   shopUI();
   kitUI();
+  passRefresh();
   /* Signing out of the account that has them puts you back in the GT
      rather than leaving you sitting in something you can no longer see. */
   if(!carAllowed(ED.opts.car)){
@@ -10363,6 +11038,9 @@ async function lbPost(ms){
        merits, unconditionally; this only stops chasing an exact float. */
     CAR.bestKept=true;
     try{ store.set("ad.bestKept."+trackKey(G.T),true); }catch(e){}
+    /* Apex Pass XP for the lap, if the relay granted any — cosmo38 only,
+       for now, same as everything else about the pass. */
+    if(r.passXp!=null){ PASS.xp=r.passXp; PASS.level=passLevel(r.passXp); xpToast(100,r.passXp); passUI(); }
     if(LB.key===key){
       const hadWR=LB.board.length?LB.board[0].ms:null;
       LB.board=r.board||LB.board; LB.at=Date.now();
@@ -10423,6 +11101,7 @@ function raceStandings(el){
     if(a.fin>=0) return a.fin-b.fin;
     return (b.lap-a.lap)||(b.prog-a.prog);
   });
+  const prevPos=RACE.pos;
   el.innerHTML="";
   rows.forEach((r,i)=>{
     if(r.me)RACE.pos=i+1;
@@ -10435,6 +11114,11 @@ function raceStandings(el){
     d.appendChild(p); d.appendChild(n); d.appendChild(t);
     el.appendChild(d);
   });
+  /* An overtake: the local position genuinely improved mid-race, not the
+     grid still settling out of its own opening 0. Finished laps do not
+     count as passes here — that is what the finish itself already pays. */
+  if(RACE.on&&prevPos&&RACE.pos&&RACE.pos<prevPos&&RACE.mine==null)
+    passReportXp("overtake",myId()+":"+RACE.pos+":"+Date.now(),10);
 }
 function timesUI(){
   const list=$("tiList"), note=$("tiNote"), me=acctIn()?ACCT.user.name:null;
@@ -11676,7 +12360,12 @@ function raceFinish(id,name,ms,me){
   if(!RACE.on||RACE.finished.some(f=>f.id===String(id)))return;
   RACE.finished.push({id:String(id),name,ms});
   const place=RACE.finished.length;
-  if(me)RACE.mine=ms;
+  if(me){
+    RACE.mine=ms;
+    const laps=RACE.laps|0;
+    const tier=laps>=10?["race10",1500]:laps>=3?["race3",400]:["race1",150];
+    passReportXp(tier[0],String(id)+":"+ms,tier[1]);
+  }
   if(place===1){
     showFlash(me?"You win!":name+" wins","#FFB020",fmtTime(ms));
     winShow(id,name);

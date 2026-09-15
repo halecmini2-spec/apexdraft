@@ -20,6 +20,7 @@ const { makePresence } = require("./presence");
 const { makeStats } = require("./stats");
 const { makeDaily } = require("./daily");
 const { makeCheckout } = require("./checkout");
+const { makePass } = require("./pass");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
@@ -33,6 +34,11 @@ const presence = makePresence(store, auth.userFor);
 setInterval(presence.sweep, 30_000).unref();
 const daily = makeDaily();
 const checkout = makeCheckout(store, auth.userFor);
+const pass = makePass(store, auth.userFor, daily);
+/* Yesterday's daily result only ever changes once, at the roll into a new
+   day, so this only has to look often enough to catch that — grantXpOnce
+   makes looking again harmless. */
+setInterval(() => { if (store.ready) pass.rolloverDaily(); }, 15 * 60_000).unref();
 const stats = makeStats(store, auth.userFor, daily);
 /* What is happening right now, for the admin desk. A socket only connects
    to host or join, so every socket is somebody in a party. */
@@ -132,6 +138,7 @@ const server = http.createServer((req, res) => {
                 : (url.pathname === "/api/me/stats" || url.pathname === "/api/wins") ? stats.route
                 : url.pathname === "/api/daily" ? daily.route
                 : url.pathname.startsWith("/api/checkout") ? checkout.route
+                : url.pathname.startsWith("/api/pass") ? pass.route
                 : url.pathname.startsWith("/api/tracks") ? tracks.route
                 : url.pathname.startsWith("/api/laps") ? laps.route
                 : url.pathname.startsWith("/api/admin") ? admin.route

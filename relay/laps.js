@@ -25,6 +25,10 @@ const GHOST_MAX = 4000;
 const isDaily = (c) => /^daily_\d{8}$/.test(c);
 const { lapBound, checkTrace, circuitFor } = require("./verify");
 const dailyMod = require("./daily");
+/* Apex Pass XP for a lap: only for the one account the Pass answers to
+   for now (see relay/pass.js), and only once a lap has already cleared
+   everything above — the same verified lap the board itself trusts. */
+const { PASS_ACCOUNT } = require("./pass");
 /* A lap has to have begun before it can end: the page asks for a ticket
    as it crosses the line, and the finish has to come at least the lap's
    own length later. One ticket, one lap, and only for the driver and the
@@ -173,6 +177,14 @@ function makeLaps(store, userFor) {
       circuit, user_id: user.id, name: user.name, ms, car, at: Date.now(),
     });
     const kept = best === ms;
+    /* Awaited rather than fired-and-forgotten, so the response the page
+       already reads for the board can carry the new total straight back —
+       the one thing an Apex Pass XP grant needs to actually be seen, not
+       just eventually true next time the pass screen happens to be open. */
+    let passXp = null;
+    if (user.name_lower === PASS_ACCOUNT) {
+      try { passXp = await store.addXp(user.id, 100); } catch (e) {}
+    }
     /* The lap itself travels with an improvement on a daily circuit, so the
        record can be driven against. */
     if (kept && isDaily(circuit) && body.ghost) {
@@ -190,7 +202,7 @@ function makeLaps(store, userFor) {
     const board = await store.board(circuit, TOP);
     const rank = await store.rank(circuit, user.id);
     return json(res, 200, {
-      board: board.map(row), best, kept, you: user.name, top: TOP, rank,
+      board: board.map(row), best, kept, you: user.name, top: TOP, rank, passXp,
     }), true;
   }
 

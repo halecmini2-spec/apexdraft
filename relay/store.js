@@ -17,11 +17,13 @@
  */
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 /* ---------- file ---------- */
 
 function fileStore(file) {
-  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {}, wins: {} };
+  let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {}, wins: {},
+             inventory: [], passClaims: [], packs: [], xpGrants: [] };
   let writing = null, again = false;
 
   try {
@@ -36,6 +38,10 @@ function fileStore(file) {
     db.ghosts = db.ghosts || [];
     db.who = db.who || {};
     db.wins = db.wins || {};
+    db.inventory = db.inventory || [];
+    db.passClaims = db.passClaims || [];
+    db.packs = db.packs || [];
+    db.xpGrants = db.xpGrants || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -93,6 +99,78 @@ function fileStore(file) {
       u.cars = [...set].join(",");
       await save();
       return true;
+    },
+    /* ---- Apex Coins ----
+       Never below zero, whichever way a delta pushes it: a grant is a
+       positive delta, a spend is a negative one, and this is the one
+       place either of them is allowed to touch the number. */
+    async addCoins(id, delta) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return null;
+      u.coins = Math.max(0, (u.coins | 0) + (delta | 0));
+      await save();
+      return u.coins;
+    },
+    /* ---- Apex Pass XP ----
+       Only ever climbs; level is worked out from it rather than stored
+       beside it, so the two can never drift apart. */
+    async addXp(id, delta) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return null;
+      u.pass_xp = Math.max(0, (u.pass_xp | 0) + (delta | 0));
+      await save();
+      return u.pass_xp;
+    },
+    /* A one-off grant — playtime crossing a threshold, a daily result the
+       day after, an account just made — filed under a key that can only
+       ever be claimed once. Two heartbeats racing each other, or a retry
+       after a dropped reply, cost nothing the second time. */
+    async grantXpOnce(id, key, amount) {
+      if (db.xpGrants.find((g) => g.user_id === id && g.key === key)) return { granted: false, xp: null };
+      db.xpGrants.push({ user_id: id, key, at: Date.now() });
+      const xp = await this.addXp(id, amount);
+      return { granted: true, xp };
+    },
+    /* ---- owned cosmetics ----
+       Whether a car or a kit item, one shelf: item_key is "<slot>:<id>".
+       A pack or a pass level asks this before handing anything over. */
+    async grantItem(id, itemKey) {
+      if (db.inventory.find((x) => x.user_id === id && x.item_key === itemKey)) return { duplicate: true };
+      db.inventory.push({ user_id: id, item_key: itemKey, acquired: Date.now() });
+      await save();
+      return { duplicate: false };
+    },
+    async ownedItems(id) {
+      return db.inventory.filter((x) => x.user_id === id).map((x) => x.item_key);
+    },
+    /* ---- the Apex Pass itself ---- */
+    async claimedLevels(id, season) {
+      return db.passClaims.filter((c) => c.user_id === id && c.season === season).map((c) => c.level);
+    },
+    async claimLevel(id, season, level) {
+      if (db.passClaims.find((c) => c.user_id === id && c.season === season && c.level === level)) return { claimed: false };
+      db.passClaims.push({ user_id: id, season, level, claimed: Date.now() });
+      await save();
+      return { claimed: true };
+    },
+    /* ---- packs: won, not yet opened ---- */
+    async addPack(id, packType, source) {
+      const p = { id: crypto.randomUUID(), user_id: id, pack_type: packType, source: source || null, created: Date.now() };
+      db.packs.push(p);
+      await save();
+      return p;
+    },
+    async packsFor(id) {
+      return db.packs.filter((p) => p.user_id === id).sort((a, b) => a.created - b.created);
+    },
+    /* Fetches and removes in one step: two requests to open the same pack
+       at once can only ever find it the once. */
+    async takePack(id, packId) {
+      const i = db.packs.findIndex((p) => p.id === packId && p.user_id === id);
+      if (i < 0) return null;
+      const [p] = db.packs.splice(i, 1);
+      await save();
+      return p;
     },
     async putSession(s) {
       db.sessions.push(s);
@@ -328,6 +406,11 @@ function pgStore(url) {
       /* cars bought from the shop, comma-separated — the same shape the
          admin desk's own car list already uses */
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS cars TEXT`);
+      /* the Apex Pass: a balance that only ever moves by a delta, and an
+         XP total that a level is worked out from rather than stored beside
+         — one number, so the two can never disagree with each other */
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coins BIGINT NOT NULL DEFAULT 0`);
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_xp BIGINT NOT NULL DEFAULT 0`);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           token_hash TEXT PRIMARY KEY,
@@ -420,6 +503,43 @@ function pgStore(url) {
           day   TEXT PRIMARY KEY,
           plays INTEGER NOT NULL DEFAULT 0,
           peak  INTEGER NOT NULL DEFAULT 0
+        )`);
+      /* ---- the Apex Pass: what an account owns, has claimed, and holds
+         unopened ---- */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS inventory (
+          user_id  TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          item_key TEXT NOT NULL,
+          acquired BIGINT NOT NULL,
+          PRIMARY KEY (user_id, item_key)
+        )`);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS pass_claims (
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          season  TEXT NOT NULL,
+          level   INTEGER NOT NULL,
+          claimed BIGINT NOT NULL,
+          PRIMARY KEY (user_id, season, level)
+        )`);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS packs (
+          id        TEXT PRIMARY KEY,
+          user_id   TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          pack_type TEXT NOT NULL,
+          source    TEXT,
+          created   BIGINT NOT NULL
+        )`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS packs_user ON packs(user_id)`);
+      /* A one-off grant filed under a key that can only ever be claimed
+         once — playtime crossing a threshold, yesterday's daily result,
+         an account just made. Two requests for the same key cost nothing
+         the second time. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS xp_grants (
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          key     TEXT NOT NULL,
+          at      BIGINT NOT NULL,
+          PRIMARY KEY (user_id, key)
         )`);
     },
     userByName: (lower) => one(`SELECT * FROM users WHERE name_lower=$1`, [lower]),
@@ -529,6 +649,73 @@ function pgStore(url) {
       set.add(carId);
       await pool.query(`UPDATE users SET cars=$2 WHERE id=$1`, [id, [...set].join(",")]);
       return true;
+    },
+
+    /* ---- Apex Coins ----
+       Never below zero, whichever way a delta pushes it: the clamp is in
+       the statement itself, so a grant and a spend racing each other can
+       never leave the balance negative between them. */
+    async addCoins(id, delta) {
+      const r = await one(`UPDATE users SET coins=GREATEST(0,coins+$2) WHERE id=$1 RETURNING coins`, [id, delta | 0]);
+      return r ? Number(r.coins) : null;
+    },
+    /* ---- Apex Pass XP ----
+       Only ever climbs; level is worked out from it rather than stored
+       beside it, so the two can never drift apart. */
+    async addXp(id, delta) {
+      const r = await one(`UPDATE users SET pass_xp=GREATEST(0,pass_xp+$2) WHERE id=$1 RETURNING pass_xp`, [id, delta | 0]);
+      return r ? Number(r.pass_xp) : null;
+    },
+    async grantXpOnce(id, key, amount) {
+      const r = await pool.query(
+        `INSERT INTO xp_grants (user_id,key,at) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+        [id, key, Date.now()]
+      );
+      if (r.rowCount === 0) return { granted: false, xp: null };
+      const xp = await this.addXp(id, amount);
+      return { granted: true, xp };
+    },
+    /* ---- owned cosmetics ----
+       Whether a car or a kit item, one shelf: item_key is "<slot>:<id>".
+       A pack or a pass level asks this before handing anything over. */
+    async grantItem(id, itemKey) {
+      const r = await pool.query(
+        `INSERT INTO inventory (user_id,item_key,acquired) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+        [id, itemKey, Date.now()]
+      );
+      return { duplicate: r.rowCount === 0 };
+    },
+    async ownedItems(id) {
+      return (await pool.query(`SELECT item_key FROM inventory WHERE user_id=$1`, [id])).rows.map((r) => r.item_key);
+    },
+    /* ---- the Apex Pass itself ---- */
+    async claimedLevels(id, season) {
+      return (await pool.query(`SELECT level FROM pass_claims WHERE user_id=$1 AND season=$2`, [id, season])).rows.map((r) => r.level);
+    },
+    async claimLevel(id, season, level) {
+      const r = await pool.query(
+        `INSERT INTO pass_claims (user_id,season,level,claimed) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING`,
+        [id, season, level, Date.now()]
+      );
+      return { claimed: r.rowCount > 0 };
+    },
+    /* ---- packs: won, not yet opened ---- */
+    async addPack(id, packType, source) {
+      const pid = crypto.randomUUID();
+      await pool.query(
+        `INSERT INTO packs (id,user_id,pack_type,source,created) VALUES ($1,$2,$3,$4,$5)`,
+        [pid, id, packType, source || null, Date.now()]
+      );
+      return { id: pid, user_id: id, pack_type: packType, source: source || null, created: Date.now() };
+    },
+    async packsFor(id) {
+      return (await pool.query(`SELECT * FROM packs WHERE user_id=$1 ORDER BY created ASC`, [id])).rows;
+    },
+    /* Fetches and removes in one statement: two requests to open the same
+       pack at once can only ever find it the once. */
+    async takePack(id, packId) {
+      const r = await pool.query(`DELETE FROM packs WHERE id=$1 AND user_id=$2 RETURNING *`, [packId, id]);
+      return r.rows[0] || null;
     },
     async users() {
       return (await pool.query(`

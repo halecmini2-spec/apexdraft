@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep *)",
+      "Bash(node --check *)",
+      "Bash(awk *)",
+      "Bash(netstat *)",
+      "Bash(tasklist *)",
+      "Bash(sed -n *)",
+      "Bash(export PATH=*)"
+    ]
+  }
+}
