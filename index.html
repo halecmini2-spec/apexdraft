@@ -6633,22 +6633,26 @@ function bodyLMP1(b,M){
   }
 
   /* ---- the wheel arches ----
-     A literal arch this time — a curved band that physically stands
-     over the top of the tyre, radius greater than the wheel's own by a
-     fixed clearance gap so it never touches it (the wheel's own mesh
-     and position are untouched; this reads off FR/RR/FX/RX the same as
-     everything else, but is a separate shape built purely to sit just
-     outside them). Not a bulge grown out of the hull's own surface:
-     a proper band, an outer face and an inner face a short radial
-     distance apart so it has real depth, closed at both open ends and
-     both sides so it is a solid-looking piece rather than a curved
-     sheet with visible zero-thickness edges. Sweeps the top ~155° of
-     the wheel — front-inner, over the crown, rear-inner — which is the
-     "covers the top of the wheel" a fender is actually for; it has no
-     opinion about the sides or the underside of the tyre at all. */
+     A literal arch — a curved band standing proud of the tyre by a
+     fixed clearance gap, never touching it (the wheel's own mesh and
+     position are completely untouched; this only reads FR/RR/FX/RX to
+     decide where to sit). Outer face and inner face a short radial
+     distance apart for real depth, closed at both open ends so it
+     isn't a zero-thickness sheet.
+
+     Swept much further round than the first go at this — 236° rather
+     than 155°, front-low round the crown to rear-low, so what is left
+     open is only the bottom of the wheel (there has to be a gap for
+     the tyre to actually touch the road through) and, on the inboard
+     side, a skirt panel running the whole sweep and closing straight
+     onto the hull's own surface (wAt/y1At again) — the wheel arch and
+     the body are one connected shape rather than a band floating near
+     the car with a gap showing daylight. The outboard side is left
+     open on purpose: the outside of the tyre is the one face of it
+     this whole assembly is not trying to hide. */
   function wheelArch(px,zw,r,tw,mat){
     const gap=Math.max(0.030,r*0.10), R1=r+gap, R2=R1+0.060;
-    const halfW=tw*0.60, N=9, a0=-77*Math.PI/180, a1=77*Math.PI/180;
+    const halfW=tw*0.60, N=16, a0=-118*Math.PI/180, a1=118*Math.PI/180;
     for(const sx of [-1,1]){
       const cx=sx*px;
       const pt=(R,a,x)=>[cx+x,r+R*Math.cos(a),zw+R*Math.sin(a)];
@@ -6670,6 +6674,15 @@ function bodyLMP1(b,M){
         b.add(flip?quadMesh(q[1],q[0],q[3],q[2],mat):quadMesh(q[0],q[1],q[2],q[3],mat));
       };
       cap(a0,true); cap(a1,false);
+      // the skirt: seals the arch to the hull along the whole inboard
+      // edge, so there is no gap left for daylight to show through
+      for(let i=0;i<N;i++){
+        const aA=a0+(a1-a0)*i/N, aB=a0+(a1-a0)*(i+1)/N;
+        const zA=zw+R1*Math.sin(aA), zB=zw+R1*Math.sin(aB);
+        const pA=pt(R1,aA,-sx*halfW), pB=pt(R1,aB,-sx*halfW);
+        const hA=[sx*wAt(zA),y1At(zA),zA], hB=[sx*wAt(zB),y1At(zB),zB];
+        b.add(quadMesh(pA,hA,hB,pB,mat));
+      }
     }
   }
   wheelArch(FX,FZ,FR,0.290,M.paint);
