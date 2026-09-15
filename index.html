@@ -6530,25 +6530,30 @@ function bodyLMP1(b,M){
   const FR=0.335, RR=0.360;
   const FZ=1.500, RZ=-1.500;
   const FX=0.800, RX=0.830;
-  const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x121517),roughness:0.50,metalness:0.28});
-  const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x06080A),roughness:0.80,metalness:0.20});
-  const armM  =new THREE.MeshStandardMaterial({color:SRGB(0x1B2023),roughness:0.42,metalness:0.55});
-  const vent  =new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.72,metalness:0.30});
-  /* Every pass before this one retuned the same three meshes — a loft
-     for the hull, a loft for each wheel arch, a loft for the canopy —
-     and every retune came back with the same three complaints. The
-     meshes themselves were the ceiling: a loft is a superellipse swept
-     smoothly along a spline, which is a genuinely different SHAPE
-     LANGUAGE from what a moulded carbon body actually is — flat-ish
-     panels meeting at creases — no matter how far the exponent gets
-     pushed. So the wheel arches below are not a loft at all this time.
-     They are hand-built from flat quads, a handful a side, each one
-     a separate mesh — which is what actually guarantees a visible
-     edge between them regardless of shading, because Three only
-     smooths normals within one mesh, never across two. Doublesided,
-     so which way a quad winds stops being something to get right by
-     hand. */
-  M.paint.side=THREE.DoubleSide;
+  const blackM=new THREE.MeshStandardMaterial({color:SRGB(0x121517),roughness:0.50,metalness:0.28,flatShading:true});
+  const meshM =new THREE.MeshStandardMaterial({color:SRGB(0x06080A),roughness:0.80,metalness:0.20,flatShading:true});
+  const armM  =new THREE.MeshStandardMaterial({color:SRGB(0x1B2023),roughness:0.42,metalness:0.55,flatShading:true});
+  const vent  =new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.72,metalness:0.30,flatShading:true});
+  /* The reference that finally settled this: a deliberately low-poly,
+     hard-surface machine — every panel one flat, even shade, a real
+     line at every edge rather than a soft gradient implying one. That
+     is a shading decision as much as a geometry one, and it was the
+     one lever never pulled before now: computeVertexNormals() (what
+     loft() and every hand-built quad here both use to light
+     themselves) always averages normals smoothly across a mesh no
+     matter how few or how angular its facets are, which is what kept
+     reading as "organic" even once the geometry itself was genuinely
+     faceted. flatShading turns that off — each triangle lit by its own
+     flat normal, no averaging at all — and is set on every material
+     this car uses, not only the new arch panels, so the whole thing
+     reads as one consistent low-poly machine rather than a faceted
+     wheel arch bolted to a smoothly-shaded hull. */
+  M.paint.flatShading=true; M.paint.needsUpdate=true; M.paint.side=THREE.DoubleSide;
+  M.glass.flatShading=true; M.glass.needsUpdate=true;
+  M.carbon.flatShading=true; M.carbon.needsUpdate=true;
+  for(const key of ["rim","lip","face","disc","spoke","metal"]){
+    if(M[key]){ M[key].flatShading=true; M[key].needsUpdate=true; }
+  }
 
   /* The hull: wide through its whole middle length rather than crested
      at the axles, because the axle crests are the wheel arches' job
@@ -6584,7 +6589,7 @@ function bodyLMP1(b,M){
     return SH[SH.length-1][key];
   }
   const wAt=(z)=>shAt(z,'w'), y1At=(z)=>shAt(z,'y1');
-  const shell=new THREE.Mesh(loft(SH,34),M.paint);
+  const shell=new THREE.Mesh(loft(SH,12),M.paint);
   shell.castShadow=true; b.add(shell);
 
   /* a flat quad from four corners, given in order round the edge —
@@ -6689,7 +6694,7 @@ function bodyLMP1(b,M){
     {z: 0.15,w:0.270,y0:0.600,y1:0.720,n:2.6},   // the peak — low, not a dome
     {z:-0.20,w:0.230,y0:0.585,y1:0.660,n:2.8},
     {z:-0.45,w:0.190,y0:0.570,y1:0.610,n:2.8}
-  ],22),M.glass);
+  ],8),M.glass);
   b.add(canopy);
   /* the roof: a painted panel picking up exactly where the glass leaves
      off, running back and narrowing the whole way to where the wing's
@@ -6700,7 +6705,7 @@ function bodyLMP1(b,M){
     {z:-1.15,w:0.170,y0:0.540,y1:0.590,n:3.0},
     {z:-1.55,w:0.125,y0:0.500,y1:0.545,n:2.8},
     {z:-1.85,w:0.085,y0:0.460,y1:0.500,n:2.6}
-  ],22),M.paint);
+  ],8),M.paint);
   roof.castShadow=true; b.add(roof);
 
   /* ---- the cockpit ---- */
@@ -6729,14 +6734,14 @@ function bodyLMP1(b,M){
       {z: 0.02,w:0.080,y0:0.195,y1:0.510,n:3.8},
       {z:-0.55,w:0.068,y0:0.192,y1:0.485,n:3.4},
       {z:-1.00,w:0.042,y0:0.205,y1:0.410,n:2.8}
-    ],12),M.paint);
+    ],8),M.paint);
     lip.position.x=s*0.790; b.add(lip);
     const duct=new THREE.Mesh(loft([
       {z: 0.50,w:0.034,y0:0.235,y1:0.435,n:3.0},
       {z: 0.00,w:0.048,y0:0.220,y1:0.475,n:3.4},
       {z:-0.52,w:0.040,y0:0.220,y1:0.448,n:3.2},
       {z:-0.96,w:0.024,y0:0.232,y1:0.380,n:2.6}
-    ],12),meshM);
+    ],8),meshM);
     duct.position.x=s*0.805; b.add(duct);
   }
   /* a small stability fin ahead of each rear arch */
