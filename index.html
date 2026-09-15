@@ -6682,18 +6682,19 @@ function bodyLMP1(b,M){
     }
   }
 
-  /* Taller again, and rounder again: the exponent pulled down further
-     still (1.6-1.8, from 2.0-2.2) — close enough to a true circle in
-     cross-section that "round" stops being a matter of degree — and
-     the peak height up by another ten centimetres on top of the last
-     rise. Still raked overall, still easing back into the roof; just a
-     bigger, rounder, taller canopy doing it. */
+  /* Shortened front-to-back rather than grown again: everything before
+     this pass had kept stretching the canopy's own length along with
+     its width and height, which is exactly what stops a dome reading
+     as a hemisphere and starts it reading as an elongated greenhouse —
+     a true half-ball is roughly as long as it is wide. Compressed from
+     a 1.82m span down to 1.20m, width and height barely touched, so
+     the plan-view footprint is now close to circular rather than oval. */
   const canopy=new THREE.Mesh(loft([
-    {z: 1.10,w:0.420,y0:0.545,y1:0.680,n:1.8},
-    {z: 0.55,w:0.540,y0:0.570,y1:0.960,n:1.6},
-    {z: 0.00,w:0.520,y0:0.585,y1:1.050,n:1.6},   // the peak
-    {z:-0.40,w:0.430,y0:0.570,y1:0.900,n:1.8},
-    {z:-0.72,w:0.320,y0:0.555,y1:0.740,n:1.8}
+    {z: 0.75,w:0.420,y0:0.550,y1:0.660,n:1.8},
+    {z: 0.40,w:0.540,y0:0.572,y1:0.940,n:1.6},
+    {z: 0.05,w:0.520,y0:0.585,y1:1.020,n:1.6},   // the peak
+    {z:-0.25,w:0.430,y0:0.572,y1:0.880,n:1.8},
+    {z:-0.45,w:0.330,y0:0.558,y1:0.720,n:1.8}
   ],12),M.glass);
   b.add(canopy);
   /* the roof: a painted panel picking up exactly where the glass leaves
@@ -6701,10 +6702,10 @@ function bodyLMP1(b,M){
      ends up being — and running back, narrowing the whole way, to
      where the wing's own pylons meet the deck */
   const roof=new THREE.Mesh(loft([
-    {z:-0.72,w:0.320,y0:0.555,y1:0.740,n:1.8},
-    {z:-0.98,w:0.275,y0:0.552,y1:0.710,n:2.2},
-    {z:-1.30,w:0.215,y0:0.522,y1:0.640,n:2.6},
-    {z:-1.60,w:0.155,y0:0.490,y1:0.565,n:2.8},
+    {z:-0.45,w:0.330,y0:0.558,y1:0.720,n:1.8},
+    {z:-0.78,w:0.280,y0:0.555,y1:0.700,n:2.2},
+    {z:-1.15,w:0.218,y0:0.524,y1:0.635,n:2.6},
+    {z:-1.52,w:0.157,y0:0.492,y1:0.562,n:2.8},
     {z:-1.86,w:0.100,y0:0.460,y1:0.510,n:2.6}
   ],12),M.paint);
   roof.castShadow=true; b.add(roof);
