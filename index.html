@@ -6732,28 +6732,17 @@ function bodyLMP1(b,M){
     {z:-1.86,w:0.100,y0:0.460,y1:0.510,n:2.8}
   ],32),domeRoofM);
   roof.castShadow=true; b.add(roof);
-  /* the spine: an actual raised bar running from the back of the
-     canopy all the way to the top of the rear wing itself — a flat top
-     and two near-vertical sides rather than a pointed ridge, so it
-     reads unmistakably as a bar standing proud of the roof rather than
-     a crease pressed into it. Starts right at the windshield's own
-     peak now (base tracking the canopy's own surface height, top only
-     a whisker proud of it) rather than only picking up at the roof
-     seam behind the glass — that left a visible valley between the
-     tall dome and the bar starting low again behind it, instead of
-     one continuous line from the top of the windshield back. From
-     there it follows the canopy's own rear slope down to the seam,
-     then climbs again past the roof's own height to roughly level
-     with the top of the canopy itself (peak ~1.02) by the time it
-     clears the cockpit, holds close to that for the mid-run, then
-     eases back down to meet the wing's own top surface (~0.92, at the
-     wing's own z) rather than stopping short of it — a strut as much
-     as a spine by the time it gets there. */
+  /* the spine: one continuous bar running from the top middle of the
+     dome itself back over the roof — a real bar, wide enough to read
+     as one, but its base tracks the canopy's and roof's own surface
+     height the whole way so it stays visibly attached at every
+     station instead of arcing up into a separate hump that reads as
+     a disconnected loop floating over the roof. */
   {
-    const spZ=[0.05,-0.25,-0.45,-0.65,-0.90,-1.20,-1.52,-1.80,-2.00];
-    const base=[1.020,0.880,0.720,0.708,0.678,0.628,0.562,0.519,0.500];
-    const top =[1.032,0.900,0.750,0.880,0.980,0.970,0.940,0.920,0.920];
-    const half=[0.010,0.018,0.028,0.070,0.085,0.078,0.065,0.050,0.035];
+    const spZ=[0.05,-0.25,-0.45,-0.78,-1.15,-1.52,-1.86,-2.00];
+    const base=[1.020,0.880,0.720,0.700,0.635,0.562,0.510,0.500];
+    const top =[1.040,0.910,0.755,0.740,0.680,0.610,0.560,0.555];
+    const half=[0.030,0.045,0.050,0.052,0.048,0.040,0.030,0.022];
     for(let i=0;i<spZ.length-1;i++){
       const za=spZ[i], zc=spZ[i+1];
       const ta=top[i], tc=top[i+1], ba=base[i], bc=base[i+1], wa=half[i], wc=half[i+1];
