@@ -25,10 +25,9 @@ const GHOST_MAX = 4000;
 const isDaily = (c) => /^daily_\d{8}$/.test(c);
 const { lapBound, checkTrace, circuitFor } = require("./verify");
 const dailyMod = require("./daily");
-/* Apex Pass XP for a lap: only for the one account the Pass answers to
-   for now (see relay/pass.js), and only once a lap has already cleared
-   everything above — the same verified lap the board itself trusts. */
-const { PASS_ACCOUNT } = require("./pass");
+/* Apex Pass XP for a lap: for every account now, and only once a lap has
+   already cleared everything above — the same verified lap the board
+   itself trusts, so this cannot be spoofed independently of it. */
 /* A lap has to have begun before it can end: the page asks for a ticket
    as it crosses the line, and the finish has to come at least the lap's
    own length later. One ticket, one lap, and only for the driver and the
@@ -182,9 +181,7 @@ function makeLaps(store, userFor) {
        the one thing an Apex Pass XP grant needs to actually be seen, not
        just eventually true next time the pass screen happens to be open. */
     let passXp = null;
-    if (user.name_lower === PASS_ACCOUNT) {
-      try { passXp = await store.addXp(user.id, 100); } catch (e) {}
-    }
+    try { passXp = await store.addXp(user.id, 100); } catch (e) {}
     /* The lap itself travels with an improvement on a daily circuit, so the
        record can be driven against. */
     if (kept && isDaily(circuit) && body.ghost) {

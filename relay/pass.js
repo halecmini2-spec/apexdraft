@@ -1,10 +1,11 @@
-/* The Apex Pass: Apex Coins, XP, the fifty-level Season 1 track, and the
- * packs it hands out along the way.
+/* The Apex Pass: Apex Coins, XP, the fifty-level Season 1 free track, and
+ * the packs it hands out along the way.
  *
- * Gated to one account, the same way the shop and the kit drawer already
- * are — cosmo38 is the only one this answers for anything to, so nothing
- * here is live for anyone else yet. Widening that later is a one-line
- * change (see PASS_ACCOUNT below), not a rebuild.
+ * Live for every signed-in account now. One thing stays behind cosmo38
+ * specifically, checked on its own further down rather than at the top of
+ * route(): /api/pass/grant-all, the test-only shortcut that hands over the
+ * whole item pool at once. Nobody else gets that button to press — see
+ * isPassTester below, now used only there.
  *
  * A pack has real Apex Coins riding on it the moment a duplicate can turn
  * into some, so it is rolled here, on the trusted side, the same way a lap
@@ -17,7 +18,7 @@
  */
 const { json, readBody, cors, overRate, passLevel } = require("./auth");
 
-/* Only account this answers to, for now — see the header above. */
+/* The one account grant-all still answers to — see the header above. */
 const PASS_ACCOUNT = "cosmo38";
 const isPassTester = (u) => !!u && u.name_lower === PASS_ACCOUNT;
 
@@ -232,7 +233,6 @@ function makePass(store, userFor, dailyMod) {
 
     const user = await userFor(bearer(req));
     if (!user) return json(res, 401, { error: "Sign in for the Apex Pass." }), true;
-    if (!isPassTester(user)) return json(res, 404, { error: "No such endpoint." }), true;
 
     if (url.pathname === "/api/pass/state" && req.method === "GET") {
       /* Playtime XP is retired. This is where it is actually taken back
@@ -320,8 +320,13 @@ function makePass(store, userFor, dailyMod) {
        pays out its coin value instead of a second copy, and a level claimed
        afterwards behaves exactly as it would have before this ran: the
        reward is still rolled, it is just already a duplicate. Touches
-       nothing about xp, claimed levels or coins beyond that. */
+       nothing about xp, claimed levels or coins beyond that.
+
+       Kept behind cosmo38 specifically, even now the rest of the pass is
+       open to everyone — this is the one door that has to stay shut, or
+       every player could hand themselves the entire item pool for free. */
     if (url.pathname === "/api/pass/grant-all") {
+      if (!isPassTester(user)) return json(res, 404, { error: "No such endpoint." }), true;
       if (overRate("gaa:" + user.id, 5, 60 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
       const results = [];
       for (const [slot, id] of ITEM_POOL) {

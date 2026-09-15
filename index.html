@@ -2008,9 +2008,10 @@ body.daily .gar-arrow{display:none}
        up your eyes off the road to read. -->
   <div id="xpToast" class="xp-toast" hidden></div>
 
-  <!-- Fifty levels, one free track for now — Premium is architected here
-       (the header has a place for it) but nothing sells it yet. Reachable
-       only from the home card above, which is reachable only by cosmo38. -->
+  <!-- Fifty levels, one free track — Premium is architected here (the
+       header has a place for it) but nothing sells it yet. Open to any
+       signed-in account; the "Own everything (test)" chip is the one
+       thing on this whole screen still cosmo38-only. -->
   <section id="passScreen" class="screen" hidden>
     <div class="tk-wrap">
       <div class="tk-head pass-head">
@@ -4698,7 +4699,7 @@ const kitItem=(slot,id)=>{ const g=KITS[slot]; return (g&&id&&g.items.find(i=>i.
    trying it out is signed in, so it cannot leak onto anybody else's car by
    a stale setting in their storage. */
 function myKit(){
-  if(!isTester())return null;
+  if(!acctIn())return null;
   const k=(ED.opts&&ED.opts.kit)||null;
   if(!k)return null;
   let any=false; const out={};
@@ -4709,8 +4710,11 @@ const myTitle=()=>{ const k=myKit(); return (k&&k.title&&k.title.label)||""; };
 /* the ones anybody may drive, and whether a given account may drive a given
    one — the test cars answer to the same name the AI opponents do */
 const carTest=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return !!(m&&m.test); };
-/* the one account that sees things still being tried out — packs, and the
-   test cars everywhere except the shop, which sells them now */
+/* the one account that still sees things being tried out beyond what the
+   Apex Pass and the shop already answer for everyone — AI opponents, and
+   the test cars in the garage/AI picker for anyone who hasn't actually
+   won or bought one yet (carAllowed() below still lets an owner drive
+   theirs regardless) */
 const TEST_ACCOUNT="cosmo38";
 function isTester(){ return acctIn()&&ACCT.user.name===TEST_ACCOUNT; }
 /* what the shop has actually sold this account — an empty list signed out
@@ -9376,7 +9380,7 @@ function kitItems(){
   for(const it of KITS[KIT_TAB].items.slice().sort(byRarity)) box.appendChild(kitChip(KIT_TAB,it));
 }
 function kitUI(){
-  const on=isTester(), box=$("garKit");
+  const on=acctIn(), box=$("garKit");
   if(box)box.hidden=!on;
   /* the swatch strip is the plain colours, and for this account they are in
      the drawer with everything else */
@@ -9434,7 +9438,7 @@ function titleBuild(){
   }
 }
 function titleUI(){
-  const on=isTester();
+  const on=acctIn();
   const row=$("auTitleRow"); if(row)row.hidden=!on;
   if(on) titleBuild();
   const k=(ED.opts&&ED.opts.kit)||{};
@@ -9905,9 +9909,11 @@ function passPacksUI(){
    and safe to call before one has ever happened (everything just reads
    as level 1, nothing claimed) */
 function passUI(){
-  const card=$("hmPass"); if(card) card.hidden=!(acctIn()&&isTester());
-  if(!acctIn()||!isTester())return;
-  $("passGrantAll").hidden=false;
+  const card=$("hmPass"); if(card) card.hidden=!acctIn();
+  if(!acctIn())return;
+  /* the grant-all shortcut stays cosmo38-only even though the rest of the
+     pass is open to everyone now — see relay/pass.js */
+  $("passGrantAll").hidden=!isTester();
   passBuild();
   $("passCoins").textContent=PASS.coins.toLocaleString();
   $("passLevelTxt").textContent="Level "+PASS.level+" / 50";
@@ -9933,7 +9939,7 @@ function passUI(){
   $("hmPassSub").textContent="Season 1 — Level "+PASS.level+" / 50, "+PASS.coins.toLocaleString()+" coins";
 }
 async function passRefresh(){
-  if(!acctIn()||!isTester()){ PASS.loaded=false; passUI(); return; }
+  if(!acctIn()){ PASS.loaded=false; passUI(); return; }
   try{
     const r=await api("/api/pass/state",{token:ACCT.token});
     PASS.loaded=true; PASS.coins=r.coins; PASS.xp=r.xp; PASS.level=r.level; PASS.season=r.season;
@@ -10012,7 +10018,7 @@ async function passOpenPack(pack,btn){
   }
 }
 function showPass(on){
-  if(on&&!(acctIn()&&isTester()))return;
+  if(on&&!acctIn())return;
   if(on){ passBuild(); passRefresh(); }
   $("passScreen").hidden=!on; baseShow(!on);
   document.body.classList.toggle("passing",on);
@@ -10026,7 +10032,7 @@ function goPass(){ closeScreens(); setApp("home"); $("home").hidden=true; $("edi
    trustworthy as a lap, which the relay checks the trace of; the most a
    relay that cannot watch a race itself can promise. */
 function passReportXp(event,key,amount){
-  if(!acctIn()||!isTester())return;
+  if(!acctIn())return;
   api("/api/pass/xp",{method:"POST",token:ACCT.token,body:{event,key,amount}})
     .then(r=>{ if(r&&r.granted){ PASS.xp=r.xp; PASS.level=passLevel(r.xp); xpToast(amount,r.xp); passUI(); } })
     .catch(()=>{});
@@ -10036,12 +10042,15 @@ function passReportXp(event,key,amount){
    the car itself rather than being written down again here, and the
    picture is the same one the garage draws, at the same size, from the
    same renderer — a second way of drawing a car would be a second way of
-   being wrong about one. */
+   being wrong about one.
+
+   LMP1 is deliberately not among them — it's the Apex Pass's own Level 10,
+   the same way golfkart (further up, in CAR_MODELS) is Level 30, not
+   something a coin can buy. */
 const SHOP_CARS=[
   {id:"bike", price:0.50, blurb:"280+ km/h, 165 kg. Leans into the corner with the rider. Unforgiving."},
   {id:"trike",price:0.50, blurb:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back."},
-  {id:"v12",  price:1.50, blurb:"360 km/h — far and away the fastest thing here. 1,450 kg of it."},
-  {id:"lmp1", price:1.00, blurb:"275+ km/h, 875 kg. Built to hold that pace for hours, not one lap."}
+  {id:"v12",  price:1.50, blurb:"360 km/h — far and away the fastest thing here. 1,450 kg of it."}
 ];
 const SHOP_PACKS=[
   {name:"Starter pack",  blurb:"A car, a handful of coins and a colour or two."},
