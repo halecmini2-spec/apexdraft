@@ -295,6 +295,7 @@ function fileStore(file) {
         id: u.id, name: u.name, email: u.email, created: u.created, notice: u.notice || null,
         tracks: db.tracks.filter((t) => t.user_id === u.id).length,
         laps: db.laps.filter((l) => l.user_id === u.id).length,
+        coins: u.coins, pass_xp: u.pass_xp,
       }));
     },
     async deleteUser(id) {
@@ -759,7 +760,7 @@ function pgStore(url) {
     },
     async users() {
       return (await pool.query(`
-        SELECT u.id, u.name, u.email, u.created, u.notice,
+        SELECT u.id, u.name, u.email, u.created, u.notice, u.coins, u.pass_xp,
                (SELECT COUNT(*)::int FROM tracks t WHERE t.user_id=u.id) AS tracks,
                (SELECT COUNT(*)::int FROM laps   l WHERE l.user_id=u.id) AS laps
         FROM users u ORDER BY u.created DESC`)).rows;

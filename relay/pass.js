@@ -336,6 +336,23 @@ function makePass(store, userFor, dailyMod) {
       return json(res, 200, { granted: results.length }), true;
     }
 
+    /* A test-only shortcut of a different shape: not a whole pool at once,
+       but one unopened pack of a chosen rarity, dropped straight onto the
+       real pack shelf — so the actual rarity-based odds (PACK_ODDS above)
+       can be tried through the real /api/pass/packs/open flow, duplicate
+       handling and all, rather than only ever being seen through Level 20
+       and Level 40. Same cosmo38-only gate as grant-all, for the same
+       reason: a free pack of any rarity on demand is not something every
+       player gets to press a button for. */
+    if (url.pathname === "/api/pass/test/pack") {
+      if (!isPassTester(user)) return json(res, 404, { error: "No such endpoint." }), true;
+      if (overRate("tp:" + user.id, 30, 10 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
+      const rarity = String(body.rarity || "");
+      if (!PACK_ODDS[rarity]) return json(res, 400, { error: "No such pack rarity." }), true;
+      const pack = await store.addPack(user.id, rarity, "test");
+      return json(res, 200, { pack }), true;
+    }
+
     return json(res, 404, { error: "No such endpoint." }), true;
   }
 

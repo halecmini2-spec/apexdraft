@@ -8,7 +8,7 @@
  * Who counts as an admin is decided by ADMIN_USERS in the environment (see
  * auth.js). There is no way to become one through the API.
  */
-const { json, readBody, cors, isAdmin } = require("./auth");
+const { json, readBody, cors, isAdmin, passLevel } = require("./auth");
 
 function makeAdmin(store, userFor, liveNow, presence) {
   function bearer(req) {
@@ -30,6 +30,7 @@ function makeAdmin(store, userFor, liveNow, presence) {
         name: u.name, email: u.email, created: Number(u.created),
         tracks: Number(u.tracks), laps: Number(u.laps), admin: isAdmin(u),
         notice: u.notice || null,
+        coins: Number(u.coins) || 0, passXp: Number(u.pass_xp) || 0, passLevel: passLevel(u.pass_xp),
       })) }), true;
     }
 

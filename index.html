@@ -2033,6 +2033,16 @@ body.daily .gar-arrow{display:none}
       <div class="pass-track-wrap">
         <div class="pass-track" id="passTrack"></div>
       </div>
+      <!-- cosmo38 only: drops one real, unopened pack of the chosen rarity
+           onto the shelf below, so the actual PACK_ODDS can be tried
+           through the real open flow rather than only via Level 20/40 -->
+      <div class="chips" id="passTestPacks" hidden>
+        <span class="ad-meta">Test: add a pack —</span>
+        <button class="chip" data-rarity="rare">Rare</button>
+        <button class="chip" data-rarity="epic">Epic</button>
+        <button class="chip" data-rarity="legendary">Legendary</button>
+        <button class="chip" data-rarity="mythic">Mythic</button>
+      </div>
       <h2 class="sh-h">Packs <span>Won, not yet opened — the odds are on each one</span></h2>
       <div class="sh-grid" id="passPacks"></div>
       <p class="sh-note" id="passPacksNote">Nothing unopened right now.</p>
@@ -9911,9 +9921,11 @@ function passPacksUI(){
 function passUI(){
   const card=$("hmPass"); if(card) card.hidden=!acctIn();
   if(!acctIn())return;
-  /* the grant-all shortcut stays cosmo38-only even though the rest of the
-     pass is open to everyone now — see relay/pass.js */
+  /* the grant-all shortcut and the rarity-pack test row both stay
+     cosmo38-only even though the rest of the pass is open to everyone now
+     — see relay/pass.js */
   $("passGrantAll").hidden=!isTester();
+  $("passTestPacks").hidden=!isTester();
   passBuild();
   $("passCoins").textContent=PASS.coins.toLocaleString();
   $("passLevelTxt").textContent="Level "+PASS.level+" / 50";
@@ -9983,6 +9995,23 @@ async function passGrantAll(){
     showFlash("Test mode","#2ED47A","Every item and car granted ("+r.granted+")");
   }catch(e){
     showFlash("Couldn't grant those","#E8453C",e&&e.message||"");
+  }finally{
+    if(btn)btn.disabled=false;
+  }
+}
+/* Test-only: drops one real, unopened pack of the chosen rarity onto the
+   shelf below, so the actual rarity-based odds can be tried through the
+   real open flow — duplicate handling and all — rather than only ever
+   being seen via Level 20/40. */
+async function passTestPack(rarity,btn){
+  if(!acctIn())return;
+  if(btn)btn.disabled=true;
+  try{
+    await api("/api/pass/test/pack",{method:"POST",token:ACCT.token,body:{rarity}});
+    await passRefresh();
+    showFlash("Test mode","#2ED47A","Added an unopened "+rarity+" pack");
+  }catch(e){
+    showFlash("Couldn't add that pack","#E8453C",e&&e.message||"");
   }finally{
     if(btn)btn.disabled=false;
   }
@@ -10656,6 +10685,8 @@ $("shBack").addEventListener("click",goHome);
 $("hmPass").addEventListener("click",goPass);
 $("passBack").addEventListener("click",goHome);
 $("passGrantAll").addEventListener("click",passGrantAll);
+for(const b of document.querySelectorAll("#passTestPacks button[data-rarity]"))
+  b.addEventListener("click",()=>passTestPack(b.dataset.rarity,b));
 $("packX").addEventListener("click",packOverlayClose);
 $("pcClose").addEventListener("click",packOverlayClose);
 $("pcAgain").addEventListener("click",()=>openPack());
@@ -11748,7 +11779,8 @@ function adRender(){
     const nm=document.createElement("b"); nm.textContent=u.name+(u.admin?" · admin":"");
     const meta=document.createElement("span"); meta.className="ad-meta";
     meta.textContent=(u.email?u.email+" · ":"")+new Date(u.created).toLocaleDateString()
-      +" · "+u.tracks+(u.tracks===1?" circuit":" circuits")+" · "+u.laps+(u.laps===1?" time":" times");
+      +" · "+u.tracks+(u.tracks===1?" circuit":" circuits")+" · "+u.laps+(u.laps===1?" time":" times")
+      +" · Pass Lv "+u.passLevel+" ("+(u.passXp||0).toLocaleString()+" XP) · "+(u.coins||0).toLocaleString()+" coins";
     who.appendChild(nm); who.appendChild(meta);
     const note=document.createElement("button"); note.className="chip"; note.textContent=u.notice?"Notice ·":"Notice";
     const del=document.createElement("button"); del.className="chip tk-del"; del.textContent="Delete";
