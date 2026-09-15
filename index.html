@@ -6554,24 +6554,32 @@ function bodyLMP1(b,M){
      the nose is sharpened back down to an actual point at its very tip —
      wide is what the car needs to be by the time it reaches the wheels,
      not at the first few centimetres of it. */
+  /* Every exponent below climbed again, on top of the pass that already
+     sharpened the nose alone: the whole hull was still reading as an
+     inflated, organic shape rather than an engineered one, and that is
+     what a low superellipse exponent gives you no matter how the widths
+     and heights are tuned — a low n is a balloon; a high one is a panel
+     with a rolled edge. Pushing it up everywhere, not just at the nose,
+     is what gets the whole car off "smooth blob" and onto "surfaces
+     that meet at something like a line". */
   const shell=new THREE.Mesh(loft([
-    {z: 2.32,w:0.140,y0:0.048,y1:0.095,n:2.4},   // lower and more of an edge to it, less of a round point
-    {z: 2.08,w:0.440,y0:0.044,y1:0.190,n:3.0},   // a wedge, not a bulge — angularity comes from n climbing, not from the width
-    {z: 1.82,w:0.780,y0:0.048,y1:0.320,n:3.6},
-    {z: 1.56,w:0.910,y0:0.052,y1:0.400,n:4.0},
-    {z: 1.50,w:0.940,y0:0.052,y1:0.440,n:4.0},   // the front crest — wide, but low: the fender above this does the capping now
-    {z: 1.30,w:0.900,y0:0.058,y1:0.460,n:3.8},
-    {z: 1.00,w:0.880,y0:0.065,y1:0.500,n:3.6},   // the sidepod's leading edge
-    {z: 0.65,w:0.860,y0:0.072,y1:0.540,n:3.4},   // the sidepod itself — now the widest the hull gets, on purpose
-    {z: 0.25,w:0.760,y0:0.085,y1:0.560,n:2.8},
-    {z:-0.15,w:0.720,y0:0.086,y1:0.560,n:2.8},   // still a recess for the cockpit, not a bare tub
-    {z:-0.55,w:0.780,y0:0.084,y1:0.550,n:3.0},
-    {z:-0.95,w:0.900,y0:0.080,y1:0.510,n:3.4},   // the rear sidepod's leading edge
-    {z:-1.30,w:0.940,y0:0.078,y1:0.480,n:3.8},
-    {z:-1.50,w:0.960,y0:0.082,y1:0.460,n:4.0},   // the rear crest — same reversal as the front
-    {z:-1.75,w:0.900,y0:0.090,y1:0.440,n:3.6},
-    {z:-2.05,w:0.680,y0:0.100,y1:0.380,n:3.0},   // tapering for the tail
-    {z:-2.30,w:0.380,y0:0.115,y1:0.240,n:2.4}    // short and blunt — the diffuser and wing finish it
+    {z: 2.32,w:0.140,y0:0.048,y1:0.095,n:2.8},
+    {z: 2.08,w:0.440,y0:0.044,y1:0.190,n:3.8},
+    {z: 1.82,w:0.780,y0:0.048,y1:0.320,n:4.6},
+    {z: 1.56,w:0.910,y0:0.052,y1:0.400,n:5.0},
+    {z: 1.50,w:0.940,y0:0.052,y1:0.440,n:5.0},   // the front crest — wide, but low: the fender above this does the capping now
+    {z: 1.30,w:0.900,y0:0.058,y1:0.460,n:4.8},
+    {z: 1.00,w:0.880,y0:0.065,y1:0.500,n:4.4},   // the sidepod's leading edge
+    {z: 0.65,w:0.860,y0:0.072,y1:0.540,n:4.2},   // the sidepod itself — now the widest the hull gets, on purpose
+    {z: 0.25,w:0.760,y0:0.085,y1:0.560,n:3.6},
+    {z:-0.15,w:0.720,y0:0.086,y1:0.560,n:3.6},   // still a recess for the cockpit, not a bare tub
+    {z:-0.55,w:0.780,y0:0.084,y1:0.550,n:3.8},
+    {z:-0.95,w:0.900,y0:0.080,y1:0.510,n:4.2},   // the rear sidepod's leading edge
+    {z:-1.30,w:0.940,y0:0.078,y1:0.480,n:4.8},
+    {z:-1.50,w:0.960,y0:0.082,y1:0.460,n:5.0},   // the rear crest — same reversal as the front
+    {z:-1.75,w:0.900,y0:0.090,y1:0.440,n:4.4},
+    {z:-2.05,w:0.680,y0:0.100,y1:0.380,n:3.6},   // tapering for the tail
+    {z:-2.30,w:0.380,y0:0.115,y1:0.240,n:2.6}    // short and blunt — the diffuser and wing finish it
   ],34),M.paint);
   shell.castShadow=true; b.add(shell);
   /* the shoulder line the sidepod needs to read as a built thing rather
@@ -6638,32 +6646,41 @@ function bodyLMP1(b,M){
   wheelRim.position.set(0,0.300,0.62); wheelRim.rotation.x=Math.PI/2-0.35; b.add(wheelRim);
   tubeTo(b,[0,0.260,0.72],[0,0.300,0.62],0.016,wheelM,8);   // the column
 
-  /* The shared addFenders() a plain closed-wheel car uses is a short,
-     sharply-tapered cap — right for a GT, wrong here: a short taper is
-     exactly what reads as a separate mudguard rather than bodywork,
-     because the seam where it meets the hull is a sudden change in
-     surface rather than a gradual one. This is its own, longer version,
-     built to actually blend: the reach is roughly half again what the
-     shared one uses, so the arch is still visibly rising by the time it
-     reaches back into the sidepod or forward into the nose, and "sit"
-     is pulled up close to the hull's own height at that point (0.44 at
-     the front, 0.46 at the rear — the shell's own crest height, on
-     purpose) rather than dropping low the way a standalone fender's
-     edge would, so the two surfaces meet at nearly the same height
-     with nearly the same slope instead of stepping. */
+  /* Longer reach fixed the seam, but not the deeper problem: a loft's
+     cross-section is a superellipse, and a low exponent swept smoothly
+     along a gently-domed width curve is exactly what reads as a ball —
+     organic, inflated, the one shape language every real panel on an
+     actual LMP1 is not. Two changes, not one, chase that down. First,
+     the width now holds close to its full value for most of the arch's
+     length and only pulls in sharply right at the two ends — a plateau
+     with a defined edge, not a dome that is always tapering — done by
+     raising the falloff's own exponent rather than touching the reach
+     again. Second, the cross-section itself is pushed hard toward flat:
+     an exponent this high reads as a panel with a rolled-over edge, the
+     way real bodywork actually is, not a tube. A thin trim line along
+     the crest — the one sharp edge a moulded arch's lip always shows,
+     that no amount of smooth loft geometry can put there on its own —
+     is what finally sells "sculpted panel" over "inflated pod". */
   function lmpArch(zw,R,px,crest,sit){
-    const gap=R*0.17, Ro=R+gap, reach=Ro+0.42, st=[], N=22;
+    const gap=R*0.17, Ro=R+gap, reach=Ro+0.42, st=[], N=24;
     for(let i=0;i<=N;i++){
       const t=-1+2*i/N, z=zw+t*reach, d=Math.abs(z-zw), u=Math.abs(t);
       const arc=d<Ro ? R+Math.sqrt(Ro*Ro-d*d)*0.995 : R-(d-Ro)*1.1;
-      const y1=crest-(crest-sit)*u*u;
-      const fade=Math.pow(Math.max(0,1-u*u),0.5);
-      const y0=Math.max(Math.min(arc,y1-0.03),y1-0.03-0.55*fade);
-      st.push({z,w:Math.max(0.02,(R*0.64)*fade),y0,y1,n:3.0+1.2*fade});
+      const y1=crest-(crest-sit)*Math.pow(u,1.6);
+      const fade=Math.pow(Math.max(0,1-u*u),1.8);
+      const y0=Math.max(Math.min(arc,y1-0.03),y1-0.03-0.50*fade);
+      st.push({z,w:Math.max(0.02,(R*0.56)*fade),y0,y1,n:4.6+2.6*fade});
     }
     for(const sx of [-px,px]){
-      const f=new THREE.Mesh(loft(st,22),M.paint);
+      const f=new THREE.Mesh(loft(st,24),M.paint);
       f.position.x=sx; f.castShadow=true; b.add(f);
+      /* the lip: three straight-ish runs tracing the crest rather than
+         one smooth curve, so it reads as a folded edge rather than a
+         wire laid over a dome */
+      const li=Math.round(N*0.28), lc=Math.round(N/2), lo=Math.round(N*0.72);
+      const lipM=armM;
+      tubeTo(b,[sx,st[li].y1,st[li].z],[sx,st[lc].y1,st[lc].z],0.010,lipM,6);
+      tubeTo(b,[sx,st[lc].y1,st[lc].z],[sx,st[lo].y1,st[lo].z],0.010,lipM,6);
     }
   }
   lmpArch(FZ,FR,FX,0.520,0.440);
