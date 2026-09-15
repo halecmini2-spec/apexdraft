@@ -6738,18 +6738,19 @@ function bodyLMP1(b,M){
      reads unmistakably as a bar standing proud of the roof rather than
      a crease pressed into it. Starts flush with the roof surface at
      the canopy seam (top only a whisker above base there) rather than
-     already 0.15 proud right from its very first station — that jump
-     was reading as a floating bar rather than one actually growing out
-     of the roof — then climbs quickly over the next couple of
-     stations, and keeps climbing past where the roof panel itself
-     stops, closing the gap up to the wing's own top surface (~0.92, at
-     the wing's own z) rather than stopping short of it — a strut as
-     much as a spine by the time it gets there. */
+     already proud right from its very first station — that jump was
+     reading as a floating bar rather than one actually growing out of
+     the roof — then climbs fast, up past the roof's own height to
+     roughly level with the top of the canopy itself (peak ~1.02) by
+     the time it clears the cockpit, holds close to that for the
+     mid-run, then eases back down to meet the wing's own top surface
+     (~0.92, at the wing's own z) rather than stopping short of it — a
+     strut as much as a spine by the time it gets there. */
   {
     const spZ=[-0.45,-0.65,-0.90,-1.20,-1.52,-1.80,-2.00];
     const base=[0.720,0.708,0.678,0.628,0.562,0.519,0.500];
-    const top =[0.735,0.790,0.820,0.810,0.800,0.850,0.920];
-    const half=[0.028,0.065,0.078,0.072,0.060,0.050,0.035];
+    const top =[0.750,0.880,0.980,0.970,0.940,0.920,0.920];
+    const half=[0.028,0.070,0.085,0.078,0.065,0.050,0.035];
     for(let i=0;i<spZ.length-1;i++){
       const za=spZ[i], zc=spZ[i+1];
       const ta=top[i], tc=top[i+1], ba=base[i], bc=base[i+1], wa=half[i], wc=half[i+1];
@@ -6814,26 +6815,29 @@ function bodyLMP1(b,M){
     const fin=new THREE.Mesh(panel([[0,-0.06],[0.32,-0.02],[0.32,0.08],[0,0.10]],0.012),blackM);
     fin.position.set(s*0.680,0.150,1.940); fin.rotation.y=s*0.5; b.add(fin);
   }
-  /* the signature: a pair of round lamp lenses in a shared dark
-     housing rather than one wraparound lamp */
+  /* the signature: a slim, angular wedge set into the corner where the
+     nose meets the fender and swept back along it — closer to the
+     reference's own wraparound light, which sits right on that corner
+     and follows its line, than a rounded pod sitting flat on the
+     bonnet. A group per side so the housing, its DRL strip and its
+     lamp pair all share one diagonal rather than each needing the
+     angle worked out separately. */
   const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
     emissiveIntensity:1.15,roughness:0.16,metalness:0.10});
   const lampSurroundM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.5});
   for(const s of [-1,1]){
-    /* properly onto the bonnet this time rather than just raised where
-       they were: pulled back past the canard (z:2.140, itself roughly
-       2.08-2.20) instead of staying forward of it, which needed
-       pulling in slightly in x as well to actually clear it rather
-       than skim past with barely a gap. The hull is meaningfully
-       taller back here too (~0.225 against ~0.157 further forward),
-       so the housing sits higher and still reads as mounted on
-       something rather than floating. */
-    const sur=new THREE.Mesh(lens(0.330,0.250,0.030),lampSurroundM);
-    sur.position.set(s*0.330,0.330,1.970); sur.rotation.set(0,s*0.20,s*0.10); b.add(sur);
-    for(let i=0;i<2;i++){
-      const l=new THREE.Mesh(new THREE.CylinderGeometry(0.048,0.048,0.020,10),lampM);
-      l.position.set(s*(0.225+i*0.200),0.270+i*0.085,1.988);
-      l.rotation.set(Math.PI/2,s*0.20,s*0.10-0.16); b.add(l);
+    const grp=new THREE.Group();
+    grp.position.set(s*0.300,0.225,2.110); grp.rotation.y=s*0.68; b.add(grp);
+    const housing=new THREE.Mesh(panel([[0,-0.050],[0.340,0.015],[0.340,0.065],[0,0.115]],0.028),lampSurroundM);
+    grp.add(housing);
+    // a slim bright DRL strip hugging the housing's own top edge
+    const drl=new THREE.Mesh(panel([[0.02,0.075],[0.320,0.038],[0.320,0.060],[0.02,0.100]],0.012),lampM);
+    drl.position.x=0.022; grp.add(drl);
+    // the main lamp pair, lower in the housing, following the same taper
+    const lampPos=[[0.09,-0.005],[0.24,0.028]];
+    for(const [lz,ly] of lampPos){
+      const l=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,0.018,10),lampM);
+      l.position.set(0.038,ly,lz); l.rotation.z=Math.PI/2; grp.add(l);
     }
   }
 
