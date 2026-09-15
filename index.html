@@ -6709,6 +6709,32 @@ function bodyLMP1(b,M){
     {z:-1.86,w:0.100,y0:0.460,y1:0.510,n:2.6}
   ],12),M.paint);
   roof.castShadow=true; b.add(roof);
+  /* the spine: an actual raised bar running from the back of the
+     canopy all the way to the top of the rear wing itself — a flat top
+     and two near-vertical sides rather than a pointed ridge, so it
+     reads unmistakably as a bar standing proud of the roof rather than
+     a crease pressed into it. Climbs off the roof's own surface for
+     its first few stations, then keeps climbing past where the roof
+     panel itself stops, closing the gap up to the wing's own top
+     surface (~0.92, at the wing's own z) rather than stopping short of
+     it — a strut as much as a spine by the time it gets there. */
+  {
+    const spZ=[-0.45,-0.78,-1.15,-1.52,-1.80,-2.00];
+    const base=[0.720,0.700,0.635,0.562,0.519,0.500];
+    const top =[0.870,0.850,0.800,0.800,0.850,0.920];
+    const half=[0.085,0.080,0.070,0.060,0.050,0.035];
+    for(let i=0;i<spZ.length-1;i++){
+      const za=spZ[i], zc=spZ[i+1];
+      const ta=top[i], tc=top[i+1], ba=base[i], bc=base[i+1], wa=half[i], wc=half[i+1];
+      // the flat top of the bar
+      b.add(quadMesh([-wa,ta,za],[wa,ta,za],[wc,tc,zc],[-wc,tc,zc],M.paint));
+      // its two near-vertical sides, down to the roof (or, by the last
+      // couple of stations, down to roughly where the roof would have
+      // been had it kept running) it rides on
+      for(const s of [-1,1])
+        b.add(quadMesh([s*wa,ta,za],[s*wa,ba,za],[s*wc,bc,zc],[s*wc,tc,zc],M.paint));
+    }
+  }
 
   /* ---- the cockpit ---- */
   const seatM=new THREE.MeshStandardMaterial({color:SRGB(0x0A0C0D),roughness:0.78,metalness:0.05});
