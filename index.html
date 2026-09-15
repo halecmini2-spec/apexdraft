@@ -6579,23 +6579,34 @@ function bodyLMP1(b,M){
   ],34),M.paint);
   shell.castShadow=true; b.add(shell);
 
-  /* the bubble, not a greenhouse — one seat, sunk low, glassed only where
-     a driver's head actually is, and faired into a spine running back to
-     the engine intake rather than stopping dead behind the driver */
+  /* A real greenhouse this time rather than a bubble: bigger in every
+     direction, a rounder dome in cross-section (the superellipse's own
+     exponent pulled down toward a true curve rather than the flatter,
+     more rectangular one a higher number gives), and the peak raised
+     enough to actually feel like a windscreen a driver sits up behind
+     rather than a slot they peer out of. */
   const canopy=new THREE.Mesh(loft([
-    {z: 0.66,w:0.240,y0:0.560,y1:0.610,n:3.0},
-    {z: 0.30,w:0.310,y0:0.585,y1:0.790,n:3.4},
-    {z:-0.06,w:0.290,y0:0.600,y1:0.750,n:3.2},
-    {z:-0.36,w:0.220,y0:0.575,y1:0.630,n:2.6}
-  ],18),M.glass);
+    {z: 0.78,w:0.300,y0:0.570,y1:0.640,n:2.6},
+    {z: 0.40,w:0.380,y0:0.600,y1:0.870,n:2.4},
+    {z: 0.00,w:0.360,y0:0.615,y1:0.840,n:2.4},
+    {z:-0.40,w:0.280,y0:0.590,y1:0.680,n:2.6}
+  ],20),M.glass);
   b.add(canopy);
-  const spine=new THREE.Mesh(loft([
-    {z:-0.30,w:0.110,y0:0.560,y1:0.640,n:3.0},   // the intake snorkel behind the driver's head
-    {z:-0.70,w:0.130,y0:0.520,y1:0.610,n:3.4},
-    {z:-1.20,w:0.110,y0:0.480,y1:0.560,n:3.0},
-    {z:-1.55,w:0.080,y0:0.440,y1:0.500,n:2.6}
-  ],14),M.paint);
-  b.add(spine);
+  /* the roof: not a snorkel now but an actual panel, painted rather than
+     glazed, picking up right where the windscreen's own glass ends and
+     running back — wide at first, the way a real closed prototype's
+     roofline carries on over the engine rather than stopping dead behind
+     the driver's head — narrowing gradually the whole way back to where
+     the wing's own pylons meet the deck, so the two connect rather than
+     one appearing to start again after a gap. */
+  const roof=new THREE.Mesh(loft([
+    {z:-0.40,w:0.270,y0:0.610,y1:0.690,n:2.8},
+    {z:-0.75,w:0.230,y0:0.580,y1:0.660,n:3.0},
+    {z:-1.15,w:0.180,y0:0.540,y1:0.610,n:3.0},
+    {z:-1.55,w:0.130,y0:0.500,y1:0.560,n:2.8},
+    {z:-1.85,w:0.090,y0:0.460,y1:0.510,n:2.6}
+  ],20),M.paint);
+  roof.castShadow=true; b.add(roof);
 
   /* ---- the cockpit ----
      Mostly hidden under a tinted canopy, the way a real one actually
@@ -6625,15 +6636,19 @@ function bodyLMP1(b,M){
      A high "sit" as well keeps the arch reading as one continuous piece
      of bodywork along the tyre's whole length rather than a peak that
      collapses back to a sliver at each end. */
-  addFenders(b,M,FZ,FR,0.700,FX,0.480);
+  /* The front arch pulled back a step from the rear's: capped hard enough
+     over the top of the tyre and the front wheel disappeared, which is
+     its own way of reading wrong — a prototype's front tyre is meant to
+     show, just from inside a housing rather than bare. A lower crest and
+     a lower "sit" both leave a real sliver of tyre in view along the
+     whole arch rather than only right at its two ends. */
+  addFenders(b,M,FZ,FR,0.600,FX,0.350);
   addFenders(b,M,RZ,RR,0.760,RX,0.520);
-  /* the detail an arch built for one specific car carries and a shared
-     helper's own never does: a brake duct sunk into the outer face, and
-     two heat-extraction louvres let into the top of it, both things an
-     endurance car's front arch is never actually without. */
+  /* heat-extraction louvres let into the top of the front arch — the one
+     thing an endurance car's front arch is never actually without, kept
+     up on the bodywork rather than down where they would sit over the
+     tyre itself */
   for(const s of [-1,1]){
-    const bd=new THREE.Mesh(lens(0.160,0.120,0.040),vent);
-    bd.position.set(s*(FX+0.220),0.200,FZ+0.040); bd.rotation.y=s*(Math.PI/2-0.12); b.add(bd);
     for(const off of [-0.085,0.085]){
       const lv=new THREE.Mesh(new THREE.BoxGeometry(0.150,0.014,0.060),vent);
       lv.position.set(s*(FX+0.040),0.372,FZ+off); lv.rotation.y=s*0.20; b.add(lv);
