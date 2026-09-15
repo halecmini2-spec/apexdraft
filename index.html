@@ -6828,6 +6828,12 @@ function bodyLMP1(b,M){
   for(const s of [-1,1]){
     const grp=new THREE.Group();
     grp.position.set(s*0.300,0.225,2.110); grp.rotation.y=s*0.68; b.add(grp);
+    // the bezel: a body-colour blister the black housing sits proud
+    // of, wider than the housing all round so it reads as bodywork
+    // shaped to take the light rather than a lamp glued flat onto an
+    // otherwise untouched hull surface
+    const bezel=new THREE.Mesh(panel([[-0.035,-0.078],[0.375,-0.010],[0.375,0.090],[-0.035,0.145]],0.022),M.paint);
+    bezel.position.x=-0.010; grp.add(bezel);
     const housing=new THREE.Mesh(panel([[0,-0.050],[0.340,0.015],[0.340,0.065],[0,0.115]],0.028),lampSurroundM);
     grp.add(housing);
     // a slim bright DRL strip hugging the housing's own top edge
@@ -6839,6 +6845,12 @@ function bodyLMP1(b,M){
       const l=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,0.018,10),lampM);
       l.position.set(0.038,ly,lz); l.rotation.z=Math.PI/2; grp.add(l);
     }
+    // a character crease running back off the bezel's own lower edge
+    // and into the fender, so the bodywork reads as leading into the
+    // light rather than the light just sitting on top of a plain
+    // curved surface
+    const crease=new THREE.Mesh(new THREE.BoxGeometry(0.014,0.016,0.260),M.paint);
+    crease.position.set(-0.012,-0.010,-0.150); grp.add(crease);
   }
 
   /* rear deck: louvres over the engine */
