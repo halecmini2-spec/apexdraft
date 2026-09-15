@@ -6815,42 +6815,19 @@ function bodyLMP1(b,M){
     const fin=new THREE.Mesh(panel([[0,-0.06],[0.32,-0.02],[0.32,0.08],[0,0.10]],0.012),blackM);
     fin.position.set(s*0.680,0.150,1.940); fin.rotation.y=s*0.5; b.add(fin);
   }
-  /* the signature: a slim, angular wedge set into the corner where the
-     nose meets the fender and swept back along it — closer to the
-     reference's own wraparound light, which sits right on that corner
-     and follows its line, than a rounded pod sitting flat on the
-     bonnet. A group per side so the housing, its DRL strip and its
-     lamp pair all share one diagonal rather than each needing the
-     angle worked out separately. */
+  /* the signature: just two round lamps in a simple dark surround —
+     no DRL strip, no bezel, no crease, nothing else drawing the eye */
   const lampM=new THREE.MeshStandardMaterial({color:SRGB(0xFFF6E2),emissive:SRGB(0xEAF2FF),
     emissiveIntensity:1.15,roughness:0.16,metalness:0.10});
   const lampSurroundM=new THREE.MeshStandardMaterial({color:SRGB(0x0C0F11),roughness:0.35,metalness:0.5});
   for(const s of [-1,1]){
-    const grp=new THREE.Group();
-    grp.position.set(s*0.300,0.225,2.110); grp.rotation.y=s*0.68; b.add(grp);
-    // the bezel: a body-colour blister the black housing sits proud
-    // of, wider than the housing all round so it reads as bodywork
-    // shaped to take the light rather than a lamp glued flat onto an
-    // otherwise untouched hull surface
-    const bezel=new THREE.Mesh(panel([[-0.035,-0.078],[0.375,-0.010],[0.375,0.090],[-0.035,0.145]],0.022),M.paint);
-    bezel.position.x=-0.010; grp.add(bezel);
-    const housing=new THREE.Mesh(panel([[0,-0.050],[0.340,0.015],[0.340,0.065],[0,0.115]],0.028),lampSurroundM);
-    grp.add(housing);
-    // a slim bright DRL strip hugging the housing's own top edge
-    const drl=new THREE.Mesh(panel([[0.02,0.075],[0.320,0.038],[0.320,0.060],[0.02,0.100]],0.012),lampM);
-    drl.position.x=0.022; grp.add(drl);
-    // the main lamp pair, lower in the housing, following the same taper
-    const lampPos=[[0.09,-0.005],[0.24,0.028]];
-    for(const [lz,ly] of lampPos){
-      const l=new THREE.Mesh(new THREE.CylinderGeometry(0.032,0.032,0.018,10),lampM);
-      l.position.set(0.038,ly,lz); l.rotation.z=Math.PI/2; grp.add(l);
+    const sur=new THREE.Mesh(lens(0.330,0.250,0.030),lampSurroundM);
+    sur.position.set(s*0.330,0.330,1.970); sur.rotation.set(0,s*0.20,s*0.10); b.add(sur);
+    for(let i=0;i<2;i++){
+      const l=new THREE.Mesh(new THREE.CylinderGeometry(0.046,0.046,0.020,10),lampM);
+      l.position.set(s*(0.220+i*0.100),0.315+i*0.045,1.988);
+      l.rotation.set(Math.PI/2,s*0.20,s*0.10-0.16); b.add(l);
     }
-    // a character crease running back off the bezel's own lower edge
-    // and into the fender, so the bodywork reads as leading into the
-    // light rather than the light just sitting on top of a plain
-    // curved surface
-    const crease=new THREE.Mesh(new THREE.BoxGeometry(0.014,0.016,0.260),M.paint);
-    crease.position.set(-0.012,-0.010,-0.150); grp.add(crease);
   }
 
   /* rear deck: louvres over the engine */
