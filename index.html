@@ -13374,8 +13374,17 @@ const TIP_ANGLE=0.30;
 const TIP_LEAN=8;               // m/s of closing before a wheel lifts it at all
 const CLIMB_LEAD=0.35;          // how much further forward the climbing wheel must be
 const tipRate=(close)=>clamp((close-TIP_LEAN)*0.36,0,ROLL_MAX);
-/* nothing much below walking pace, all of it by 8 m/s into the contact */
-const crashScale=(close)=>clamp((close-1.5)/6.5,0,1);
+/* nothing much below walking pace, all of it by 8 m/s into the contact —
+   "all of it" being 40% of what this used to reach: every crashTurn/
+   crashLean/crashSlide call, for a wall, another car, or the AI's own
+   reaction to one, reads its severity through this one function, so
+   scaling it here cuts all three by the same 60% in one place rather
+   than three tuned numbers that could drift apart. Momentum itself
+   (the jN/jT impulse each collision already resolved before ever
+   calling this) is untouched — cars still bounce and deflect exactly
+   as before; only the knocked-about spin/lean/slide on top of that is
+   smaller now. */
+const crashScale=(close)=>clamp((close-1.5)/6.5,0,1)*0.40;
 /* The turning a blow gives: the moment of the impulse about the middle of
    the car. A square hit through the centre turns it not at all; the same
    blow on a corner brings it round. */
