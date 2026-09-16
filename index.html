@@ -4663,8 +4663,8 @@ const KITS={
        faint to actually see — wide, slow-rolling bands and real glow
        behind them read as a highlight sweeping across wet metal; forty
        tight, dim ones just read as noise, which is to say as dull. */
-    {id:"liquid-metal", label:"Liquid Metal Paint", rarity:"legendary", metal:1.00,rough:0.02,env:3.0,tint:0xC7CBCC,
-      iri:{bands:18.0, speed:0.16, mix:0.00, glow:0.42, sat:0.00, hard:true}},
+    {id:"liquid-metal", label:"Liquid Metal Paint", rarity:"legendary", metal:1.00,rough:0.02,env:2.4,tint:0xA8ACAD,
+      iri:{bands:18.0, speed:0.16, mix:0.00, glow:0.30, sat:0.00, hard:true}},
     /* The same mirror smoothness as Liquid Metal, dark rather than bright
        — still fully metallic, which is what keeps a near-black finish
        reading as chrome instead of quietly becoming flat black paint —
@@ -13118,7 +13118,7 @@ const SPIN_MAX=5.5;
    CAR.spinV) throws its nose round and fades on its own. Nothing about
    the driver — the car recovers itself the same way it does after being
    flipped, there's no damage to carry. */
-const AI_CRASH_T=1.5;
+const AI_CRASH_T=2.0;
 /* How hard a hit has to be before it actually spins the AI out, rather
    than just being absorbed as a shove — crashScale itself is already 0
    below 1.5 m/s of closing speed; this asks for real contact on top of
@@ -13238,14 +13238,18 @@ function netCollide(){
        speed, and this asks for real contact on top of that floor. Which
        way it turns follows where the contact landed on the car, the same
        idea as crashTurn above but worked out fresh in the AI's own frame
-       rather than reusing CAR's. The driver's fine either way — it's the
-       same temporary loss of control a wall hit gives the player, not
-       damage, and it fades and gathers itself back up on its own. */
+       rather than reusing CAR's. Deliberately thrown further round than
+       the same hit would throw the player (the 2.5 below, against
+       crashTurn's own implicit ~1) — a car you've just rammed should look
+       and feel more knocked about than yours does. The driver's fine
+       either way — it's the same temporary loss of control a wall hit
+       gives the player, not damage, and it fades and gathers itself back
+       up on its own. */
     const aiScale=crashScale(m.close);
     if(aiScale>AI_CRASH_SCALE_MIN){
       const crx=-Math.cos(c.yaw), crz=Math.sin(c.yaw);
       const lat=(ov.cx-c.x)*crx+(ov.cz-c.z)*crz;
-      c.spinV=clamp(c.spinV-SPIN_PER*lat*m.close*aiScale*0.25,-SPIN_MAX,SPIN_MAX);
+      c.spinV=clamp(c.spinV-SPIN_PER*lat*m.close*aiScale*2.5,-SPIN_MAX,SPIN_MAX);
       c.crashT=Math.max(c.crashT,AI_CRASH_T*aiScale);
     }
     /* one of the two may get up on its side; never both */
