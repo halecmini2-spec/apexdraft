@@ -10963,23 +10963,18 @@ function packSimulate(n){
   const parts=order.filter(k=>tally[k]).map(k=>k+": "+tally[k]+" ("+(100*tally[k]/n).toFixed(2)+"%)");
   $("shPackTally").textContent=parts.join("  ·  ");
 }
-/* The door on the home page. Open to everyone now — packs and coins are
-   still behind the same gate as the rest of what's being tried out — real
-   money is wired up behind it now, but not turned on for anybody else
-   until it's actually been paid through once. */
+/* The door on the home page. Open to everyone now — three cars, real
+   money, through Stripe. Packs and coin bundles stay behind the same
+   gate as the rest of what's still being tried out (shopBuild() below
+   hides that section for anyone but the tester itself). */
 function shopUI(){
   const card=$("hmShop"); if(!card)return;
-  const on=isTester();
-  card.classList.toggle("grey",!on);
-  card.classList.toggle("gold",on);
-  card.querySelector("span").textContent=on
-    ? "Cars, packs and coins. Being built — have a look."
-    : "Coming soon.";
+  card.classList.remove("grey"); card.classList.add("gold");
+  card.querySelector("span").textContent="Three cars, for real money.";
   const bal=$("shCoinBal");
-  if(bal){ bal.hidden=!on; if(on) bal.querySelector("b").textContent=PASS.coins.toLocaleString(); }
+  if(bal){ bal.hidden=!isTester(); if(isTester()) bal.querySelector("b").textContent=PASS.coins.toLocaleString(); }
 }
 function showShop(on){
-  if(on&&!isTester())return;
   if(on){ shopBuild(); }
   $("shop").hidden=!on; baseShow(!on);
   document.body.classList.toggle("shopping",on);
@@ -11016,10 +11011,7 @@ $("hmDraw").addEventListener("click",goDraw);
 $("hmMulti").addEventListener("click",goMulti);
 $("hmDaily").addEventListener("click",goDaily);
 $("hmShop").addEventListener("click",()=>{
-  if(isTester()){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true); return; }
-  const b=$("hmShop").querySelector("span");
-  b.textContent="Coming soon — nothing to buy yet.";
-  setTimeout(()=>{ b.textContent="Coming soon."; },1800);
+  closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true);
 });
 $("shBack").addEventListener("click",goHome);
 $("hmPass").addEventListener("click",goPass);

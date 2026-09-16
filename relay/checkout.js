@@ -16,11 +16,13 @@ const { json, cors, overRate, clientIp } = require("./auth");
 /* Every price a pack or a shop card already shows, kept once. Changing a
    price here is the only place it needs to change — the client's own copy
    is what a driver reads before paying, not what they are charged. */
+/* LMP1 used to be here too, back when the shop was the only way to a test
+   car — it's the Apex Pass's own Level 10 now (relay/pass.js, FREE_PASS),
+   not something a card should be able to buy a second way. */
 const CARS = {
   bike: { name: "Superbike X",     pence: 50   },
   trike:{ name: "Rocket Trike",    pence: 50   },
   v12:  { name: "V12 Monster",     pence: 150  },
-  lmp1: { name: "LMP1 Prototype",  pence: 100  },
 };
 
 /* Where the tab comes back to. Render sets this on the relay itself if it's
