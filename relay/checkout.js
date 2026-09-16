@@ -127,13 +127,13 @@ function makeCheckout(store, userFor) {
             price_data: { currency: "gbp", product_data: { name: car.name }, unit_amount: car.pence },
             quantity: 1,
           }],
-          /* Automatic tax also comes on by default on a newer account, and
-             then refuses every line item for having no tax_code — a real
-             one means classifying a cosmetic in a browser game against
-             Stripe's own product tax categories, which is more than this
-             shop needs right now. Off, same as payment_method_types above:
-             opted out rather than fought. */
-          automatic_tax: { enabled: false },
+          /* Managed Payments (on by default on this account) requires this
+             to be true rather than false or left out — the account's own
+             error is explicit about it, and disabling it outright was the
+             wrong read of an earlier, vaguer one. Stripe collects whatever
+             address it needs for this on the Checkout page itself; nothing
+             else here has to know about tax jurisdictions. */
+          automatic_tax: { enabled: true },
           success_url: GAME_ORIGIN + "/?checkout=success&session_id={CHECKOUT_SESSION_ID}",
           cancel_url: GAME_ORIGIN + "/?checkout=cancel",
           client_reference_id: user.id,
