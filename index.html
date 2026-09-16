@@ -11525,7 +11525,7 @@ async function lbPost(ms){
     CAR.bestKept=true;
     try{ store.set("ad.bestKept."+trackKey(G.T),true); }catch(e){}
     /* Apex Pass XP for the lap, if the relay granted any. */
-    if(r.passXp!=null){ PASS.xp=r.passXp; PASS.level=passLevel(r.passXp); xpToast(1000,r.passXp,"Lap completed"); passUI(); }
+    if(r.passXp!=null){ PASS.xp=r.passXp; PASS.level=passLevel(r.passXp); xpToast(100,r.passXp,"Lap completed"); passUI(); }
     /* A drive-time milestone, on top of the lap's own flat XP — queued
        to show right after that toast clears rather than stepping on it. */
     if(r.driveBonus){

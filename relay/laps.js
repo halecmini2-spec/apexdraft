@@ -195,7 +195,7 @@ function makeLaps(store, userFor, quests) {
     /* A lap under half a minute is a lap around something built to be
        farmed, not raced — the XP for one only pays out at a real length. */
     if (ms >= 30_000) {
-      try { passXp = await store.addXp(user.id, 1000); } catch (e) {}
+      try { passXp = await store.addXp(user.id, 100); } catch (e) {}
     }
     /* Drive-time XP: milestones against accumulated SERVER-VERIFIED lap
        time — never a client-reported clock — so this is the one form
