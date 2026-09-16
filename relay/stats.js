@@ -8,9 +8,7 @@
  */
 const { json, readBody, cors, overRate } = require("./auth");
 
-const NOTICES = {
-  sebvader: "Your account is under investigation for suspicious and advantageous activity on the leaderboards.",
-};
+const NOTICES = {};
 for (const item of String(process.env.NOTICES || "").split(";").map((x) => x.trim()).filter(Boolean)) {
   const i = item.indexOf("="); if (i > 0) NOTICES[item.slice(0, i).trim().toLowerCase()] = item.slice(i + 1).trim();
 }

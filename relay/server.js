@@ -11,7 +11,7 @@
 const http = require("http");
 const { WebSocketServer } = require("ws");
 const { open } = require("./store");
-const { makeAuth } = require("./auth");
+const { makeAuth, carAllowedFor } = require("./auth");
 const { makeTracks } = require("./tracks");
 const { makeLaps } = require("./laps");
 const { makeAdmin } = require("./admin");
@@ -191,6 +191,18 @@ wss.on("connection", (ws) => {
     try { acct = await auth.userFor(m.token); } catch (e) { console.error("auth:", e && e.message); }
     ws.acct = !!acct;
     ws.name = acct ? acct.name : String(m.name || fallback).slice(0, 16);
+    /* Cached here rather than re-fetched per message: a car claimed later,
+       in a "meta", is checked against what was already looked up at
+       host/join rather than trusting the token freshly each time. */
+    ws.cars = acct ? acct.cars : "";
+  }
+
+  /* A car a room hears about — at host, at join, or later in a "meta" — only
+     ever reaches another player's screen once it is checked against what
+     the account actually owns; a guest (no account) gets the free set. */
+  function ownedCar(ws, claimed) {
+    const id = String(claimed || "gt").slice(0, 16);
+    return carAllowedFor(ws.cars, id) ? id : "gt";
   }
 
   async function handle(ws, m) {
@@ -205,7 +217,7 @@ wss.on("connection", (ws) => {
       const room = { code, hostId: ws.id, players: new Map() };
       rooms.set(code, room);
       ws.room = code;
-      ws.car = m.car; ws.colour = m.colour;
+      ws.car = ownedCar(ws, m.car); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
       room.players.set(ws.id, ws);
       send(ws, { t: "hosted", code, id: ws.id });
       played();
@@ -221,7 +233,7 @@ wss.on("connection", (ws) => {
       await named(ws, m, "Driver");
       if (ws.readyState !== 1) return;
       ws.room = code;
-      ws.car = m.car; ws.colour = m.colour;
+      ws.car = ownedCar(ws, m.car); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
       const peers = roomPeers(room, ws.id);
       room.players.set(ws.id, ws);
       /* The circuit the room is on and whether it is racing on it travel with
@@ -256,7 +268,7 @@ wss.on("connection", (ws) => {
       return;
     }
     if (m.t === "meta") {
-      ws.car = m.car; ws.colour = m.colour;
+      ws.car = ownedCar(ws, m.car); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
       /* An account name is not the client's to change. */
       if (m.name && !ws.acct) ws.name = String(m.name).slice(0, 16);
       broadcast(room, { t: "meta", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);

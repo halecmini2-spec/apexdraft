@@ -11,7 +11,7 @@
  * is a claim, and all that is checked here is that it is a plausible one.
  * Worth knowing before treating the board as a record book.
  */
-const { json, readBody, cors, clientIp, overRate } = require("./auth");
+const { json, readBody, cors, clientIp, overRate, carAllowedFor } = require("./auth");
 
 const TOP = 25;
 const ALL = 500;   // "show all": as many as anyone will scroll through
@@ -92,10 +92,8 @@ function makeLaps(store, userFor, quests) {
         }
       }
       /* a time that was put on the board by hand rather than driven, taken
-         off by name; joined by anything named in PURGE_LAPS */
-      const purge = [];
-      for (const back of [0, 1, 2]) purge.push(dailyMod.circuitKey(dailyMod.dayIndex() - back) + ":sebvader");
-      for (const item of purge.concat(String(process.env.PURGE_LAPS || "").split(",").map((x) => x.trim()).filter(Boolean))) {
+         off by name; anything named in PURGE_LAPS */
+      for (const item of String(process.env.PURGE_LAPS || "").split(",").map((x) => x.trim()).filter(Boolean)) {
         const [circuit, name] = item.split(":");
         const u = name && await store.userByName(name.toLowerCase());
         if (u && circuit && await store.deleteLap(circuit, u.id)) console.log("purge: removed " + u.name + " on " + circuit);
@@ -162,6 +160,10 @@ function makeLaps(store, userFor, quests) {
     if (/^daily_\d{8}$/.test(circuit)) {
       const y = +circuit.slice(6, 10), mo = +circuit.slice(10, 12), da = +circuit.slice(12, 14);
       car = dailyMod.carFor(Math.floor(Date.UTC(y, mo - 1, da) / 86_400_000));
+    } else if (!carAllowedFor(user.cars, car)) {
+      /* A car the claim doesn't own does not get to sort onto a public
+         board next to the driver's name, whatever the page sent. */
+      car = "gt";
     }
     if (!KEY_RE.test(circuit)) return json(res, 400, { error: "That isn't a circuit." }), true;
     if (!Number.isFinite(ms) || ms < MIN_MS || ms > MAX_MS)

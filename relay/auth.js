@@ -170,6 +170,16 @@ const isAdmin = (u) => !!u && ADMINS.has(u.name_lower || String(u.name || "").to
    total rather than stored beside it, so the two can never disagree. */
 const passLevel = (xp) => Math.min(50, Math.floor(Math.max(0, xp | 0) / 1000) + 1);
 
+/* Cars everyone can drive, and cars that have to be owned first (matching
+   CAR_MODELS' test:true set in index.html). A claimed car id is only ever
+   trusted once it's checked against one of these — never taken as given. */
+const TEST_CARS = new Set(["bike", "trike", "v12", "lmp1", "golfkart"]);
+const carAllowedFor = (cars, carId) => {
+  if (!TEST_CARS.has(carId)) return true;
+  const owned = String(cars || "").split(",").map((s) => s.trim());
+  return owned.includes(carId);
+};
+
 const publicUser = (u) => ({
   name: u.name, email: u.email, created: Number(u.created), admin: isAdmin(u),
   /* Anything an admin has left for this account to read. It rides along with
@@ -334,4 +344,7 @@ module.exports = {
   /* shared with the Apex Pass routes, so a level means the same thing
      everywhere it is asked about */
   publicUser, passLevel,
+  /* shared with the lap and multiplayer routes, so a claimed car id is
+     checked against ownership the same way everywhere it arrives */
+  TEST_CARS, carAllowedFor,
 };
