@@ -760,11 +760,12 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .pass-premium b{color:var(--dim)}
 @media (max-width:760px){ .pass-card{flex-basis:122px} .pass-card.major{flex-basis:150px} }
 /* small, corner, out of the way — see the comment on the element itself */
-.xp-toast{position:fixed;top:calc(14px + var(--sat));right:calc(14px + var(--sar));z-index:60;
-  display:flex;align-items:center;gap:7px;background:rgba(12,19,20,.92);border:1px solid var(--purple);
-  border-radius:14px;padding:7px 14px;font-family:var(--mono);font-size:13px;color:var(--purple);
-  pointer-events:none;opacity:0;transform:translateY(-6px);transition:opacity .25s ease,transform .25s ease}
-.xp-toast.on{opacity:1;transform:translateY(0)}
+.xp-toast{position:fixed;left:50%;top:calc(15% + var(--sat));z-index:60;
+  display:flex;flex-direction:column;align-items:center;gap:2px;background:rgba(12,19,20,.92);border:1px solid var(--purple);
+  border-radius:14px;padding:8px 18px;font-family:var(--mono);font-size:13px;color:var(--purple);
+  text-align:center;pointer-events:none;opacity:0;transform:translate(-50%,-6px);transition:opacity .25s ease,transform .25s ease}
+.xp-toast.on{opacity:1;transform:translate(-50%,0)}
+.xp-toast em{font-style:normal;font-family:var(--ui);font-size:11px;color:var(--ink);opacity:.85}
 .xp-toast small{font-family:var(--ui);font-size:10px;color:var(--faint);letter-spacing:.04em}
 /* ---- opening a pack: a pass over the pad, then the card ----
    The canvas is the whole screen and stays put throughout — the car and
@@ -2002,10 +2003,10 @@ body.daily .gar-arrow{display:none}
     </div>
   </section>
 
-  <!-- XP, wherever it is earned: a corner note rather than a flash across
-       the middle of the screen, because a lap counts whether or not you
-       are looking at it, and this is not the thing that should be holding
-       up your eyes off the road to read. -->
+  <!-- XP, wherever it is earned: up near the top of the screen, a little
+       above the car rather than over it, and with a short caption saying
+       what it was for — clear enough to actually read without needing to
+       take your eyes far off the road. -->
   <div id="xpToast" class="xp-toast" hidden></div>
 
   <!-- Fifty levels, one free track — Premium is architected here (the
@@ -4973,22 +4974,61 @@ function glowShadows(car,on){
    way it faces. It cannot be buried, on any car, over any ground, because
    there is nowhere for it to be buried into. */
 const GLOW_N=16;                      // squares along the length — enough to taper smoothly
-/* How wide the light is, at a point running from -1 (tail) to 1 (nose).
-   A rectangle read as a ring lit round the edges because every row was
-   exactly as wide as the last one; this narrows it toward each end the
-   way the car's own bodywork does, so the patch on the ground reads as
-   the car's own shape rather than a box it happens to be standing in. */
+/* A fallback only, now: the width at a point running from -1 (tail) to 1
+   (nose), for the rare row a raycast below finds no bodywork at all (open
+   space between a bike's wheels, say). Everything that does get a real
+   hit uses that instead — see glowFootprintWidth. */
 function glowWidthProfile(t){
   if(t>0.72) return Math.max(0.18,1-(t-0.72)/0.28*0.82);   // the nose, tapering to a point
   if(t<-0.62) return Math.max(0.30,1-(-t-0.62)/0.38*0.70); // the tail, blunter than the nose
   return 1;
 }
+/* The car's own footprint, read straight off its geometry: a ray straight
+   down, swept in from outside until it finds the body, within a band just
+   above the car's lowest point — the sills and floor an underbody light
+   actually grazes, not a wing mirror or a rear wing standing well clear of
+   it. Only ever called at build time (glowBuild), not per frame, so a
+   couple of dozen raycasts per row costs nothing worth counting. */
+function glowFootprintWidth(body,z,maxX,lowYs){
+  /* Sideways, not down: these shells are only ever modelled on the face a
+     camera can see, so most have no floor to hit from above — a bonnet
+     with nothing below it reads as empty. From outside in, at a handful
+     of low heights, finds the same outward-facing surface a side view
+     already shows, and keeps whichever of those heights reached widest. */
+  const caster=new THREE.Raycaster(), dir=new THREE.Vector3(-1,0,0);
+  caster.far=maxX+0.5;
+  let best=0;
+  for(const y of lowYs){
+    caster.set(new THREE.Vector3(maxX,y,z),dir);
+    const hits=caster.intersectObject(body,true);
+    if(hits.length) best=Math.max(best,Math.abs(hits[0].point.x));
+  }
+  return best;
+}
 function glowBuild(car){
+  /* Read in the car's own local space, its world transform zeroed for the
+     moment and put back after — so a lean under the springs or a pitch
+     over a crest right now can never skew the shape baked in here, and a
+     raycast's "up" really is straight up from the car's own floor. */
+  const body=car.userData.body||car;
+  const savedPos=car.position.clone(), savedQuat=car.quaternion.clone(), savedScale=car.scale.clone();
+  car.position.set(0,0,0); car.quaternion.identity(); car.scale.set(1,1,1); car.updateMatrixWorld(true);
   const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
   box.getSize(sz);
   /* held in close around the car, which is what an underbody light throws */
   const hw=sz.x*0.98, hl=sz.z*0.62;
+  /* a handful of low heights to test each row against — sills, rockers,
+     the lower door line, the top of a wheel arch — since which one is
+     actually the widest point varies car to car and row to row */
+  const lowYs=[0.06,0.14,0.22,0.32,0.44].map(d=>box.min.y+d);
   const n=GLOW_N, w=n+1, count=w*w;
+  const rowW=[];
+  for(let j=0;j<w;j++){
+    const t=(j/n-0.5)*2;
+    const found=glowFootprintWidth(body,t*hl,hw*1.05,lowYs);
+    rowW.push(found>0.02?found:hw*glowWidthProfile(t));
+  }
+  car.position.copy(savedPos); car.quaternion.copy(savedQuat); car.scale.copy(savedScale); car.updateMatrixWorld(true);
   const g=new THREE.BufferGeometry();
   const pos=new Float32Array(count*3), uv=new Float32Array(count*2);
   const base=new Float32Array(count*2);
@@ -4996,8 +5036,7 @@ function glowBuild(car){
   for(let j=0;j<w;j++)for(let i=0;i<w;i++){
     const k=j*w+i, u=i/n, v=j/n;
     const t=(v-0.5)*2;                // -1 tail .. 1 nose
-    const rowW=hw*glowWidthProfile(t);
-    base[k*2]  =(u-0.5)*2*rowW;       // metres across, narrowed toward each end
+    base[k*2]  =(u-0.5)*2*rowW[j];    // metres across — the car's own width at this row
     base[k*2+1]=t*hl;                 // metres along
     uv[k*2]=u; uv[k*2+1]=v;
   }
@@ -9845,11 +9884,12 @@ const SEASONS={s1:{id:"s1",label:"Season 1",free:APEX_PASS_FREE,premium:null}};
 
 const PASS_COINS_VALUE={rare:100,epic:200,legendary:500,mythic:1000};
 
-function xpToast(amount,total){
+function xpToast(amount,total,caption){
   const el=$("xpToast"); if(!el)return;
   el.innerHTML="";
   const b=document.createElement("b"); b.textContent="+"+amount+" XP";
   el.appendChild(b);
+  if(caption){ const c=document.createElement("em"); c.textContent=caption; el.appendChild(c); }
   if(total!=null){ const s=document.createElement("small"); s.textContent=passLevel(total)+" / 50 · "+(total%1000)+"/1,000"; el.appendChild(s); }
   el.hidden=false;
   requestAnimationFrame(()=>el.classList.add("on"));
@@ -10060,10 +10100,10 @@ function goPass(){ closeScreens(); setApp("home"); $("home").hidden=true; $("edi
    only ever paid out once per key on the relay's own side. Not as
    trustworthy as a lap, which the relay checks the trace of; the most a
    relay that cannot watch a race itself can promise. */
-function passReportXp(event,key,amount){
+function passReportXp(event,key,amount,caption){
   if(!acctIn())return;
   api("/api/pass/xp",{method:"POST",token:ACCT.token,body:{event,key,amount}})
-    .then(r=>{ if(r&&r.granted){ PASS.xp=r.xp; PASS.level=passLevel(r.xp); xpToast(amount,r.xp); passUI(); } })
+    .then(r=>{ if(r&&r.granted){ PASS.xp=r.xp; PASS.level=passLevel(r.xp); xpToast(amount,r.xp,caption); passUI(); } })
     .catch(()=>{});
 }
 /* ---- the shop ----
@@ -11306,9 +11346,8 @@ async function lbPost(ms){
        merits, unconditionally; this only stops chasing an exact float. */
     CAR.bestKept=true;
     try{ store.set("ad.bestKept."+trackKey(G.T),true); }catch(e){}
-    /* Apex Pass XP for the lap, if the relay granted any — cosmo38 only,
-       for now, same as everything else about the pass. */
-    if(r.passXp!=null){ PASS.xp=r.passXp; PASS.level=passLevel(r.passXp); xpToast(100,r.passXp); passUI(); }
+    /* Apex Pass XP for the lap, if the relay granted any. */
+    if(r.passXp!=null){ PASS.xp=r.passXp; PASS.level=passLevel(r.passXp); xpToast(100,r.passXp,"Lap completed"); passUI(); }
     if(LB.key===key){
       const hadWR=LB.board.length?LB.board[0].ms:null;
       LB.board=r.board||LB.board; LB.at=Date.now();
@@ -11386,7 +11425,7 @@ function raceStandings(el){
      grid still settling out of its own opening 0. Finished laps do not
      count as passes here — that is what the finish itself already pays. */
   if(RACE.on&&prevPos&&RACE.pos&&RACE.pos<prevPos&&RACE.mine==null)
-    passReportXp("overtake",myId()+":"+RACE.pos+":"+Date.now(),10);
+    passReportXp("overtake",myId()+":"+RACE.pos+":"+Date.now(),10,"Overtake");
 }
 function timesUI(){
   const list=$("tiList"), note=$("tiNote"), me=acctIn()?ACCT.user.name:null;
@@ -12633,7 +12672,7 @@ function raceFinish(id,name,ms,me){
     RACE.mine=ms;
     const laps=RACE.laps|0;
     const tier=laps>=10?["race10",1500]:laps>=3?["race3",400]:["race1",150];
-    passReportXp(tier[0],String(id)+":"+ms,tier[1]);
+    passReportXp(tier[0],String(id)+":"+ms,tier[1],"Race finished");
   }
   if(place===1){
     showFlash(me?"You win!":name+" wins","#FFB020",fmtTime(ms));
