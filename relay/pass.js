@@ -292,24 +292,38 @@ function makePass(store, userFor, dailyMod, quests) {
     }
 
     /* The events the relay has no other way to see for itself: a
-       race/overtake a driver reports having just done. Rate-limited and
-       only ever paid out once per key, which is the most a relay that
-       cannot watch a race itself can promise. */
+       race/overtake a driver reports having just done. There is no
+       server-side race to check this against — multiplayer rooms are
+       ephemeral and keep no history — so a key was only ever dedup, never
+       proof the event happened. That made the true limit whatever overRate
+       allowed, and one shared 40-per-10-minutes bucket across all four
+       events let race10's 1,500 XP be called at that same rate: a level 50
+       account in minutes, no driving involved. Each event now keeps its own
+       bucket, sized to how often a real one plausibly happens, and a race
+       key's claimed finish time has to fall in the range a real lap time
+       already has to (relay/laps.js's own MIN_MS/MAX_MS) — still a claim,
+       not a record, but no longer one a script can cash in unbounded. */
     if (url.pathname === "/api/pass/xp") {
-      if (overRate("px:" + user.id, 40, 10 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
       const event = String(body.event || "");
       const XP_TABLE = {
-        overtake: { amount: () => 10, max: 10 },
-        race1: { amount: () => 150, max: 150 },
-        race3: { amount: () => 400, max: 400 },
-        race10: { amount: () => 1500, max: 1500 },
+        overtake: { amount: () => 10, max: 10, per10min: 20 },
+        race1: { amount: () => 150, max: 150, per10min: 6 },
+        race3: { amount: () => 400, max: 400, per10min: 3 },
+        race10: { amount: () => 1500, max: 1500, per10min: 1 },
       };
       const spec = XP_TABLE[event];
       if (!spec) return json(res, 400, { error: "No such event." }), true;
+      if (overRate("px:" + event + ":" + user.id, spec.per10min, 10 * 60_000))
+        return json(res, 429, { error: "Slow down a moment." }), true;
       const amount = Math.min(spec.max, Math.max(0, spec.amount(body) | 0));
       if (!amount) return json(res, 400, { error: "Nothing to grant." }), true;
       const key = String(body.key || "");
       if (!key || key.length > 200) return json(res, 400, { error: "That needs a key." }), true;
+      if (event === "race1" || event === "race3" || event === "race10") {
+        const claimedMs = Number(key.slice(key.lastIndexOf(":") + 1));
+        if (!Number.isFinite(claimedMs) || claimedMs < 5000 || claimedMs > 30 * 60_000)
+          return json(res, 400, { error: "That doesn't look like a finish." }), true;
+      }
       const { granted, xp } = await store.grantXpOnce(user.id, event + ":" + key, amount);
       /* Quest progress: a finished race, at the same once-only, rate
          limited trust level its own XP already carries. Not overtakes —
