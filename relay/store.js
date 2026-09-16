@@ -201,6 +201,20 @@ function fileStore(file) {
     async ownedItems(id) {
       return db.inventory.filter((x) => x.user_id === id).map((x) => x.item_key);
     },
+    /* Every account's shelf at once, named rather than by id — for the
+       admin desk, checking who actually has what. */
+    async allInventory() {
+      const byId = new Map(db.users.map((u) => [u.id, u.name]));
+      return db.inventory
+        .map((x) => ({ name: byId.get(x.user_id), item: x.item_key, acquired: x.acquired }))
+        .filter((x) => x.name);
+    },
+    async revokeItem(id, itemKey) {
+      const before = db.inventory.length;
+      db.inventory = db.inventory.filter((x) => !(x.user_id === id && x.item_key === itemKey));
+      if (db.inventory.length !== before) await save();
+      return before !== db.inventory.length;
+    },
     /* ---- the Apex Pass itself ---- */
     async claimedLevels(id, season) {
       return db.passClaims.filter((c) => c.user_id === id && c.season === season).map((c) => c.level);
@@ -813,6 +827,17 @@ function pgStore(url) {
     },
     async ownedItems(id) {
       return (await pool.query(`SELECT item_key FROM inventory WHERE user_id=$1`, [id])).rows.map((r) => r.item_key);
+    },
+    /* Every account's shelf at once, named rather than by id — for the
+       admin desk, checking who actually has what. */
+    async allInventory() {
+      return (await pool.query(
+        `SELECT u.name, i.item_key AS item, i.acquired FROM inventory i JOIN users u ON u.id=i.user_id ORDER BY u.name, i.item_key`
+      )).rows;
+    },
+    async revokeItem(id, itemKey) {
+      const r = await pool.query(`DELETE FROM inventory WHERE user_id=$1 AND item_key=$2`, [id, itemKey]);
+      return r.rowCount > 0;
     },
     /* ---- the Apex Pass itself ---- */
     async claimedLevels(id, season) {

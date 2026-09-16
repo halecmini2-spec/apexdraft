@@ -12057,7 +12057,30 @@ function adRender(){
     inp.addEventListener("keydown",e=>{ if(e.key==="Enter")post(); });
     row.classList.toggle("hasnote",!!u.notice);
     row.style.flexWrap="wrap";
-    row.appendChild(wrap); row.appendChild(bar); box.appendChild(row);
+    row.appendChild(wrap); row.appendChild(bar);
+    /* What this account actually owns, beyond the plain six colours — a
+       car or a kit item granted by a claim, a pack, or (cosmo38 only) the
+       test shortcut. Nothing shown here for an account holding nothing,
+       since that is everyone by default. */
+    if(u.items&&u.items.length){
+      const items=document.createElement("div"); items.className="ad-notice"; items.style.flexWrap="wrap";
+      for(const key of u.items.slice().sort()){
+        const chip=document.createElement("button"); chip.className="chip"; chip.textContent=key;
+        chip.title="Revoke this item from "+u.name;
+        chip.addEventListener("click",async()=>{
+          if(chip.dataset.armed!=="1"){ chip.dataset.armed="1"; chip.textContent="Revoke "+key+"?";
+            setTimeout(()=>{ chip.dataset.armed=""; chip.textContent=key; },3000); return; }
+          chip.disabled=true; chip.textContent="…";
+          try{
+            await api("/api/admin/items/revoke",{method:"POST",token:ACCT.token,body:{name:u.name,item:key}});
+            chip.remove(); adSay("Revoked "+key+" from "+u.name+".");
+          }catch(e){ adSay(e.message,true); chip.disabled=false; chip.textContent=key; }
+        });
+        items.appendChild(chip);
+      }
+      row.appendChild(items);
+    }
+    box.appendChild(row);
   }
 }
 $("adRefresh").addEventListener("click",()=>{ AD.list=[]; adLoad(); });

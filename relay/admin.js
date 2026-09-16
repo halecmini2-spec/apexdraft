@@ -26,11 +26,17 @@ function makeAdmin(store, userFor, liveNow, presence) {
     if (!isAdmin(me)) return json(res, 404, { error: "No such endpoint." }), true;
 
     if (url.pathname === "/api/admin/users" && req.method === "GET") {
+      const inv = new Map();
+      for (const row of await store.allInventory()) {
+        if (!inv.has(row.name)) inv.set(row.name, []);
+        inv.get(row.name).push(row.item);
+      }
       return json(res, 200, { users: (await store.users()).map((u) => ({
         name: u.name, email: u.email, created: Number(u.created),
         tracks: Number(u.tracks), laps: Number(u.laps), admin: isAdmin(u),
         notice: u.notice || null,
         coins: Number(u.coins) || 0, passXp: Number(u.pass_xp) || 0, passLevel: passLevel(u.pass_xp),
+        items: inv.get(u.name) || [],
       })) }), true;
     }
 
@@ -97,6 +103,23 @@ function makeAdmin(store, userFor, liveNow, presence) {
       if (!u || !circuit) return json(res, 404, { error: "No such time." }), true;
       const ok = await store.deleteLap(circuit, u.id);
       console.log("admin " + me.name + " removed " + u.name + "'s time on " + circuit);
+      return json(res, 200, { ok }), true;
+    }
+
+    /* Taking a cosmetic or car back off the shelf it was granted to — the
+       one thing here that undoes a grant rather than a claim, for whatever
+       turns up owned without ever having been paid, packed or played for.
+       A car granted this way also sits in the older, separate place
+       carAllowed()/myCars() reads (users.cars); this only clears the
+       inventory row, same as nothing here has ever needed to touch that
+       column before. */
+    if (url.pathname === "/api/admin/items/revoke") {
+      const name = String(body.name || "").trim().toLowerCase();
+      const item = String(body.item || "").trim();
+      const u = await store.userByName(name);
+      if (!u || !item) return json(res, 404, { error: "No such item." }), true;
+      const ok = await store.revokeItem(u.id, item);
+      console.log("admin " + me.name + " revoked " + item + " from " + u.name);
       return json(res, 200, { ok }), true;
     }
 
