@@ -54,10 +54,13 @@ function makeAdmin(store, userFor, liveNow, presence) {
          when it began and how long it lasted. */
       const online = presence ? presence.online().map((p) => ({ who: tag(p.vid), name: p.name || null, what: p.what, since: p.since, last: p.last })) : [];
       const stays = (await store.stays(200)).map((x) => ({ who: tag(x.vid), name: x.name || null, since: x.since, until: x.until }));
+      /* Real money — every car a purchase has actually fulfilled, newest
+         first, so a sale doesn't need to be gone looking for. */
+      const purchases = (await store.recentPurchases(50)).map((p) => ({ at: p.at, name: p.name, carId: p.car_id, pence: p.pence }));
       return json(res, 200, {
         live: liveNow ? liveNow() : { players: 0, rooms: 0, racing: 0 },
         today: new Date().toISOString().slice(0, 10),
-        days: st.days, totals: st.totals, recent, online, stays,
+        days: st.days, totals: st.totals, recent, online, stays, purchases,
       }), true;
     }
 

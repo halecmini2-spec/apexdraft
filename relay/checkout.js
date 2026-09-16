@@ -63,10 +63,21 @@ function bearer(req) {
 
 function makeCheckout(store, userFor) {
   /* Both settlement paths land here. Whichever gets there first wins;
-     the other finds the car already added and does nothing further. */
+     the other finds the car already added and does nothing further —
+     which is also how a purchase is only ever logged once: checked
+     against what the account already owns before addCar runs, not
+     after, so the settlement that lost the race sees it as already
+     theirs and logs nothing. */
   async function fulfil(userId, carId) {
-    if (!CARS[carId]) return false;
+    const car = CARS[carId];
+    if (!car) return false;
+    const user = await store.userById(userId);
+    const already = user && String(user.cars || "").split(",").map((s) => s.trim()).includes(carId);
     await store.addCar(userId, carId);
+    if (!already) {
+      try { await store.logPurchase(userId, (user && user.name) || "?", carId, car.pence); }
+      catch (e) { console.error("logPurchase:", e && e.message); }
+    }
     return true;
   }
 

@@ -36,7 +36,7 @@ function playtimeAmount(mins) {
 
 function fileStore(file) {
   let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {}, wins: {},
-             inventory: [], passClaims: [], packs: [], xpGrants: [], questProgress: [] };
+             inventory: [], passClaims: [], packs: [], xpGrants: [], questProgress: [], purchases: [] };
   let writing = null, again = false;
 
   try {
@@ -56,6 +56,7 @@ function fileStore(file) {
     db.packs = db.packs || [];
     db.xpGrants = db.xpGrants || [];
     db.questProgress = db.questProgress || [];
+    db.purchases = db.purchases || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -397,6 +398,15 @@ function fileStore(file) {
     /* ---- what a driver has won ---- */
     async winsAdd(userId, kind) { const w = db.wins[userId] || (db.wins[userId] = { race: 0 }); w[kind] = (w[kind] | 0) + 1; await save(); return w; },
     async wins(userId) { return db.wins[userId] || { race: 0 }; },
+    /* ---- real money, actually spent ---- */
+    async logPurchase(userId, name, carId, pence) {
+      db.purchases.push({ at: Date.now(), user_id: userId, name, car_id: carId, pence });
+      if (db.purchases.length > 1000) db.purchases = db.purchases.slice(-1000);
+      await save();
+    },
+    async recentPurchases(limit) {
+      return db.purchases.slice(-limit).reverse();
+    },
     /* the fastest lap on every daily board: that day's winner */
     async dailyWinners() {
       const best = {};
@@ -573,6 +583,20 @@ function pgStore(url) {
           name TEXT
         )`);
       await pool.query(`ALTER TABLE visit_log ADD COLUMN IF NOT EXISTS name TEXT`);
+      /* Real money, actually spent — one row per car a purchase actually
+         fulfilled, for the admin desk's own record of it. checkout.js
+         writes this once, the first time fulfil() finds the car not
+         already owned, so a webhook and its own redirect both settling
+         the same purchase never doubles it up. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS purchases (
+          id      SERIAL PRIMARY KEY,
+          at      BIGINT NOT NULL,
+          user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          name    TEXT NOT NULL,
+          car_id  TEXT NOT NULL,
+          pence   INTEGER NOT NULL
+        )`);
       /* Which browser is whose: the last account seen signed in on it, so
          the visits it made before signing in can be named too. */
       await pool.query(`
@@ -934,6 +958,18 @@ function pgStore(url) {
       return { race: r ? Number(r.race) : 1 };
     },
     async wins(userId) { const r = await one(`SELECT race FROM wins WHERE user_id=$1`, [userId]); return { race: r ? Number(r.race) : 0 }; },
+    /* ---- real money, actually spent ---- */
+    async logPurchase(userId, name, carId, pence) {
+      await pool.query(
+        `INSERT INTO purchases (at,user_id,name,car_id,pence) VALUES ($1,$2,$3,$4,$5)`,
+        [Date.now(), userId, name, carId, pence]
+      );
+    },
+    async recentPurchases(limit) {
+      return (await pool.query(
+        `SELECT at,user_id,name,car_id,pence FROM purchases ORDER BY id DESC LIMIT $1`, [limit]
+      )).rows.map((r) => ({ at: Number(r.at), user_id: r.user_id, name: r.name, car_id: r.car_id, pence: Number(r.pence) }));
+    },
     async dailyWinners() {
       const rows = (await pool.query(`SELECT circuit, user_id, name, ms FROM laps WHERE circuit LIKE 'daily%'`)).rows;
       const best = {}; for (const r of rows) { if (!/^daily_\d{8}$/.test(r.circuit)) continue; if (!best[r.circuit] || Number(r.ms) < Number(best[r.circuit].ms)) best[r.circuit] = r; }

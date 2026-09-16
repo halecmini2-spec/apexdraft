@@ -2663,6 +2663,13 @@ body.daily .gar-arrow{display:none}
         <input type="text" id="adPrefixInput" placeholder="Delete every account starting with…" maxlength="16">
         <button class="chip tk-del" id="adPrefixGo">Delete all</button>
       </div>
+      <!-- Real money, as it actually comes in — first on the page, not
+           buried under the visit counts, since this is the one thing here
+           worth a glance every time the desk is opened. -->
+      <div class="ad-recent" id="adPurchasesBox">
+        <div class="ad-head"><span>Recent purchases</span><span class="ad-meta" id="stPurchasesN"></span></div>
+        <div class="ad-list ad-log" id="stPurchases"></div>
+      </div>
       <!-- How many came, how many played, and who is on right now. Counts
            only: the page sends a random id it made up, and the server keeps
            a number per day against it. -->
@@ -11997,6 +12004,7 @@ async function adStats(){
     $("stAll").textContent=n(r.totals.hits); $("stAllU").textContent=n(r.totals.uniques); $("stAcct").textContent=n(r.totals.accounts);
     adChart(r.days||[],r.today);
     adRecent(r.recent||[],r.today);
+    adPurchases(r.purchases||[]);
   }catch(e){ adSay(e.message,true); }
   stTimer=setTimeout(adStats,15000);
 }
@@ -12044,6 +12052,30 @@ function adStays(stays){
 }
 /* The list of moments, and the same moments folded onto a clock face. Both
    in the admin's own time zone, which is the only clock a person reads. */
+/* Every car a purchase has actually paid for and fulfilled — the thing
+   this desk is actually opened to check on. */
+function adPurchases(purchases){
+  const box=$("stPurchases"); box.innerHTML="";
+  const now=new Date(), dayOf=d=>d.toDateString();
+  const fmtT=d=>d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const fmtD=d=>dayOf(d)===dayOf(now)?"today":(dayOf(d)===dayOf(new Date(now-86400000))?"yesterday":d.toLocaleDateString([],{day:"numeric",month:"short"}));
+  $("stPurchasesN").textContent=purchases.length?("last "+purchases.length):"none yet";
+  for(const p of purchases){
+    const d=new Date(p.at), row=document.createElement("div"); row.className="ad-row";
+    const left=document.createElement("span");
+    const t=document.createElement("span"); t.className="t"; t.textContent=fmtT(d);
+    const dd=document.createElement("span"); dd.className="d"; dd.textContent=fmtD(d);
+    left.appendChild(t); left.appendChild(dd);
+    const right=document.createElement("span");
+    const w=document.createElement("span"); w.className="w who"; w.textContent=p.name;
+    const m=CAR_MODELS.find(x=>x.id===p.carId);
+    const tag=document.createElement("span"); tag.className="tag";
+    tag.textContent=" · "+(m?m.label:p.carId)+" · "+money(p.pence/100);
+    w.appendChild(tag);
+    right.appendChild(w);
+    row.appendChild(left); row.appendChild(right); box.appendChild(row);
+  }
+}
 function adRecent(recent,today){
   const box=$("stRecent"); box.innerHTML="";
   const now=new Date(), dayOf=d=>d.toDateString();
