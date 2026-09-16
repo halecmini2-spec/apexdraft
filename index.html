@@ -4654,16 +4654,13 @@ const KITS={
     {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
       iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}},
     /* Not in the pass or a pack's pool — cosmo38 only, gated the same way
-       in kitAllowed() below the test cars already are. Every earlier pass
-       darkened the tint and kept landing light anyway — because tint was
-       never the only thing fighting it: glow and mix add and blend a
-       brighter colour in on top of it regardless of how dark the tint
-       itself is, and env/metal add reflection on top of that again. All
-       four cut this time, not just the tint, plus the exact hex given
-       rather than another guess at it. */
-    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.28,rough:0.32,env:0.55,tint:0x221C35,
-      iri:{bands:6.0, speed:0.10, mix:0.22, glow:0.14, sat:0.55, hueMin:0.52, hueMax:0.78,
-           stars:true, starGlow:0.8, starSize:0.09}},
+       in kitAllowed() below the test cars already are. Reverted exactly
+       to this configuration — the next attempt also cut mix/glow/env/
+       metal, and that stacked change is undone here rather than judged
+       alongside the tint itself. */
+    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.40,rough:0.28,env:1.0,tint:0x230548,
+      iri:{bands:6.0, speed:0.10, mix:0.40, glow:0.30, sat:0.55, hueMin:0.52, hueMax:0.78,
+           stars:true, starGlow:1.2, starSize:0.09}},
     /* An early pass at Galaxy, kept on as a legendary of its own rather
        than thrown away once Galaxy moved to the magenta-purple above — a
        cooler, blue-violet-into-magenta counterpart to it rather than the
