@@ -192,7 +192,11 @@ function makeLaps(store, userFor, quests) {
        the one thing an Apex Pass XP grant needs to actually be seen, not
        just eventually true next time the pass screen happens to be open. */
     let passXp = null;
-    try { passXp = await store.addXp(user.id, 100); } catch (e) {}
+    /* A lap under half a minute is a lap around something built to be
+       farmed, not raced — the XP for one only pays out at a real length. */
+    if (ms >= 30_000) {
+      try { passXp = await store.addXp(user.id, 1000); } catch (e) {}
+    }
     /* Drive-time XP: milestones against accumulated SERVER-VERIFIED lap
        time — never a client-reported clock — so this is the one form
        "playtime" XP can take that an idle tab or an autoclicker earns
