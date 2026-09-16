@@ -1,15 +1,25 @@
 /* Accounts: signing up, signing in, and saying who a token belongs to.
  *
- * Deliberately small. A username and a password is the whole of it — there
- * is no email, no password reset and no profile, so
- * nothing here should imply otherwise to the person filling the form in.
+ * A username, an email and a password. The email exists for exactly one
+ * reason beyond a receipt: getting back in when the password is forgotten,
+ * through a one-time sign-in link (see /api/reset/request and
+ * /api/reset/consume below) rather than a "choose a new password" flow —
+ * one fewer thing to type, and one fewer password-strength rule to argue
+ * with, for the same actual need.
  *
  * What it does take seriously is the password. It is hashed with scrypt and
  * never stored, logged or echoed back, and sessions are held as a hash of
  * the token rather than the token itself, so a copy of the database is not
- * a set of keys to everyone's account.
+ * a set of keys to everyone's account. A login token (the reset link) gets
+ * the same treatment — only its hash is ever kept.
  */
 const crypto = require("crypto");
+const email = require("./email");
+
+/* Where the tab comes back to — the same default checkout.js already
+   uses, kept in step with it rather than imported, since neither file
+   otherwise needs anything from the other. */
+const GAME_ORIGIN = process.env.GAME_ORIGIN || "https://apexdrawn.onrender.com";
 
 const SESSION_MS = 90 * 24 * 60 * 60 * 1000;   // ninety days
 const MAX_BODY = 4096;
@@ -339,6 +349,41 @@ function makeAuth(store) {
       const ok = await verify(pass, user ? user.pass : DUMMY_HASH);
       if (!user || !ok) return json(res, 401, { error: "That username and password don't match." }), true;
 
+      const token = await startSession(user);
+      return json(res, 200, { token, user: publicUser(user) }), true;
+    }
+
+    /* --- getting back in, without the password --- */
+    if (url.pathname === "/api/reset/request") {
+      if (overRate("rr:" + ip, 6, 15 * 60_000))
+        return json(res, 429, { error: "Slow down a moment." }), true;
+      const addr = String(body.email || "").trim().toLowerCase();
+      /* The same answer whichever way this goes — confirming an email
+         does or doesn't have an account here is a way to find out who
+         has one, so nothing below can be told apart from the outside. */
+      if (addr && email.configured()) {
+        try {
+          const u = await store.userByEmail(addr);
+          if (u) {
+            const raw = await store.createLoginToken(u.id);
+            const link = GAME_ORIGIN + "/?login=" + encodeURIComponent(raw);
+            await email.sendEmail(u.email, "Sign in to Apex Drawn", email.loginLinkHtml(u.name, link));
+          }
+        } catch (e) { console.error("reset request:", e && e.message); }
+      }
+      return json(res, 200, { ok: true }), true;
+    }
+
+    /* The other end of the link above: a raw token in, a fresh session
+       out — the same shape /api/signin already answers with, so the page
+       can hand it to the exact same code path either way. */
+    if (url.pathname === "/api/reset/consume") {
+      if (overRate("rc:" + ip, 20, 10 * 60_000))
+        return json(res, 429, { error: "Slow down a moment." }), true;
+      const raw = String(body.token || "");
+      if (!raw) return json(res, 400, { error: "No link." }), true;
+      const user = await store.consumeLoginToken(raw);
+      if (!user) return json(res, 400, { error: "That link has expired or already been used." }), true;
       const token = await startSession(user);
       return json(res, 200, { token, user: publicUser(user) }), true;
     }

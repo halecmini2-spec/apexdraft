@@ -36,7 +36,7 @@ function playtimeAmount(mins) {
 
 function fileStore(file) {
   let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {}, wins: {},
-             inventory: [], passClaims: [], packs: [], xpGrants: [], questProgress: [], purchases: [] };
+             inventory: [], passClaims: [], packs: [], xpGrants: [], questProgress: [], purchases: [], loginTokens: [] };
   let writing = null, again = false;
 
   try {
@@ -57,6 +57,7 @@ function fileStore(file) {
     db.xpGrants = db.xpGrants || [];
     db.questProgress = db.questProgress || [];
     db.purchases = db.purchases || [];
+    db.loginTokens = db.loginTokens || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -145,6 +146,27 @@ function fileStore(file) {
       u.email_lower = email.toLowerCase();
       await save();
       return true;
+    },
+    /* ---- password reset, by magic link ---- */
+    /* Returns the RAW token — it goes into the emailed link and nowhere
+       else. Only the hash is ever kept. */
+    async createLoginToken(userId) {
+      const raw = crypto.randomBytes(24).toString("base64url");
+      const hash = crypto.createHash("sha256").update(raw).digest("hex");
+      db.loginTokens = db.loginTokens.filter((t) => t.expires > Date.now());
+      db.loginTokens.push({ token_hash: hash, user_id: userId, expires: Date.now() + 30 * 60_000, used: null });
+      await save();
+      return raw;
+    },
+    /* Single-use: the row is marked used in the same lookup that reads it,
+       so two racing requests for the same link cannot both sign in. */
+    async consumeLoginToken(raw) {
+      const hash = crypto.createHash("sha256").update(raw).digest("hex");
+      const row = db.loginTokens.find((t) => t.token_hash === hash && !t.used && t.expires > Date.now());
+      if (!row) return null;
+      row.used = Date.now();
+      await save();
+      return db.users.find((u) => u.id === row.user_id) || null;
     },
     /* ---- Apex Pass XP ----
        Only ever climbs; level is worked out from it rather than stored
@@ -608,6 +630,16 @@ function pgStore(url) {
           car_id  TEXT NOT NULL,
           pence   INTEGER NOT NULL
         )`);
+      /* A password reset, as a one-time link rather than a typed-in code —
+         the raw value only ever exists in the emailed URL; this table
+         holds its hash. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS login_tokens (
+          token_hash TEXT PRIMARY KEY,
+          user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          expires    BIGINT NOT NULL,
+          used       BIGINT
+        )`);
       /* Which browser is whose: the last account seen signed in on it, so
          the visits it made before signing in can be named too. */
       await pool.query(`
@@ -817,6 +849,28 @@ function pgStore(url) {
     async setEmail(id, email) {
       const r = await pool.query(`UPDATE users SET email=$2, email_lower=$3 WHERE id=$1`, [id, email, email.toLowerCase()]);
       return r.rowCount > 0;
+    },
+    /* ---- password reset, by magic link ---- */
+    async createLoginToken(userId) {
+      const raw = crypto.randomBytes(24).toString("base64url");
+      const hash = crypto.createHash("sha256").update(raw).digest("hex");
+      await pool.query(
+        `INSERT INTO login_tokens (token_hash,user_id,expires) VALUES ($1,$2,$3)`,
+        [hash, userId, Date.now() + 30 * 60_000]
+      );
+      return raw;
+    },
+    /* Single-use, atomically: the UPDATE only lands while unused and
+       fresh, so two racing requests for the same link cannot both land. */
+    async consumeLoginToken(raw) {
+      const hash = crypto.createHash("sha256").update(raw).digest("hex");
+      const now = Date.now();
+      const r = await one(
+        `UPDATE login_tokens SET used=$2 WHERE token_hash=$1 AND used IS NULL AND expires>$2 RETURNING user_id`,
+        [hash, now]
+      );
+      if (!r) return null;
+      return one(`SELECT * FROM users WHERE id=$1`, [r.user_id]);
     },
     /* ---- Apex Pass XP ----
        Only ever climbs; level is worked out from it rather than stored

@@ -1207,6 +1207,9 @@ body.admining #lobbybar{display:none}
 .amsg{margin:0 0 12px;min-height:16px;font-size:11.5px;line-height:1.4;color:var(--dim)}
 .amsg.bad{color:var(--party)}
 .ahint{margin:15px 0 0;font-size:11px;line-height:1.5;color:var(--faint)}
+.alink{background:none;border:0;padding:0;font:inherit;font-size:11.5px;color:var(--faint);
+  text-decoration:underline;cursor:pointer;margin:-6px 0 12px}
+.alink:hover{color:var(--dim)}
 .awho{margin:0 0 3px;font-size:15px;color:var(--dim)}
 .awho b{color:var(--amber);font-weight:700}
 .amail{margin:0 0 18px;font-size:11.5px;color:var(--faint)}
@@ -2626,10 +2629,25 @@ body.daily .gar-arrow{display:none}
             <span>Password</span>
             <input id="auPass" type="password" maxlength="200" autocomplete="current-password">
           </label>
+          <button type="button" class="alink" id="auForgot" hidden>Forgotten your password?</button>
 
           <p class="amsg" id="auMsg"></p>
           <button class="go" id="auGo" type="submit">Sign in</button>
         </form>
+
+        <!-- The way back in without the password: an email, if the account
+             has one on file, gets a one-time sign-in link rather than a
+             chance to pick a new password — see relay/email.js. -->
+        <div id="authReset" hidden>
+          <label class="afield">
+            <span>Email</span>
+            <input id="rsEmail" type="email" maxlength="120" autocomplete="email"
+                   autocapitalize="none" autocorrect="off" spellcheck="false">
+          </label>
+          <p class="amsg" id="rsMsg"></p>
+          <button class="go" id="rsGo" type="button">Send sign-in link</button>
+          <button type="button" class="alink" id="rsBack">Back to sign in</button>
+        </div>
 
         <p class="ahint" id="auWhy">An account puts your own name on your car when you
           race other people, and keeps anyone else from turning up wearing it.</p>
@@ -11430,6 +11448,23 @@ function acctUI(){
    which /verify checks against Stripe itself rather than trusting the
    query string alone — a driver could type ?checkout=success into the
    address bar just as easily as Stripe could put it there. */
+/* The tab that comes back from clicking a sign-in link — the raw token
+   only ever appears here and in the emailed link itself, and /consume
+   accepts each one exactly once, so this is safe to run on whatever the
+   address bar happens to hold. */
+async function loginLinkReturn(){
+  const p=new URLSearchParams(location.search);
+  const token=p.get("login");
+  if(!token)return;
+  history.replaceState(null,"",location.pathname+location.hash);
+  try{
+    const r=await api("/api/reset/consume",{method:"POST",body:{token}});
+    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind(); acctStats();
+    syncEquippedTitle();
+    TK.list=[]; TK.loaded=false;
+    acctUI();
+  }catch(e){ /* expired or already used — quietly stays signed out */ }
+}
 async function checkoutReturn(){
   const p=new URLSearchParams(location.search);
   const status=p.get("checkout");
@@ -11511,6 +11546,11 @@ function auNote(msg,good){
   e.classList.toggle("bad",!!msg&&!good);
   e.classList.toggle("good",!!msg&&!!good);
 }
+function authReset(on){
+  $("authForm").hidden=on; $("authReset").hidden=!on;
+  $("auForgot").hidden=on||AU_MODE!=="in";
+  if(on){ $("rsMsg").textContent=""; try{$("rsEmail").focus();}catch(e){} }
+}
 function authTab(mode){
   AU_MODE=mode;
   $("tabIn").setAttribute("aria-pressed",String(mode==="in"));
@@ -11520,6 +11560,7 @@ function authTab(mode){
   $("auGo").textContent=mode==="up"?"Create account":"Sign in";
   $("auWhy").textContent=AU_WHY[mode];
   $("auEmailField").hidden=mode!=="up";     // signing in never asks for it
+  authReset(false);
   auSay(""); auNote("");
 }
 function showAuth(on){
@@ -11545,6 +11586,21 @@ $("btnAccount").addEventListener("click",()=>showAuth(true));
 $("auBack").addEventListener("click",()=>showAuth(false));
 $("tabIn").addEventListener("click",()=>authTab("in"));
 $("tabUp").addEventListener("click",()=>authTab("up"));
+$("auForgot").addEventListener("click",()=>authReset(true));
+$("rsBack").addEventListener("click",()=>authReset(false));
+$("rsGo").addEventListener("click",async()=>{
+  const email=$("rsEmail").value.trim();
+  if(!email){ $("rsMsg").textContent="Enter the email on the account."; $("rsMsg").classList.add("bad"); return; }
+  const btn=$("rsGo"); btn.disabled=true; const was=btn.textContent; btn.textContent="Sending…";
+  $("rsMsg").classList.remove("bad");
+  try{
+    await api("/api/reset/request",{method:"POST",body:{email}});
+    $("rsMsg").textContent="If that email has an account, a sign-in link is on its way. It's good for thirty minutes.";
+  }catch(e){
+    $("rsMsg").textContent=e.message; $("rsMsg").classList.add("bad");
+  }
+  btn.disabled=false; btn.textContent=was;
+});
 addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("auth").hidden)showAuth(false); });
 
 /* Says whether a name is free while you are still typing it, because being
@@ -14105,6 +14161,7 @@ $("pBack").addEventListener("click",()=>{
   fsUI();
   acctUI();                         // your own name, from the last visit
   checkoutReturn();                 // the tab that comes back from paying for a car
+  loginLinkReturn();                // the tab that comes back from a sign-in email
   netUI();                          // settles the screen into solo before anything else
   /* Confirmed in the background, and only every few hours: a page load must
      not wait on a sleeping server, nor keep one awake for no reason. */
