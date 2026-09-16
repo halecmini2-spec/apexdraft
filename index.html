@@ -4653,6 +4653,14 @@ const KITS={
        see. Nothing else here is allowed to look like this. */
     {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
       iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}},
+    /* Not in the pass or a pack's pool — cosmo38 only, gated the same way
+       in kitAllowed() below the test cars already are. A dark near-black
+       violet base under a slow shift held to blue-through-violet only
+       (hueMin/hueMax below), with a scatter of small bright points fixed
+       to the bodywork itself rather than sliding with the view — see
+       I.stars in iridescent(). */
+    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.55,rough:0.20,env:1.7,tint:0x0B0714,
+      iri:{bands:6.0, speed:0.10, mix:0.40, glow:0.26, sat:0.65, hueMin:0.62, hueMax:0.84, stars:true}},
 
     /* ---- the Apex Pass's own finishes, Season 1 ----
        A woven carbon look with no geometry to hang a texture off — loft()
@@ -4836,13 +4844,14 @@ function carAllowed(k){
 const PASS={loaded:false,coins:0,xp:0,level:1,season:"s1",claimed:[],owned:[],packs:[],packOdds:null};
 function myItems(){ return (acctIn()&&Array.isArray(PASS.owned))?PASS.owned:[]; }
 /* Whether this account can put a given cosmetic on — the six plain colours
-   and "nothing on" are free, same as they always were; everything else now
-   has to have actually been won, which nothing checked before this. No
-   isTester() fallback here on purpose: cosmo38 is the one account that can
-   even open this drawer, and a bypass would mean the one account able to
-   try the Apex Pass could never see its own gate holding. */
+   and "nothing on" are free, same as they always were; everything else has
+   to have actually been won, checked against what the Apex Pass says this
+   account owns. Galaxy Paint is the one deliberate exception: it is not in
+   the pass or any pack's pool at all, so no ownership check could ever
+   pass for it — cosmo38 only, the same way the test cars are. */
 function kitAllowed(slot,id){
   if(!id) return true;
+  if(slot==="paint"&&id==="galaxy") return isTester();
   const it=kitItem(slot,id);
   if(it&&it.std) return true;
   return myItems().indexOf(slot+":"+id)>=0;
@@ -5199,15 +5208,28 @@ function iridescent(mat,I){
      sat:0 finish to sat:1, a full rainbow, which is exactly the colour
      a "no hue in it" paint was written to not have. */
   const sat=I.sat!=null?I.sat:1;
-  /* Three keeps compiled programs in a cache keyed by what it knows about
+  /* Two optional extras, neither touching an existing paint that doesn't
+     ask for them: hueMin/hueMax narrows the shift to a slice of the hue
+     wheel (Galaxy's own blue-to-violet, rather than the full rainbow
+     every other iridescent finish cycles through), and stars scatters a
+     field of small bright points fixed to the body itself — object-space
+     position, not view angle, so unlike the colour band it does not
+     slide as the car turns. loft() shells have no UVs to map a real
+     texture onto (see the carbon-fibre paint above), so this is a hash
+     of position instead: no asset, same "everything here is procedural"
+     rule the rest of the car is already built to.
+     Three keeps compiled programs in a cache keyed by what it knows about
      the material, and it knows nothing about source injected here — so two
      paints built the same way but with different numbers in them are handed
      the same compiled shader, and the second one silently renders as the
      first. This is what tells them apart. */
-  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,sat,I.hard?1:0].join(",");
+  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,sat,I.hard?1:0,I.hueMin||0,I.hueMax||0,I.stars?1:0].join(",");
   mat.onBeforeCompile=sh=>{
     sh.uniforms.iriTime=u;
+    if(I.stars) sh.vertexShader="varying vec3 vGalPos;\n"+sh.vertexShader.replace(
+      "#include <begin_vertex>","#include <begin_vertex>\nvGalPos = transformed;");
     sh.fragmentShader=
+      (I.stars?"varying vec3 vGalPos;\n":"")+
       "uniform float iriTime;\n"+
       "vec3 iriHue(float h){ return clamp(abs(mod(h*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0,0.0,1.0); }\n"+
       sh.fragmentShader.replace("#include <emissivemap_fragment>",
@@ -5218,9 +5240,18 @@ function iridescent(mat,I){
         "float iriF = 1.0 - clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0);\n"+
         "float iriH = fract(iriF * "+I.bands.toFixed(2)+" + iriTime * "+I.speed.toFixed(3)+");\n"+
         (I.hard?"iriH = floor(iriH*7.0)/7.0 + 0.07;\n":"")+
+        (I.hueMin!=null?"iriH = "+I.hueMin.toFixed(3)+" + iriH * "+(I.hueMax-I.hueMin).toFixed(3)+";\n":"")+
         "vec3 iriC = mix(vec3(1.0), iriHue(iriH), "+sat.toFixed(2)+");\n"+
         "diffuseColor.rgb = mix(diffuseColor.rgb, iriC, "+I.mix.toFixed(2)+");\n"+
-        "totalEmissiveRadiance += iriC * "+I.glow.toFixed(2)+" * (0.35 + 0.65*iriF);\n");
+        "totalEmissiveRadiance += iriC * "+I.glow.toFixed(2)+" * (0.35 + 0.65*iriF);\n"+
+        (I.stars?
+          "vec3 galP = vGalPos * 12.0;\n"+
+          "vec3 galI = floor(galP);\n"+
+          "float galH = fract(sin(dot(galI, vec3(12.9898,78.233,37.719))) * 43758.5453);\n"+
+          "vec3 galF = fract(galP) - 0.5 - (vec3(fract(galH*7.0),fract(galH*13.0),fract(galH*31.0)) - 0.5) * 0.6;\n"+
+          "float galStar = smoothstep(0.14, 0.0, length(galF)) * step(0.90, galH);\n"+
+          "totalEmissiveRadiance += vec3(1.0) * galStar * 1.5;\n"
+          :""));
   };
   mat.needsUpdate=true;
 }
@@ -10462,6 +10493,7 @@ const ITEM_BLURB={
   "paint:gold":"Metal enough to mean it.",
   "paint:holo":"Shifts colour as you move round it — a paint, not a light show.",
   "paint:prism":"A mirror with a spectrum stepped across it. Nothing else looks like this.",
+  "paint:galaxy":"Black enough to be night, with stars painted into it.",
   "rims:bronze":"Warm metal, and one less rim like everyone else's.",
   "rims:carbon":"Weave under a polished ring — the ring is what sells it.",
   "rims:chrome":"Mirror-bright, every face of it.",
