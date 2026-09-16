@@ -4654,13 +4654,26 @@ const KITS={
     {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
       iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}},
     /* Not in the pass or a pack's pool — cosmo38 only, gated the same way
-       in kitAllowed() below the test cars already are. A dark near-black
-       violet base under a slow shift held to blue-through-violet only
-       (hueMin/hueMax below), with a scatter of small bright points fixed
-       to the bodywork itself rather than sliding with the view — see
-       I.stars in iridescent(). */
-    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.55,rough:0.20,env:1.7,tint:0x0B0714,
-      iri:{bands:6.0, speed:0.10, mix:0.40, glow:0.26, sat:0.65, hueMin:0.62, hueMax:0.84, stars:true}},
+       in kitAllowed() below the test cars already are. Almost black: low
+       metal and env keep it from picking up bright reflections that would
+       read as grey rather than night, so the white points (I.stars in
+       iridescent(), boosted here with starGlow/starSize since the first
+       pass was too faint against the brighter base it started on) stand
+       out the way stars actually do — against dark, not against shine.
+       The shift itself stays held to blue-through-violet only (hueMin/
+       hueMax below), same as it was. */
+    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.30,rough:0.35,env:0.55,tint:0x020103,
+      iri:{bands:6.0, speed:0.10, mix:0.30, glow:0.18, sat:0.65, hueMin:0.62, hueMax:0.84,
+           stars:true, starGlow:2.4, starSize:0.16}},
+    /* Galaxy's own first pass, kept on rather than thrown away once Galaxy
+       itself went darker — a legendary of its own now, and pushed further
+       toward the vivid, glowing cosmic-energy look Galaxy started from:
+       wider hue range (blue clear through violet into magenta, not just
+       blue-violet), more saturated, more lit. Where Galaxy reads as night
+       sky, this reads as the nebula itself. cosmo38 only, same as its
+       sibling. */
+    {id:"nebula", label:"Nebula", rarity:"legendary", metal:0.55,rough:0.16,env:1.9,tint:0x120A22,
+      iri:{bands:6.0, speed:0.11, mix:0.55, glow:0.42, sat:0.85, hueMin:0.60, hueMax:0.98, stars:true}},
 
     /* ---- the Apex Pass's own finishes, Season 1 ----
        A woven carbon look with no geometry to hang a texture off — loft()
@@ -4846,12 +4859,14 @@ function myItems(){ return (acctIn()&&Array.isArray(PASS.owned))?PASS.owned:[]; 
 /* Whether this account can put a given cosmetic on — the six plain colours
    and "nothing on" are free, same as they always were; everything else has
    to have actually been won, checked against what the Apex Pass says this
-   account owns. Galaxy Paint is the one deliberate exception: it is not in
-   the pass or any pack's pool at all, so no ownership check could ever
-   pass for it — cosmo38 only, the same way the test cars are. */
+   account owns. Galaxy and Nebula Paint are the deliberate exception:
+   neither is in the pass or any pack's pool at all, so no ownership check
+   could ever pass for either — cosmo38 only, the same way the test cars
+   are. */
+const COSMO_ONLY_PAINTS=new Set(["galaxy","nebula"]);
 function kitAllowed(slot,id){
   if(!id) return true;
-  if(slot==="paint"&&id==="galaxy") return isTester();
+  if(slot==="paint"&&COSMO_ONLY_PAINTS.has(id)) return isTester();
   const it=kitItem(slot,id);
   if(it&&it.std) return true;
   return myItems().indexOf(slot+":"+id)>=0;
@@ -5223,7 +5238,7 @@ function iridescent(mat,I){
      paints built the same way but with different numbers in them are handed
      the same compiled shader, and the second one silently renders as the
      first. This is what tells them apart. */
-  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,sat,I.hard?1:0,I.hueMin||0,I.hueMax||0,I.stars?1:0].join(",");
+  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,sat,I.hard?1:0,I.hueMin||0,I.hueMax||0,I.stars?1:0,I.starGlow||0,I.starSize||0].join(",");
   mat.onBeforeCompile=sh=>{
     sh.uniforms.iriTime=u;
     if(I.stars) sh.vertexShader="varying vec3 vGalPos;\n"+sh.vertexShader.replace(
@@ -5249,8 +5264,8 @@ function iridescent(mat,I){
           "vec3 galI = floor(galP);\n"+
           "float galH = fract(sin(dot(galI, vec3(12.9898,78.233,37.719))) * 43758.5453);\n"+
           "vec3 galF = fract(galP) - 0.5 - (vec3(fract(galH*7.0),fract(galH*13.0),fract(galH*31.0)) - 0.5) * 0.6;\n"+
-          "float galStar = smoothstep(0.14, 0.0, length(galF)) * step(0.90, galH);\n"+
-          "totalEmissiveRadiance += vec3(1.0) * galStar * 1.5;\n"
+          "float galStar = smoothstep("+(I.starSize!=null?I.starSize:0.14).toFixed(3)+", 0.0, length(galF)) * step(0.90, galH);\n"+
+          "totalEmissiveRadiance += vec3(1.0) * galStar * "+(I.starGlow!=null?I.starGlow:1.5).toFixed(2)+";\n"
           :""));
   };
   mat.needsUpdate=true;
@@ -10494,6 +10509,7 @@ const ITEM_BLURB={
   "paint:holo":"Shifts colour as you move round it — a paint, not a light show.",
   "paint:prism":"A mirror with a spectrum stepped across it. Nothing else looks like this.",
   "paint:galaxy":"Black enough to be night, with stars painted into it.",
+  "paint:nebula":"The colour Galaxy used to be — kept on, under a name of its own.",
   "rims:bronze":"Warm metal, and one less rim like everyone else's.",
   "rims:carbon":"Weave under a polished ring — the ring is what sells it.",
   "rims:chrome":"Mirror-bright, every face of it.",
