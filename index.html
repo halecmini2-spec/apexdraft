@@ -5072,18 +5072,31 @@ function glowBuild(car){
   car.position.set(0,0,0); car.quaternion.identity(); car.scale.set(1,1,1); car.updateMatrixWorld(true);
   const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
   box.getSize(sz);
-  /* held in close around the car, which is what an underbody light throws */
-  const hw=sz.x*0.98, hl=sz.z*0.62;
+  /* The pool's own edge sits a little outside the car's, on every side —
+     nose, tail and both flanks alike — the way a top-down silhouette
+     looks with a border drawn slightly proud of it. Not held in close:
+     that was tried, and against real bodywork the light read as painted
+     on rather than thrown from underneath it. */
+  const MARGIN=0.15;
+  const searchX=sz.x*1.05;              // safely outside the widest point, to raycast inward from
+  const zMin=box.min.z, zMax=box.max.z; // the car's own real length, nose to tail
   /* a handful of low heights to test each row against — sills, rockers,
      the lower door line, the top of a wheel arch — since which one is
      actually the widest point varies car to car and row to row */
   const lowYs=[0.06,0.14,0.22,0.32,0.44].map(d=>box.min.y+d);
   const n=GLOW_N, w=n+1, count=w*w;
-  const rowW=[];
+  const rowW=[], rowZ=[];
   for(let j=0;j<w;j++){
-    const t=(j/n-0.5)*2;
-    const found=glowFootprintWidth(body,t*hl,hw*1.05,lowYs);
-    rowW.push(found>0.02?found:hw*glowWidthProfile(t));
+    /* the sampled span runs from one margin past the tail to one margin
+       past the nose, so the taper below has room to close the edge */
+    const z=zMin-MARGIN+(j/n)*((zMax-zMin)+2*MARGIN);
+    rowZ.push(z);
+    const zc=Math.min(zMax,Math.max(zMin,z));       // the nearest real point on the body
+    const t=(zMax>zMin)?((zc-zMin)/(zMax-zMin))*2-1:0; // -1 tail .. 1 nose, for the fallback taper
+    const found=glowFootprintWidth(body,zc,searchX,lowYs);
+    const bodyHalf=found>0.02?found:sz.x*0.5*glowWidthProfile(t);
+    const beyond=z<zMin?zMin-z:z>zMax?z-zMax:0;      // how far past the real body this row sits
+    rowW.push((bodyHalf+MARGIN)*(1-beyond/MARGIN));  // wider by the margin, closing to a point past it
   }
   car.position.copy(savedPos); car.quaternion.copy(savedQuat); car.scale.copy(savedScale); car.updateMatrixWorld(true);
   const g=new THREE.BufferGeometry();
@@ -5092,9 +5105,8 @@ function glowBuild(car){
   const idx=[];
   for(let j=0;j<w;j++)for(let i=0;i<w;i++){
     const k=j*w+i, u=i/n, v=j/n;
-    const t=(v-0.5)*2;                // -1 tail .. 1 nose
-    base[k*2]  =(u-0.5)*2*rowW[j];    // metres across — the car's own width at this row
-    base[k*2+1]=t*hl;                 // metres along
+    base[k*2]  =(u-0.5)*2*rowW[j];    // metres across — the car's own width at this row, plus the margin
+    base[k*2+1]=rowZ[j];              // metres along, in the car's own local z
     uv[k*2]=u; uv[k*2+1]=v;
   }
   for(let j=0;j<n;j++)for(let i=0;i<n;i++){
