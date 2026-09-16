@@ -5046,16 +5046,7 @@ function glowShadows(car,on){
    world rather than to the car — the car only says where it is and which
    way it faces. It cannot be buried, on any car, over any ground, because
    there is nowhere for it to be buried into. */
-const GLOW_N=16;                      // squares along the length — enough to taper smoothly
-/* A fallback only, now: the width at a point running from -1 (tail) to 1
-   (nose), for the rare row a raycast below finds no bodywork at all (open
-   space between a bike's wheels, say). Everything that does get a real
-   hit uses that instead — see glowFootprintWidth. */
-function glowWidthProfile(t){
-  if(t>0.72) return Math.max(0.18,1-(t-0.72)/0.28*0.82);   // the nose, tapering to a point
-  if(t<-0.62) return Math.max(0.30,1-(-t-0.62)/0.38*0.70); // the tail, blunter than the nose
-  return 1;
-}
+const GLOW_N=16;                      // squares along the length — enough to hug hilly ground smoothly
 /* The car's own footprint, read straight off its geometry: a ray straight
    down, swept in from outside until it finds the body, within a band just
    above the car's lowest point — the sills and floor an underbody light
@@ -5088,29 +5079,30 @@ function glowBuild(car){
   car.position.set(0,0,0); car.quaternion.identity(); car.scale.set(1,1,1); car.updateMatrixWorld(true);
   const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
   box.getSize(sz);
-  /* The pool's own edge sits outside the car's, wider than the body on
-     both flanks — a top-down silhouette with a border drawn proud of it.
-     Not held in close: that was tried, and against real bodywork the
-     light read as painted on rather than thrown from underneath it.
-     The length stays the car's own, nose to tail, rather than reaching
-     past either end: extending it there tapered to a point beyond the
-     tail — a stray wedge of light trailing the car, not a border. */
-  const MARGIN=0.7;
+  /* A rectangle, not a silhouette: the car's own length, nose to tail,
+     at its own widest point plus a margin on both flanks — short straight
+     edges at the front and back rather than a taper following the body
+     in. A traced outline read as fussy at speed; a plain rectangle reads
+     as a light thrown from underneath the whole car. */
+  const MARGIN=0.9;
   const searchX=sz.x*1.05;              // safely outside the widest point, to raycast inward from
   const zMin=box.min.z, zMax=box.max.z; // the car's own real length, nose to tail
-  /* a handful of low heights to test each row against — sills, rockers,
-     the lower door line, the top of a wheel arch — since which one is
-     actually the widest point varies car to car and row to row */
+  /* a handful of low heights to test against — sills, rockers, the lower
+     door line, the top of a wheel arch — since which one is actually the
+     widest point varies car to car */
   const lowYs=[0.06,0.14,0.22,0.32,0.44].map(d=>box.min.y+d);
   const n=GLOW_N, w=n+1, count=w*w;
-  const rowW=[], rowZ=[];
+  let bodyHalf=0;
   for(let j=0;j<w;j++){
     const z=zMin+(j/n)*(zMax-zMin);
-    rowZ.push(z);
-    const t=(zMax>zMin)?((z-zMin)/(zMax-zMin))*2-1:0; // -1 tail .. 1 nose, for the fallback taper
-    const found=glowFootprintWidth(body,z,searchX,lowYs);
-    const bodyHalf=found>0.02?found:sz.x*0.5*glowWidthProfile(t);
-    rowW.push(bodyHalf+MARGIN);        // wider by the margin, on both flanks
+    bodyHalf=Math.max(bodyHalf,glowFootprintWidth(body,z,searchX,lowYs));
+  }
+  if(bodyHalf<0.02)bodyHalf=sz.x*0.5;   // nothing hit anywhere — the box itself is all there is
+  const halfW=bodyHalf+MARGIN;
+  const rowW=[], rowZ=[];
+  for(let j=0;j<w;j++){
+    rowZ.push(zMin+(j/n)*(zMax-zMin));
+    rowW.push(halfW);
   }
   car.position.copy(savedPos); car.quaternion.copy(savedQuat); car.scale.copy(savedScale); car.updateMatrixWorld(true);
   const g=new THREE.BufferGeometry();
@@ -5119,7 +5111,7 @@ function glowBuild(car){
   const idx=[];
   for(let j=0;j<w;j++)for(let i=0;i<w;i++){
     const k=j*w+i, u=i/n, v=j/n;
-    base[k*2]  =(u-0.5)*2*rowW[j];    // metres across — the car's own width at this row, plus the margin
+    base[k*2]  =(u-0.5)*2*rowW[j];    // metres across — the same width at every row, plus the margin
     base[k*2+1]=rowZ[j];              // metres along, in the car's own local z
     uv[k*2]=u; uv[k*2+1]=v;
   }
@@ -9497,6 +9489,19 @@ function kitChip(slot,it){
   b.addEventListener("click",()=>kitSet(slot,it.id));
   return b;
 }
+/* A chip row scrolls sideways under a touch swipe for free, but a mouse
+   wheel only ever turns vertically — so on a desktop, with the scrollbar
+   itself hidden for looks, there was no way to reach a chip past the
+   edge at all. One delegated listener turns that vertical wheel into
+   the row's own horizontal scroll, wherever a .kit-chips row is under
+   the pointer; a trackpad already scrolling sideways is left alone. */
+document.addEventListener("wheel",e=>{
+  const box=e.target.closest(".kit-chips");
+  if(!box||box.scrollWidth<=box.clientWidth)return;
+  if(Math.abs(e.deltaX)>=Math.abs(e.deltaY))return;
+  box.scrollLeft+=e.deltaY;
+  e.preventDefault();
+},{passive:false});
 function kitBuild(){
   const tabs=$("kitTabs"); if(!tabs||tabs.dataset.built)return;
   tabs.dataset.built="1";

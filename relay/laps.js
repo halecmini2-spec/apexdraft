@@ -227,7 +227,11 @@ function makeLaps(store, userFor, quests) {
     if (quests) {
       try {
         await quests.addMetricProgress(user.id, "laps", 1);
-        await quests.addMetricProgress(user.id, "distance", C.len);
+        /* quest_progress.count is a BIGINT — C.len is real metres with a
+           fraction on it, and every update was silently failing against
+           that column (caught below, logged, never surfaced) until this
+           was rounded. A whole metre is finer than the quest needs. */
+        await quests.addMetricProgress(user.id, "distance", Math.round(C.len));
       } catch (e) {}
     }
     /* The lap itself travels with an improvement on a daily circuit, so the
