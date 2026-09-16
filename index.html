@@ -637,7 +637,7 @@ body.mudoor .lb-party,body.mudoor #btnTracks{display:none!important}
 @media (pointer:coarse) and (max-height:500px){
   :root{--cutL:max(var(--sal),34px);--cutR:max(var(--sar),34px)}
   #lobbybar{padding-left:calc(10px + var(--cutL));padding-right:calc(10px + var(--cutR))}
-  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#raceSet,#auth,#shop{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
+  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#raceSet,#auth,#shop,#questsScreen{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
 }
 body:not([data-app="home"]) #btnAbout,body:not([data-app="home"]) #btnAccount,body:not([data-app="home"]) #btnAdmin{display:none}
 body[data-app="daily"] #btnTracks{display:none}
@@ -760,6 +760,7 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
   display:flex;gap:10px;align-items:baseline;letter-spacing:.08em}
 .pass-premium b{color:var(--dim)}
 /* ---- quests ---- */
+#questsScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .quest-card{background:var(--panel2);border:1px solid var(--line);border-radius:4px;
   padding:14px;display:flex;flex-direction:column;gap:8px}
 .quest-card.done{border-color:var(--green)}
