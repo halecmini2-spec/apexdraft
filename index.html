@@ -907,6 +907,15 @@ body.aiok .chips .chip.test{display:inline-flex}
 .readout .v{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .readout .v em{font-style:normal;font-size:10px;color:var(--faint);margin-left:2px}
 
+.readout-mini{
+  display:none;position:absolute;left:calc(14px + var(--sal));bottom:calc(14px + var(--sab));z-index:2;
+  background:rgba(12,19,20,.94);border:1px solid var(--line);border-radius:2px;
+  padding:7px 11px;font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+.readout-mini em{font-style:normal;font-size:10px;color:var(--faint);margin-left:2px}
+
 .pad-msg{
   position:absolute;left:50%;top:22px;transform:translateX(-50%);z-index:3;
   font-size:12px;letter-spacing:.06em;color:var(--amber);background:rgba(12,19,20,.94);
@@ -1474,8 +1483,10 @@ body.daily .gar-arrow{display:none}
 @media (max-width:860px),(pointer:coarse) and (max-height:560px){
   .rail-scroll{padding:4px 13px 10px}
   .rail-foot{padding:11px 13px 13px}
-  /* The stats floated over the board, the scarcest space on a phone. */
+  /* The stats floated over the board, the scarcest space on a phone —
+     all but the length, which keeps a corner of it (see .readout-mini). */
   .readout{display:none}
+  .readout-mini{display:block}
   /* Drop the marketing line but keep the Add to Home Screen tip, which is
      the one piece of footer copy that only matters on a phone. */
   .foot-note:not(.touchonly){display:none}
@@ -2347,6 +2358,11 @@ body.daily .gar-arrow{display:none}
         <button class="tool" id="btnReverse">Reverse direction</button>
       </div>
       <div class="readout" id="readout"></div>
+      <!-- The full readout is a desktop luxury — on a phone the board is
+           the scarcest space there is — but the length is worth a corner
+           of it even there, not least since a circuit under a kilometre
+           earns nothing on the Apex Pass any more. -->
+      <div class="readout-mini" id="readoutMini"></div>
       <div class="pad-msg" id="padMsg"></div>
     </main>
   </section>
@@ -9103,9 +9119,13 @@ function drawCircuitMap(ctx,T){
   ctx.restore();
 }
 function updateReadout(){
-  const el=$("readout"), T=ED.track;
+  const el=$("readout"), mini=$("readoutMini"), T=ED.track;
   $("btnDrive").disabled=!T;
-  if(!T){ el.innerHTML='<div class="cell"><span class="k">Circuit</span><span class="v">'+(BUILD_WHY?"Not valid":"—")+'</span></div>'; return; }
+  if(!T){
+    el.innerHTML='<div class="cell"><span class="k">Circuit</span><span class="v">'+(BUILD_WHY?"Not valid":"—")+'</span></div>';
+    if(mini)mini.textContent=BUILD_WHY?"Not valid":"—";
+    return;
+  }
   const s=T.stats;
   const cells=[
     ["Length",(s.length/1000).toFixed(2),"km"],
@@ -9118,6 +9138,7 @@ function updateReadout(){
   el.innerHTML=cells.map(c=>
     '<div class="cell"><span class="k">'+c[0]+'</span><span class="v">'+c[1]+
     (c[2]?'<em>'+c[2]+'</em>':'')+'</span></div>').join("");
+  if(mini)mini.innerHTML=(s.length/1000).toFixed(2)+'<em>km</em>';
 }
 
 /* ---- preset shapes ---- */
