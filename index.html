@@ -1983,10 +1983,22 @@ body.daily .gar-arrow{display:none}
            on every device. Signed in, the strip just says who you are. -->
       <div class="home-acct" id="hmAcct">
         <div class="notice" id="hmNotice" hidden><i>!</i><div><b>A message about your account</b><span id="hmNoticeTxt"></span></div></div>
+        <!-- Older accounts were made before an email was asked for at all.
+             Not a block on anything here — the shop is where that one
+             actually holds up a purchase (buyCar()) — just a standing
+             reminder until one is added. -->
+        <div class="notice" id="hmEmailNag" hidden><i>!</i><div>
+          <b>Add an email</b>
+          <span>For a forgotten password, and a receipt if you ever buy something. Nothing else it's used for.</span>
+          <div class="ad-notice" style="margin-top:8px">
+            <input type="email" id="hmEmailInput" placeholder="you@example.com" maxlength="120" autocapitalize="none" autocorrect="off" spellcheck="false">
+            <button class="chip" id="hmEmailGo">Save</button>
+          </div>
+        </div></div>
         <div class="home-acct-txt">
           <b id="hmAcctHead">Easy and free: make an account</b>
           <i id="hmTitle" class="acct-title" hidden></i>
-          <span id="hmAcctSub">A name and a password. No email, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.</span>
+          <span id="hmAcctSub">A name, an email and a password — ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.</span>
         </div>
         <div class="home-acct-btns">
           <button class="go green" id="hmSignUp">Create free account</button>
@@ -2603,6 +2615,12 @@ body.daily .gar-arrow{display:none}
                    autocapitalize="none" autocorrect="off" spellcheck="false">
           </label>
           <p class="anote" id="auNote"></p>
+
+          <label class="afield" id="auEmailField" hidden>
+            <span>Email</span>
+            <input id="auEmail" type="email" maxlength="120" autocomplete="email"
+                   autocapitalize="none" autocorrect="off" spellcheck="false">
+          </label>
 
           <label class="afield">
             <span>Password</span>
@@ -10610,6 +10628,13 @@ function shopCarsUI(){
 async function buyCar(carId,btn){
   if(myCars().indexOf(carId)>=0)return;
   if(!acctIn()){ shopSay("Sign in first, then come back and buy it."); AU_MODE="in"; showAuth(true); return; }
+  /* Real money, no way back to the account if it's forgotten — an email
+     is asked for before this, not after. */
+  if(!ACCT.user.email){
+    goHome();
+    setTimeout(()=>{ try{$("hmEmailInput").focus();}catch(e){} },50);
+    return;
+  }
   const was=btn.textContent; btn.disabled=true; btn.textContent="One moment…";
   try{
     const r=await api("/api/checkout/session",{method:"POST",token:ACCT.token,body:{carId}});
@@ -11036,6 +11061,23 @@ $("pcAgain").addEventListener("click",()=>openPack());
 $("shPackTest").addEventListener("click",()=>packSimulate(500));
 $("hmAccount").addEventListener("click",()=>{ AU_MODE="in"; showAuth(true); });
 $("hmSignUp").addEventListener("click",()=>{ AU_MODE="up"; showAuth(true); });
+(()=>{
+  const inp=$("hmEmailInput"), go=$("hmEmailGo");
+  const submit=async()=>{
+    const email=inp.value.trim();
+    if(!email)return;
+    go.disabled=true; const was=go.textContent; go.textContent="…";
+    try{
+      await api("/api/me/email",{method:"POST",token:ACCT.token,body:{email}});
+      ACCT.user.email=email; acctSave(); acctUI();
+    }catch(e){
+      go.disabled=false; go.textContent=e.message;
+      setTimeout(()=>{ go.textContent=was; },2200);
+    }
+  };
+  go.addEventListener("click",submit);
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); submit(); } });
+})();
 $("hmAdmin").addEventListener("click",()=>showAdmin(true));
 $("hmAbout").addEventListener("click",()=>showAbout(true));
 $("muHost").addEventListener("click",()=>{ $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true); $("btnHost").click(); });
@@ -11364,7 +11406,11 @@ function acctUI(){
   $("hmAcct").classList.toggle("in",on);
   $("hmAcctHead").textContent=on?"Signed in as "+ACCT.user.name:"Easy and free: make an account";
   $("hmAcctSub").textContent=on?"Your name is on your car, and your laps and saved circuits follow you to any device."
-    :"A name and a password. No email, no card, ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.";
+    :"A name, an email and a password — ten seconds. Your name on your car in multiplayer, your best laps and saved circuits on every device, and your place on the daily leaderboard.";
+  /* Older accounts were made before an email was asked for — a standing
+     reminder to add one, not a block on anything here (buyCar() is the
+     one place that actually holds up on it). */
+  $("hmEmailNag").hidden=!(on&&!ACCT.user.email);
   $("authForms").hidden=on;
   $("authWho").hidden=!on;
   $("auSub").textContent=on?"Your account":"Race under your own name";
@@ -11454,8 +11500,9 @@ let AU_MODE="in";
 const AU_WHY={
   in:"An account puts your own name on your car when you race other people, "+
      "and keeps anyone else turning up wearing it.",
-  up:"A name and a password, and nothing else asked for. There is no email "+
-     "and no password reset, so pick a password you will remember.",
+  up:"An email too now, not just a name and a password — it's what a "+
+     "forgotten password is recovered through, and where a receipt goes "+
+     "if you ever buy something.",
 };
 function auSay(msg,bad){ const e=$("auMsg"); e.textContent=msg||""; e.classList.toggle("bad",!!bad); }
 function auNote(msg,good){
@@ -11472,6 +11519,7 @@ function authTab(mode){
   $("auPass").setAttribute("autocomplete",mode==="up"?"new-password":"current-password");
   $("auGo").textContent=mode==="up"?"Create account":"Sign in";
   $("auWhy").textContent=AU_WHY[mode];
+  $("auEmailField").hidden=mode!=="up";     // signing in never asks for it
   auSay(""); auNote("");
 }
 function showAuth(on){
@@ -11523,6 +11571,7 @@ $("authForm").addEventListener("submit",async ev=>{
   ev.preventDefault();
   const up=AU_MODE==="up";
   const username=$("auName").value.trim();
+  const email=$("auEmail").value.trim();
   const password=$("auPass").value;
   $("auGo").disabled=true;
   auNote("");
@@ -11532,7 +11581,7 @@ $("authForm").addEventListener("submit",async ev=>{
   try{
     const r=await api(up?"/api/signup":"/api/signin",{
       method:"POST",
-      body:{username,password},
+      body:up?{username,email,password}:{username,password},
     });
     ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind(); acctStats();
     syncEquippedTitle();

@@ -135,6 +135,17 @@ function fileStore(file) {
       await save();
       return u.equipped_title;
     },
+    /* Only ever fills an empty one in — an account backfilling the email
+       it was made without, back when one wasn't asked for. Uniqueness is
+       checked by the route, against userByEmail, before this is called. */
+    async setEmail(id, email) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return false;
+      u.email = email;
+      u.email_lower = email.toLowerCase();
+      await save();
+      return true;
+    },
     /* ---- Apex Pass XP ----
        Only ever climbs; level is worked out from it rather than stored
        beside it, so the two can never drift apart. */
@@ -799,6 +810,13 @@ function pgStore(url) {
     async setEquippedTitle(id, title) {
       const r = await one(`UPDATE users SET equipped_title=$2 WHERE id=$1 RETURNING equipped_title`, [id, title || null]);
       return r ? r.equipped_title : null;
+    },
+    /* Only ever fills an empty one in — an account backfilling the email
+       it was made without, back when one wasn't asked for. Uniqueness is
+       checked by the route, against userByEmail, before this is called. */
+    async setEmail(id, email) {
+      const r = await pool.query(`UPDATE users SET email=$2, email_lower=$3 WHERE id=$1`, [id, email, email.toLowerCase()]);
+      return r.rowCount > 0;
     },
     /* ---- Apex Pass XP ----
        Only ever climbs; level is worked out from it rather than stored

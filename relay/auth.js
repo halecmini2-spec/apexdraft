@@ -266,23 +266,40 @@ function makeAuth(store) {
     try { body = await readBody(req); }
     catch (e) { return json(res, 400, { error: "That request didn't make sense." }), true; }
 
+    /* Filling in the email an older account was made without — never
+       changing one that is already there, which is a different, riskier
+       operation (account recovery hangs off this address) not offered
+       here. */
+    if (url.pathname === "/api/me/email") {
+      const u = await userFor(bearer(req));
+      if (!u) return json(res, 401, { error: "Not signed in." }), true;
+      if (u.email) return json(res, 409, { error: "This account already has an email." }), true;
+      const email = String(body.email || "").trim();
+      const problem = emailProblem(email);
+      if (problem) return json(res, 400, { error: problem }), true;
+      if (await store.userByEmail(email.toLowerCase()))
+        return json(res, 409, { error: "That email already has an account." }), true;
+      await store.setEmail(u.id, email);
+      return json(res, 200, { email }), true;
+    }
+
     /* --- signing up --- */
     if (url.pathname === "/api/signup") {
       if (overRate("s:" + ip, 12, 10 * 60_000))
         return json(res, 429, { error: "Too many accounts from here just now. Try again shortly." }), true;
 
       const name = String(body.username || "").trim();
-      /* No email is asked for any more. One is still accepted if an older
-         client sends it, and checked as before, but nothing needs it. */
+      /* Required again: an account with no way to reach it can't be sent a
+         password reset, and can't be told a sale went through either. */
       const email = String(body.email || "").trim();
       const pass = String(body.password || "");
 
-      const problem = nameProblem(name) || (email && emailProblem(email)) || passProblem(pass);
+      const problem = nameProblem(name) || emailProblem(email) || passProblem(pass);
       if (problem) return json(res, 400, { error: problem }), true;
 
       if (await store.userByName(name.toLowerCase()))
         return json(res, 409, { error: "That username is taken." }), true;
-      if (email && await store.userByEmail(email.toLowerCase()))
+      if (await store.userByEmail(email.toLowerCase()))
         return json(res, 409, { error: "That email already has an account." }), true;
 
       const user = {
