@@ -12404,7 +12404,7 @@ function aiSpawn(){
       wander:(Math.random()-0.5)*0.9*(1.2-k),
       gridD:(col?1:-1)*T.halfW*0.44, held:0,
       mistake:null,next:(12+90*k*k)*(0.5+Math.random()),mistakes:0,pass:0,passOf:null,passSide:1,passT:0,
-      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,aRoll:0,aRollV:0,mesh:null};
+      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,aRoll:0,aRollV:0,spinV:0,crashT:0,mesh:null};
     const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
     car.mesh=buildCar(car.colour,car.kind);
     if(!car.mesh.userData.noShadow) car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
@@ -12548,7 +12548,15 @@ function aiTick(dt){
        no floor under this. A stationary car cannot move sideways at all,
        and one crawling off the grid can barely do it — without that they
        slid across the start line without ever turning the wheel. */
-    const rate=Math.min(1.6+c.v*0.045,c.v*0.16)*dt;
+    /* Loose from a hard hit: for as long as crashT has left to run, the
+       car steers back onto the line far more slowly than it otherwise
+       would, the same way a real spin can't just be steered out of —
+       it visibly slides before gathering itself back up, rather than
+       snapping straight back onto the racing line the instant it's
+       touched. */
+    if(c.crashT>0) c.crashT=Math.max(0,c.crashT-dt);
+    const crashEase=c.crashT>0?clamp(c.crashT/AI_CRASH_T,0,1):0;
+    const rate=Math.min(1.6+c.v*0.045,c.v*0.16)*dt*(1-crashEase*0.85);
     const dPrev=c.d; c.d+=clamp(dWant-c.d,-rate,rate); c.dMax=Math.max(c.dMax||0,Math.abs(c.d));
     /* along the lap; a lap is a lap */
     const sPrev=c.s; c.s+=c.v*dt;
@@ -12573,6 +12581,14 @@ function aiTick(dt){
     /* the nose follows the path it is actually taking, closely, so the car
        is always pointing where it is going */
     if(c.v>1.0){ let want=Math.atan2(vAx,vAz); let dy=want-c.yaw; while(dy>Math.PI)dy-=TAU; while(dy<-Math.PI)dy+=TAU; c.yaw+=dy*Math.min(1,dt*16); }
+    /* A crash turns the car on top of that, the same as it does the
+       player's — thrown off the instant it lands, fading on its own
+       after, never steered out of. */
+    if(c.spinV){
+      c.yaw+=c.spinV*dt;
+      c.spinV-=c.spinV*Math.min(1,dt*2.6);
+      if(Math.abs(c.spinV)<0.01)c.spinV=0;
+    }
     c.vx=vAx; c.vz=vAz;
     c.x=nx; c.z=nz;
     const yHint=c.y, ground=heightAt(T,c.x,c.z,null,yHint);
@@ -13095,6 +13111,19 @@ function bumpReady(o){ const t=performance.now()/1000; if(o.bumpT&&t-o.bumpT<BUM
    changed before. */
 const SPIN_PER=0.190;           // rad/s per unit of turning impulse
 const SPIN_MAX=5.5;
+/* How long an AI car stays loose after a hard enough hit — its own
+   equivalent of SLIDE_T below, but simpler: rather than touching the grip
+   model an AI doesn't have, this just loosens how fast it steers back
+   onto the racing line (see aiTick) while spinV (below, mirroring
+   CAR.spinV) throws its nose round and fades on its own. Nothing about
+   the driver — the car recovers itself the same way it does after being
+   flipped, there's no damage to carry. */
+const AI_CRASH_T=1.5;
+/* How hard a hit has to be before it actually spins the AI out, rather
+   than just being absorbed as a shove — crashScale itself is already 0
+   below 1.5 m/s of closing speed; this asks for real contact on top of
+   that floor, so a graze in traffic stays a graze. */
+const AI_CRASH_SCALE_MIN=0.20;
 /* How long the tyres are scrabbling after a crash. Everything in the grip
    model assumes four tyres loaded and pointing where the car is going; a
    real impact makes nonsense of that for a moment, and that moment is the
@@ -13204,6 +13233,21 @@ function netCollide(){
     /* The physics run several times per drawn frame while the machines move
        once, so their world velocity has to be brought up to date here. */
     c.vx=cfx*c.v; c.vz=cfz*c.v;
+    /* Hit hard enough, the AI spins out too — sometimes, not off every
+       graze in traffic: crashScale is already 0 below 1.5 m/s of closing
+       speed, and this asks for real contact on top of that floor. Which
+       way it turns follows where the contact landed on the car, the same
+       idea as crashTurn above but worked out fresh in the AI's own frame
+       rather than reusing CAR's. The driver's fine either way — it's the
+       same temporary loss of control a wall hit gives the player, not
+       damage, and it fades and gathers itself back up on its own. */
+    const aiScale=crashScale(m.close);
+    if(aiScale>AI_CRASH_SCALE_MIN){
+      const crx=-Math.cos(c.yaw), crz=Math.sin(c.yaw);
+      const lat=(ov.cx-c.x)*crx+(ov.cz-c.z)*crz;
+      c.spinV=clamp(c.spinV-SPIN_PER*lat*m.close*aiScale*0.25,-SPIN_MAX,SPIN_MAX);
+      c.crashT=Math.max(c.crashT,AI_CRASH_T*aiScale);
+    }
     /* one of the two may get up on its side; never both */
     const mine=climbTip(ov,m.close,m.lat,fx,fz,c.x,c.z,cfx,cfz,c.kind,myKind);
     if(mine>0) CAR.aRollV=clamp(CAR.aRollV+m.latSigned*mine,-ROLL_MAX,ROLL_MAX);
