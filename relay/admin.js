@@ -96,6 +96,26 @@ function makeAdmin(store, userFor, liveNow, presence) {
       return json(res, 200, { ok: true }), true;
     }
 
+    /* A whole batch of throwaway accounts at once, named by how they start
+       rather than one at a time — for the test accounts a live check of
+       something else leaves behind. Four characters minimum, so a short
+       prefix can't sweep up more than was meant; admins and the caller's
+       own account are skipped the same way a single delete already
+       protects them, rather than failing the whole batch over one row. */
+    if (url.pathname === "/api/admin/users/delete-prefix") {
+      const prefix = String(body.prefix || "").trim().toLowerCase();
+      if (prefix.length < 4) return json(res, 400, { error: "Needs at least four characters." }), true;
+      const matches = (await store.users()).filter((u) => u.name.toLowerCase().startsWith(prefix));
+      const deleted = [];
+      for (const u of matches) {
+        if (u.id === me.id || isAdmin(u)) continue;
+        await store.deleteUser(u.id);
+        deleted.push(u.name);
+      }
+      console.log("admin " + me.name + " deleted " + deleted.length + " account(s) matching \"" + prefix + "\"");
+      return json(res, 200, { deleted }), true;
+    }
+
     if (url.pathname === "/api/admin/laps/delete") {
       const circuit = String(body.circuit || "");
       const name = String(body.name || "").trim().toLowerCase();

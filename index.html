@@ -2640,6 +2640,12 @@ body.daily .gar-arrow{display:none}
           <button class="chip" id="adBack">Back to the track</button>
         </div>
       </div>
+      <!-- A batch of throwaway accounts, gone by how they start rather than
+           one click per row — for whatever a live check leaves behind. -->
+      <div class="ad-notice" id="adPrefixBar">
+        <input type="text" id="adPrefixInput" placeholder="Delete every account starting with…" maxlength="16">
+        <button class="chip tk-del" id="adPrefixGo">Delete all</button>
+      </div>
       <!-- How many came, how many played, and who is on right now. Counts
            only: the page sends a random id it made up, and the server keeps
            a number per day against it. -->
@@ -12084,6 +12090,27 @@ function adRender(){
   }
 }
 $("adRefresh").addEventListener("click",()=>{ AD.list=[]; adLoad(); });
+(()=>{
+  const inp=$("adPrefixInput"), go=$("adPrefixGo");
+  let armed=false,t=0;
+  go.addEventListener("click",async()=>{
+    const prefix=inp.value.trim();
+    if(prefix.length<4){ adSay("At least four characters.",true); return; }
+    if(!armed){
+      armed=true; go.classList.add("arm"); go.textContent="Sure?";
+      clearTimeout(t); t=setTimeout(()=>{ armed=false; go.classList.remove("arm"); go.textContent="Delete all"; },3000);
+      return;
+    }
+    clearTimeout(t); go.disabled=true; go.textContent="…";
+    try{
+      const r=await api("/api/admin/users/delete-prefix",{method:"POST",token:ACCT.token,body:{prefix}});
+      AD.list=AD.list.filter(x=>!r.deleted.includes(x.name)); adRender();
+      adSay(r.deleted.length?("Deleted "+r.deleted.length+" account(s): "+r.deleted.join(", ")):"Nothing matched that.");
+      inp.value="";
+    }catch(e){ adSay(e.message,true); }
+    go.disabled=false; go.textContent="Delete all"; armed=false; go.classList.remove("arm");
+  });
+})();
 addEventListener("resize",()=>{ if(!$("adminScreen").hidden)adStats(); });
 /* Clearing a whole board asks first, in the button. */
 let wipeArm=0;
