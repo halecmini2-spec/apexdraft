@@ -599,6 +599,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .home-card.amber i{background:var(--amber)} .home-card.amber:hover{border-color:var(--amber);background:var(--amber-glow)}
 .home-card.red i{background:var(--party)} .home-card.red:hover{border-color:var(--party);background:var(--party-glow)}
 .home-card.purple i{background:var(--purple)} .home-card.purple:hover{border-color:var(--purple);background:rgba(178,79,232,.12)}
+.home-card.green i{background:var(--green)} .home-card.green:hover{border-color:var(--green);background:rgba(46,212,122,.12)}
 .home-card.grey{cursor:default;opacity:.6} .home-card.grey:hover{transform:none;border-color:var(--line)}
 .home-card.static{cursor:default} .home-card.static:hover{transform:none}
 .home-links{justify-content:center}
@@ -758,6 +759,20 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .pass-premium{margin-top:26px;padding:14px;border:1px dashed var(--line);border-radius:3px;color:var(--faint);
   display:flex;gap:10px;align-items:baseline;letter-spacing:.08em}
 .pass-premium b{color:var(--dim)}
+/* ---- quests ---- */
+.quest-card{background:var(--panel2);border:1px solid var(--line);border-radius:4px;
+  padding:14px;display:flex;flex-direction:column;gap:8px}
+.quest-card.done{border-color:var(--green)}
+.quest-card b{font-size:14px;color:var(--ink);line-height:1.3}
+.quest-card .qxp{font-family:var(--mono);font-size:11px;color:var(--purple);letter-spacing:.04em}
+.quest-card .qbar{height:8px;border-radius:4px;background:var(--panel);border:1px solid var(--line);overflow:hidden}
+.quest-card .qbar i{display:block;height:100%;width:0%;background:var(--amber);transition:width .3s ease}
+.quest-card.done .qbar i{background:var(--green)}
+.quest-card .qcount{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.quest-card button{margin-top:2px;padding:8px 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  border:1px solid var(--amber);background:var(--amber-glow);color:var(--amber);border-radius:2px;font-weight:700;cursor:pointer}
+.quest-card button:disabled{opacity:.5;cursor:default}
+.quest-card .qdone{font-size:10.5px;color:var(--green);letter-spacing:.06em;text-transform:uppercase;text-align:center}
 @media (max-width:760px){ .pass-card{flex-basis:122px} .pass-card.major{flex-basis:150px} }
 /* small, corner, out of the way — see the comment on the element itself */
 .xp-toast{position:fixed;left:50%;top:calc(15% + var(--sat));z-index:60;
@@ -1942,11 +1957,11 @@ body.daily .gar-arrow{display:none}
         <button class="home-card red" id="hmMulti"><i></i><b>Multiplayer</b><span>Host or join a party and race friends live, on a circuit you draw or one you saved.</span></button>
         <button class="home-card purple" id="hmDaily"><i></i><b>Daily time trial</b><span>Today's circuit, the world's times, your ranking, and a ghost to chase.</span></button>
         <button class="home-card grey" id="hmShop"><i></i><b>Shop</b><span>Coming soon.</span></button>
-        <!-- Test mode only, same gate as the shop's own packs/coins section
-             — cosmo38 is the only account the Apex Pass answers anything
-             to yet, so this stays out of the grid entirely for everyone
-             else rather than showing and refusing them. -->
+        <!-- Hidden signed out — nothing here means anything without an
+             account to hold the level, coins and claims — shown for any
+             signed-in account otherwise. -->
         <button class="home-card purple" id="hmPass" hidden><i></i><b>Apex Pass</b><span id="hmPassSub">Season 1 — Free track.</span></button>
+        <button class="home-card green" id="hmQuests" hidden><i></i><b>Quests</b><span id="hmQuestsSub">Daily, weekly and seasonal challenges.</span></button>
       </div>
       <!-- The account, sold rather than mentioned: it is free and takes a
            moment, and it is what puts your name on your car and your laps
@@ -2050,6 +2065,29 @@ body.daily .gar-arrow{display:none}
       <div class="pass-premium">
         <b>PREMIUM</b><span>— COMING SOON</span>
       </div>
+    </div>
+  </section>
+
+  <!-- Quests: three tabs, three challenges each, every one paying Apex
+       Pass XP on top of anything else already earning it. Open to any
+       signed-in account, same as the pass itself. -->
+  <section id="questsScreen" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head pass-head">
+        <div>
+          <h1 class="auth-brand">Quests</h1>
+          <p class="auth-sub" id="qMsg">Daily, weekly and seasonal challenges</p>
+        </div>
+        <div class="chips">
+          <button class="chip" id="qBack">Back</button>
+        </div>
+      </div>
+      <div class="kit-tabs" id="qTabs">
+        <button class="kit-tab" data-tab="daily" aria-pressed="true">Daily</button>
+        <button class="kit-tab" data-tab="weekly">Weekly</button>
+        <button class="kit-tab" data-tab="seasonal">Seasonal</button>
+      </div>
+      <div class="sh-grid" id="qCards"></div>
     </div>
   </section>
 
@@ -9809,8 +9847,8 @@ function baseShow(v){
   else { $("home").hidden=true; $("editor").hidden=!v; if(v)fitPad(); }
 }
 function closeScreens(){
-  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet","shop","passScreen"]) $(id).hidden=true;
-  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting","shopping","passing"]) document.body.classList.remove(c);
+  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet","shop","passScreen","questsScreen"]) $(id).hidden=true;
+  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting","shopping","passing","questing"]) document.body.classList.remove(c);
 }
 
 /* ---- the Apex Pass ----
@@ -10106,6 +10144,73 @@ function passReportXp(event,key,amount,caption){
     .then(r=>{ if(r&&r.granted){ PASS.xp=r.xp; PASS.level=passLevel(r.xp); xpToast(amount,r.xp,caption); passUI(); } })
     .catch(()=>{});
 }
+
+/* ---- Quests: daily, weekly, seasonal ----
+   Three challenges per tab, every one paying real Apex Pass XP. Progress
+   is never client-reported: it rides along on laps and race finishes the
+   relay already checks or rate-limits for its own reasons
+   (relay/quests.js), so this screen only ever asks for a snapshot and
+   claims what has already been earned server-side. */
+const QUESTS={loaded:false,tab:"daily",tabs:{daily:[],weekly:[],seasonal:[]}};
+function questsUI(){
+  const card=$("hmQuests"); if(card) card.hidden=!acctIn();
+  if(!acctIn())return;
+  for(const b of document.querySelectorAll("#qTabs .kit-tab"))
+    b.setAttribute("aria-pressed",String(b.dataset.tab===QUESTS.tab));
+  const box=$("qCards"); if(!box)return;
+  box.innerHTML="";
+  for(const q of QUESTS.tabs[QUESTS.tab]||[]){
+    const done=q.count>=q.target;
+    const b=document.createElement("div"); b.className="quest-card"+(done?" done":"");
+    b.innerHTML='<b></b><span class="qxp"></span><div class="qbar"><i></i></div><span class="qcount"></span>';
+    b.querySelector("b").textContent=q.label;
+    b.querySelector(".qxp").textContent="+"+q.xp.toLocaleString()+" XP";
+    b.querySelector(".qbar i").style.width=Math.round(Math.min(1,q.count/q.target)*100)+"%";
+    b.querySelector(".qcount").textContent=q.metric==="distance"
+      ? (q.count/1000).toFixed(1)+" / "+(q.target/1000)+" km"
+      : q.count.toLocaleString()+" / "+q.target.toLocaleString();
+    if(q.claimed){
+      const got=document.createElement("span"); got.className="qdone"; got.textContent="Claimed"; b.appendChild(got);
+    }else{
+      const btn=document.createElement("button"); btn.textContent=done?"Claim":"In progress";
+      btn.disabled=!done;
+      btn.addEventListener("click",()=>questClaim(QUESTS.tab,q.id,btn));
+      b.appendChild(btn);
+    }
+    box.appendChild(b);
+  }
+}
+async function questsRefresh(){
+  if(!acctIn()){ QUESTS.loaded=false; questsUI(); return; }
+  try{
+    const r=await api("/api/quests/state",{token:ACCT.token});
+    QUESTS.loaded=true; QUESTS.tabs=r.tabs||{daily:[],weekly:[],seasonal:[]};
+    questsUI();
+  }catch(e){ /* not worth interrupting anything over */ }
+}
+async function questClaim(tab,questId,btn){
+  if(!acctIn())return;
+  if(btn)btn.disabled=true;
+  try{
+    const q=(QUESTS.tabs[tab]||[]).find(x=>x.id===questId);
+    const r=await api("/api/quests/claim",{method:"POST",token:ACCT.token,body:{tab,questId}});
+    PASS.xp=r.xp; PASS.level=passLevel(r.xp);
+    xpToast(r.amount,r.xp,(q?q.label:"Quest")+" — "+tab);
+    await questsRefresh(); passUI();
+  }catch(e){
+    showFlash("Couldn't claim that","#E8453C",e&&e.message||"");
+    if(btn)btn.disabled=false;
+  }
+}
+function showQuests(on){
+  if(on&&!acctIn())return;
+  if(on) questsRefresh();
+  $("questsScreen").hidden=!on; baseShow(!on);
+  document.body.classList.toggle("questing",on);
+  if(!on) fitPad();
+}
+function goQuests(){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showQuests(true); }
+
 /* ---- the shop ----
    The cars are the three still being tried out, priced. Rarity comes off
    the car itself rather than being written down again here, and the
@@ -10725,6 +10830,10 @@ $("shBack").addEventListener("click",goHome);
 $("hmPass").addEventListener("click",goPass);
 $("passBack").addEventListener("click",goHome);
 $("passGrantAll").addEventListener("click",passGrantAll);
+$("hmQuests").addEventListener("click",goQuests);
+$("qBack").addEventListener("click",goHome);
+for(const b of document.querySelectorAll("#qTabs .kit-tab"))
+  b.addEventListener("click",()=>{ QUESTS.tab=b.dataset.tab; questsUI(); });
 for(const b of document.querySelectorAll("#passTestPacks button[data-rarity]"))
   b.addEventListener("click",()=>passTestPack(b.dataset.rarity,b));
 $("packX").addEventListener("click",packOverlayClose);
@@ -11046,6 +11155,7 @@ function acctUI(){
   shopUI();
   kitUI();
   passRefresh();
+  questsRefresh();
   /* Signing out of the account that has them puts you back in the GT
      rather than leaving you sitting in something you can no longer see. */
   if(!carAllowed(ED.opts.car)){

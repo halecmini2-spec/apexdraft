@@ -73,7 +73,7 @@ function cleanGhost(g) {
   return out;
 }
 
-function makeLaps(store, userFor) {
+function makeLaps(store, userFor, quests) {
   function bearer(req) {
     const h = req.headers.authorization || "";
     return h.startsWith("Bearer ") ? h.slice(7).trim() : null;
@@ -213,6 +213,16 @@ function makeLaps(store, userFor) {
         if (r.granted) { driveBonus = { amount: 1000, minutes: block * 60, xp: r.xp }; passXp = r.xp; }
       }
     } catch (e) {}
+    /* Quest progress: the same verified lap feeds the "laps" and
+       "distance" challenges — distance is the circuit's own length
+       (C.len, metres), which checkTrace already required this lap to
+       have covered. */
+    if (quests) {
+      try {
+        await quests.addMetricProgress(user.id, "laps", 1);
+        await quests.addMetricProgress(user.id, "distance", C.len);
+      } catch (e) {}
+    }
     /* The lap itself travels with an improvement on a daily circuit, so the
        record can be driven against. */
     if (kept && isDaily(circuit) && body.ghost) {

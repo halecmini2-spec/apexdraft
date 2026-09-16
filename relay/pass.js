@@ -159,7 +159,7 @@ function bearer(req) {
   return h.startsWith("Bearer ") ? h.slice(7).trim() : null;
 }
 
-function makePass(store, userFor, dailyMod) {
+function makePass(store, userFor, dailyMod, quests) {
   /* Grants one reward, applying the duplicate rule wherever it applies:
      coins just add, a car or kit item checks ownership first and turns
      into coins instead of a second copy, a pack goes into the unopened
@@ -311,6 +311,13 @@ function makePass(store, userFor, dailyMod) {
       const key = String(body.key || "");
       if (!key || key.length > 200) return json(res, 400, { error: "That needs a key." }), true;
       const { granted, xp } = await store.grantXpOnce(user.id, event + ":" + key, amount);
+      /* Quest progress: a finished race, at the same once-only, rate
+         limited trust level its own XP already carries. Not overtakes —
+         "races" means a finish, the same thing the weekly/seasonal
+         quests below ask for. */
+      if (granted && quests && (event === "race1" || event === "race3" || event === "race10")) {
+        try { await quests.addMetricProgress(user.id, "races", 1); } catch (e) {}
+      }
       return json(res, 200, { granted, xp: granted ? xp : Number(user.pass_xp) || 0 }), true;
     }
 

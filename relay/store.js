@@ -36,7 +36,7 @@ function playtimeAmount(mins) {
 
 function fileStore(file) {
   let db = { users: [], sessions: [], tracks: [], laps: [], visits: {}, days: {}, log: [], ghosts: [], who: {}, wins: {},
-             inventory: [], passClaims: [], packs: [], xpGrants: [] };
+             inventory: [], passClaims: [], packs: [], xpGrants: [], questProgress: [] };
   let writing = null, again = false;
 
   try {
@@ -55,6 +55,7 @@ function fileStore(file) {
     db.passClaims = db.passClaims || [];
     db.packs = db.packs || [];
     db.xpGrants = db.xpGrants || [];
+    db.questProgress = db.questProgress || [];
   } catch (e) { /* first run */ }
 
   /* One write at a time, and one more queued at most: a burst of signups
@@ -153,6 +154,27 @@ function fileStore(file) {
       db.xpGrants.push({ user_id: id, key, at: Date.now() });
       const xp = await this.addXp(id, amount);
       return { granted: true, xp };
+    },
+    /* A read-only check against the same shelf grantXpOnce writes to — so
+       a caller (the quests screen, checking whether today's quest is
+       already claimed) can ask without the side effect of granting
+       anything. */
+    async hasGrant(id, key) {
+      return !!db.xpGrants.find((g) => g.user_id === id && g.key === key);
+    },
+    /* ---- quests: daily/weekly/seasonal progress ----
+       One counter per (account, period, quest) that only ever climbs
+       within its period — a fresh period is just a key nothing has
+       written under yet, not a row that gets reset or deleted. */
+    async addQuestProgress(id, periodKey, questId, delta) {
+      let row = db.questProgress.find((r) => r.user_id === id && r.period_key === periodKey && r.quest_id === questId);
+      if (!row) { row = { user_id: id, period_key: periodKey, quest_id: questId, count: 0 }; db.questProgress.push(row); }
+      row.count += delta;
+      await save();
+      return row.count;
+    },
+    async questProgress(id, periodKeys) {
+      return db.questProgress.filter((r) => r.user_id === id && periodKeys.includes(r.period_key));
     },
     /* Retiring playtime XP: finds every grant this account still has under
        the old "playtime:<session>:<mins>" key, removes them, and hands
@@ -585,6 +607,18 @@ function pgStore(url) {
           at      BIGINT NOT NULL,
           PRIMARY KEY (user_id, key)
         )`);
+      /* Quest progress: one counter per account/period/quest, climbing
+         within its own period key (see relay/quests.js) rather than ever
+         being reset in place — a new day/week/season is just a key
+         nothing has written under yet. */
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS quest_progress (
+          user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          period_key TEXT NOT NULL,
+          quest_id   TEXT NOT NULL,
+          count      BIGINT NOT NULL DEFAULT 0,
+          PRIMARY KEY (user_id, period_key, quest_id)
+        )`);
     },
     userByName: (lower) => one(`SELECT * FROM users WHERE name_lower=$1`, [lower]),
     userByEmail: (lower) => one(`SELECT * FROM users WHERE email_lower=$1`, [lower]),
@@ -725,6 +759,33 @@ function pgStore(url) {
       if (r.rowCount === 0) return { granted: false, xp: null };
       const xp = await this.addXp(id, amount);
       return { granted: true, xp };
+    },
+    /* A read-only check against the same shelf grantXpOnce writes to — so
+       a caller (the quests screen, checking whether today's quest is
+       already claimed) can ask without the side effect of granting
+       anything. */
+    async hasGrant(id, key) {
+      const r = await one(`SELECT 1 FROM xp_grants WHERE user_id=$1 AND key=$2`, [id, key]);
+      return !!r;
+    },
+    /* ---- quests: daily/weekly/seasonal progress ----
+       One counter per (account, period, quest) that only ever climbs
+       within its period — a fresh period is just a key nothing has
+       written under yet, not a row that gets reset or deleted. */
+    async addQuestProgress(id, periodKey, questId, delta) {
+      const r = await one(`
+        INSERT INTO quest_progress (user_id,period_key,quest_id,count) VALUES ($1,$2,$3,$4)
+        ON CONFLICT (user_id,period_key,quest_id) DO UPDATE SET count=quest_progress.count+$4
+        RETURNING count`, [id, periodKey, questId, delta]);
+      return r ? Number(r.count) : null;
+    },
+    async questProgress(id, periodKeys) {
+      if (!periodKeys.length) return [];
+      const r = await pool.query(
+        `SELECT period_key, quest_id, count FROM quest_progress WHERE user_id=$1 AND period_key = ANY($2)`,
+        [id, periodKeys]
+      );
+      return r.rows;
     },
     /* Retiring playtime XP: finds every grant this account still has under
        the old "playtime:<session>:<mins>" key, removes them, and hands

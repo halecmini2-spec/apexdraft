@@ -21,6 +21,7 @@ const { makeStats } = require("./stats");
 const { makeDaily } = require("./daily");
 const { makeCheckout } = require("./checkout");
 const { makePass } = require("./pass");
+const { makeQuests } = require("./quests");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
@@ -28,13 +29,16 @@ const { makePass } = require("./pass");
 const store = open();
 const auth = makeAuth(store);
 const tracks = makeTracks(store, auth.userFor);
-const laps = makeLaps(store, auth.userFor);
+const daily = makeDaily();
+/* Quests needs dailyMod for its day/week period keys, and both laps and
+   pass report progress into it, so it's built before either. */
+const quests = makeQuests(store, auth.userFor, daily);
+const laps = makeLaps(store, auth.userFor, quests);
 const visits = makeVisits(store, auth.userFor);
 const presence = makePresence(store, auth.userFor);
 setInterval(presence.sweep, 30_000).unref();
-const daily = makeDaily();
 const checkout = makeCheckout(store, auth.userFor);
-const pass = makePass(store, auth.userFor, daily);
+const pass = makePass(store, auth.userFor, daily, quests);
 /* Yesterday's daily result only ever changes once, at the roll into a new
    day, so this only has to look often enough to catch that — grantXpOnce
    makes looking again harmless. */
@@ -139,6 +143,7 @@ const server = http.createServer((req, res) => {
                 : url.pathname === "/api/daily" ? daily.route
                 : url.pathname.startsWith("/api/checkout") ? checkout.route
                 : url.pathname.startsWith("/api/pass") ? pass.route
+                : url.pathname.startsWith("/api/quests") ? quests.route
                 : url.pathname.startsWith("/api/tracks") ? tracks.route
                 : url.pathname.startsWith("/api/laps") ? laps.route
                 : url.pathname.startsWith("/api/admin") ? admin.route
