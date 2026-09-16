@@ -528,6 +528,10 @@ function pgStore(url) {
           PRIMARY KEY (circuit, user_id)
         )`);
       await pool.query(`CREATE INDEX IF NOT EXISTS laps_board ON laps(circuit,ms)`);
+      /* The title worn at the moment the lap was put on the board — a
+         claim checked against the inventory shelf the same way the car
+         already is, so a board only ever shows one actually owned. */
+      await pool.query(`ALTER TABLE laps ADD COLUMN IF NOT EXISTS title TEXT`);
       /* A lap as a run of positions, kept beside the time so the fastest
          one can be driven against. Only the daily circuits keep these. */
       await pool.query(`
@@ -687,11 +691,11 @@ function pgStore(url) {
          statement rather than in a read-then-write, so two laps finishing at
          once cannot leave the slower one standing. */
       await pool.query(
-        `INSERT INTO laps (circuit,user_id,name,ms,car,at) VALUES ($1,$2,$3,$4,$5,$6)
+        `INSERT INTO laps (circuit,user_id,name,ms,car,at,title) VALUES ($1,$2,$3,$4,$5,$6,$7)
          ON CONFLICT (circuit,user_id)
-         DO UPDATE SET ms=EXCLUDED.ms, car=EXCLUDED.car, at=EXCLUDED.at, name=EXCLUDED.name
+         DO UPDATE SET ms=EXCLUDED.ms, car=EXCLUDED.car, at=EXCLUDED.at, name=EXCLUDED.name, title=EXCLUDED.title
          WHERE laps.ms > EXCLUDED.ms`,
-        [l.circuit, l.user_id, l.name, l.ms, l.car, l.at]
+        [l.circuit, l.user_id, l.name, l.ms, l.car, l.at, l.title || null]
       );
       /* Reading back what stands beats counting rows: a DO UPDATE that
          declined to fire is not reported the same way everywhere. */
@@ -700,7 +704,7 @@ function pgStore(url) {
     },
     async board(circuit, limit) {
       return (await pool.query(
-        `SELECT name,ms,car,at FROM laps WHERE circuit=$1 ORDER BY ms ASC LIMIT $2`,
+        `SELECT name,ms,car,at,title FROM laps WHERE circuit=$1 ORDER BY ms ASC LIMIT $2`,
         [circuit, limit]
       )).rows;
     },

@@ -1300,6 +1300,7 @@ body.admining #lobbybar{display:none}
 .ti-row .p{color:var(--faint);font-size:10px;width:16px;flex:0 0 16px;font-family:var(--mono)}
 .ti-row .n{flex:1;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ti-row .c{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.ti-row .tg{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ti-row .t{font-family:var(--mono);color:var(--ink)}
 .ti-row.me{background:var(--amber-glow)}
 .ti-row.me .n{color:var(--amber)}
@@ -4779,6 +4780,18 @@ const KIT_SLOTS=["title","paint","rims","glow","horn","badge"];
 /* the ones that are the car, which are the ones the garage offers */
 const KIT_CAR_SLOTS=["paint","rims","glow","horn"];
 const kitItem=(slot,id)=>{ const g=KITS[slot]; return (g&&id&&g.items.find(i=>i.id===id))||null; };
+/* A leaderboard row's own title tag — the label, in its rarity's colour,
+   or nothing at all for a row with none worn. Built fresh rather than
+   cached: the same id can read as a different label if the item pool
+   itself ever changes, and a row is redrawn far less often than that
+   would matter anyway. */
+function lbTitleTag(id){
+  const it=kitItem("title",id); if(!it)return null;
+  const R=RARITY[it.rarity];
+  const e=document.createElement("span"); e.className="tg"; e.textContent=it.label;
+  if(R)e.style.color=R.colour;
+  return e;
+}
 /* What this driver is wearing — nothing at all unless the account that is
    trying it out is signed in, so it cannot leak onto anybody else's car by
    a stale setting in their storage. */
@@ -9755,8 +9768,9 @@ function dyRender(){
     const row=document.createElement("div"); row.className="ti-row"+(me&&r.name===me?" me":"");
     const p=document.createElement("span"); p.className="p"; p.textContent=(i+1)+".";
     const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
+    const tag=lbTitleTag(r.title);
     const t=document.createElement("span"); t.className="t"; t.textContent=i===0?fmtTime(r.ms):"+"+((r.ms-b[0].ms)/1000).toFixed(3);
-    row.appendChild(p); row.appendChild(n); row.appendChild(t);
+    row.appendChild(p); row.appendChild(n); if(tag)row.appendChild(tag); row.appendChild(t);
     if(typeof isAdminHere==="function"&&isAdminHere()){
       const x=document.createElement("button"); x.className="ti-x"; x.title="Remove this time"; x.textContent="\u00D7";
       x.addEventListener("click",async()=>{ x.disabled=true; try{ await api("/api/admin/laps/delete",{method:"POST",token:ACCT.token,body:{circuit:DAILY.viewKey||d.circuit,name:r.name}}); dyRefresh(); }catch(e){ $("dyListNote").textContent=e.message; x.disabled=false; } });
@@ -11561,7 +11575,8 @@ async function lbPost(ms){
   const key=LB.key;
   if(!key||!acctIn())return;
   try{
-    const body={circuit:key,ms:Math.round(ms),car:ED.opts.car||"gt",ghost:GH.mine,ticket:LB.ticket};
+    const wornTitle=myKit()&&myKit().title&&myKit().title.id;
+    const body={circuit:key,ms:Math.round(ms),car:ED.opts.car||"gt",ghost:GH.mine,ticket:LB.ticket,title:wornTitle||null};
     if(!DAILY.on) body.track=trackData();               // the relay rebuilds the circuit to check the lap
     LB.ticket=null;
     const r=await api("/api/laps",{method:"POST",token:ACCT.token,body});
@@ -11674,11 +11689,12 @@ function timesUI(){
       d.className="ti-row"+(me&&r.name===me?" me":"");
       const p=document.createElement("span"); p.className="p"; p.textContent=(i+1)+".";
       const n=document.createElement("span"); n.className="n"; n.textContent=r.name;
+      const tag=lbTitleTag(r.title);
       const c=document.createElement("span"); c.className="c";
       const cm=CAR_MODELS.find(x=>x.id===r.car); c.textContent=cm?cm.label:(r.car||"");
       const t=document.createElement("span"); t.className="t";
       t.textContent=i===0?fmtTime(r.ms):"+"+((r.ms-lead)/1000).toFixed(3);
-      d.appendChild(p); d.appendChild(n); d.appendChild(c); d.appendChild(t);
+      d.appendChild(p); d.appendChild(n); if(tag)d.appendChild(tag); d.appendChild(c); d.appendChild(t);
       if(isAdminHere()){
         /* one time off the board, for the times that could not have been driven */
         const x=document.createElement("button"); x.className="ti-x"; x.textContent="×";

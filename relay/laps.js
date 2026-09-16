@@ -101,7 +101,7 @@ function makeLaps(store, userFor, quests) {
     } catch (e) { console.error("sweep:", e && e.message); }
   }
 
-  const row = (r) => ({ name: r.name, ms: Number(r.ms), car: r.car, at: Number(r.at) });
+  const row = (r) => ({ name: r.name, ms: Number(r.ms), car: r.car, at: Number(r.at), title: r.title || null });
 
   async function route(req, res, url) {
     if (req.method === "OPTIONS") { cors(res); res.writeHead(204).end(); return true; }
@@ -169,6 +169,18 @@ function makeLaps(store, userFor, quests) {
     if (!Number.isFinite(ms) || ms < MIN_MS || ms > MAX_MS)
       return json(res, 400, { error: "That isn't a lap time." }), true;
 
+    /* The title worn on the board next to a name is checked against the
+       inventory shelf the same way the car is — a claim, but not a free
+       one — asked for only when a title was actually sent, so a lap with
+       nothing worn costs nothing extra to check. */
+    let title = body.title ? String(body.title).slice(0, 24) : null;
+    if (title) {
+      try {
+        const owned = await store.ownedItems(user.id);
+        if (!owned.includes("title:" + title)) title = null;
+      } catch (e) { title = null; }
+    }
+
     /* ---- could this lap have been driven? ---- */
     const refuse = (why) => { console.log("lap refused: " + user.name + " " + ms + " ms on " + circuit + " — " + why); return json(res, 422, { error: "That lap couldn't be verified (" + why + "), so it wasn't kept." }), true; };
     const tk = tickets.get(String(body.ticket || ""));
@@ -184,7 +196,7 @@ function makeLaps(store, userFor, quests) {
     /* Only an improvement is worth writing, and the board is what you wanted
        back anyway — so one round trip does both. */
     const best = await store.putLap({
-      circuit, user_id: user.id, name: user.name, ms, car, at: Date.now(),
+      circuit, user_id: user.id, name: user.name, ms, car, at: Date.now(), title,
     });
     const kept = best === ms;
     /* Awaited rather than fired-and-forgotten, so the response the page
