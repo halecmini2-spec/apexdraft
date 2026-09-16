@@ -120,20 +120,22 @@ function makeCheckout(store, userFor) {
       try {
         const session = await stripe.checkout.sessions.create({
           mode: "payment",
-          /* Not set: Managed Payments (on by default for newer Stripe
-             accounts) picks the payment methods itself and rejects the
-             session outright if this legacy parameter is present at all. */
+          /* Managed Payments is on by default on newer accounts, and it
+             changes who the customer is actually buying from: Stripe
+             becomes merchant of record, handling VAT itself, in exchange
+             for a different cut and its own requirements — no
+             payment_method_types, a real tax_code, automatic_tax turned
+             on. None of that is a decision this shop has made; switched
+             off outright rather than satisfied piecemeal, which is what
+             the two attempts before this one were actually doing. Plain
+             Standard Checkout underneath, same as before Managed Payments
+             existed — no payment_method_types or automatic_tax needed at
+             all once this is off. */
+          managed_payments: { enabled: false },
           line_items: [{
             price_data: { currency: "gbp", product_data: { name: car.name }, unit_amount: car.pence },
             quantity: 1,
           }],
-          /* Managed Payments (on by default on this account) requires this
-             to be true rather than false or left out — the account's own
-             error is explicit about it, and disabling it outright was the
-             wrong read of an earlier, vaguer one. Stripe collects whatever
-             address it needs for this on the Checkout page itself; nothing
-             else here has to know about tax jurisdictions. */
-          automatic_tax: { enabled: true },
           success_url: GAME_ORIGIN + "/?checkout=success&session_id={CHECKOUT_SESSION_ID}",
           cancel_url: GAME_ORIGIN + "/?checkout=cancel",
           client_reference_id: user.id,
