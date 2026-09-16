@@ -4654,15 +4654,13 @@ const KITS={
     {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
       iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}},
     /* Not in the pass or a pack's pool — cosmo38 only, gated the same way
-       in kitAllowed() below the test cars already are. The base tint was
-       the actual mistake through every pass before this one: 0x5A2159 has
-       red and blue nearly equal, which is magenta, not purple — purple
-       needs blue clearly ahead of red. 0x3B0764 does that: a real dark
-       purple (indigo-leaning, not pink-leaning), still dark without being
-       the near-black an earlier pass wrongly read "dark" as. Everything
-       else — the cyan-through-violet energy glow, the stars — unchanged;
-       the base colour was the whole problem. */
-    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.40,rough:0.28,env:1.4,tint:0x3B0764,
+       in kitAllowed() below the test cars already are. The hue was fixed
+       (0x3B0764: blue clearly ahead of red, so purple rather than the
+       magenta an earlier tint actually was) but still landed too light —
+       darkened again here, and env pulled back a step too so a bright sky
+       reflection can't relight it back toward that same lightness. Still
+       blue-led, same character, just properly dark now. */
+    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.40,rough:0.28,env:1.0,tint:0x230548,
       iri:{bands:6.0, speed:0.10, mix:0.40, glow:0.30, sat:0.55, hueMin:0.52, hueMax:0.78,
            stars:true, starGlow:1.2, starSize:0.09}},
     /* An early pass at Galaxy, kept on as a legendary of its own rather
