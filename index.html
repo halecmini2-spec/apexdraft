@@ -5088,12 +5088,13 @@ function glowBuild(car){
   car.position.set(0,0,0); car.quaternion.identity(); car.scale.set(1,1,1); car.updateMatrixWorld(true);
   const box=new THREE.Box3().setFromObject(car), sz=new THREE.Vector3();
   box.getSize(sz);
-  /* The pool's own edge sits a little outside the car's, on every side —
-     nose, tail and both flanks alike — the way a top-down silhouette
-     looks with a border drawn slightly proud of it. Not held in close:
-     that was tried, and against real bodywork the light read as painted
-     on rather than thrown from underneath it. */
-  const MARGIN=0.15;
+  /* The pool's own edge sits outside the car's, on every side — nose,
+     tail and both flanks alike — the way a top-down silhouette looks
+     with a border drawn proud of it. Not held in close: that was tried,
+     and against real bodywork the light read as painted on rather than
+     thrown from underneath it. 0.15m wasn't enough to actually read as
+     a border at a normal camera distance; this is the width that does. */
+  const MARGIN=0.45;
   const searchX=sz.x*1.05;              // safely outside the widest point, to raycast inward from
   const zMin=box.min.z, zMax=box.max.z; // the car's own real length, nose to tail
   /* a handful of low heights to test each row against — sills, rockers,
