@@ -277,6 +277,21 @@ function makePass(store, userFor, dailyMod, quests) {
       return json(res, 200, { level, result }), true;
     }
 
+    /* Which title is worn, on the account itself rather than in one
+       browser's storage — the same title on a phone as on a desktop, and
+       the default a new lap's own title (relay/laps.js) is sent as. Empty
+       or missing clears it. */
+    if (url.pathname === "/api/pass/title") {
+      if (overRate("pt:" + user.id, 30, 10 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
+      let title = body.title ? String(body.title).slice(0, 24) : null;
+      if (title) {
+        const owned = await store.ownedItems(user.id);
+        if (!owned.includes("title:" + title)) return json(res, 403, { error: "Not owned." }), true;
+      }
+      title = await store.setEquippedTitle(user.id, title);
+      return json(res, 200, { title }), true;
+    }
+
     if (url.pathname === "/api/pass/packs/open") {
       if (overRate("po:" + user.id, 30, 10 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
       const packId = String(body.packId || "");

@@ -197,6 +197,9 @@ const publicUser = (u) => ({
   coins: Number(u.coins) || 0,
   passXp: Number(u.pass_xp) || 0,
   passLevel: passLevel(u.pass_xp),
+  /* The title worn on the account itself, the same on every device —
+     set through POST /api/pass/title, checked there against ownership. */
+  title: u.equipped_title || null,
 });
 
 function makeAuth(store) {

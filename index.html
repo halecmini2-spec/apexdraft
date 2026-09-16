@@ -9474,7 +9474,13 @@ function kitSet(slot,id){
   ED.opts.kit[slot]=(ED.opts.kit[slot]===id)?null:id;   // pressing it again takes it off
   store.set("ad.opts",ED.opts);
   kitUI();
-  if(slot==="title"){ titleUI(); return; }
+  if(slot==="title"){
+    titleUI();
+    /* Worn on the account, not just this browser — so it is still there
+       signed in anywhere else. */
+    if(acctIn()) api("/api/pass/title",{method:"POST",token:ACCT.token,body:{title:ED.opts.kit.title||null}}).catch(()=>{});
+    return;
+  }
   GAR.cache={};                       // the pictures are of the old kit
   garPictures();
   if(slot==="paint"||slot==="rims"){
@@ -9569,6 +9575,19 @@ function kitUI(){
 }
 /* A title goes under the name, wherever the name is: on the account strip
    at home, and over your own car on track. */
+/* The account's own title, read back in on sign-in — so a title set on
+   another device is what shows up here too, not whatever this browser's
+   own storage last had (or nothing, on a browser that has never opened
+   the drawer at all). A no-op once the two already agree. */
+function syncEquippedTitle(){
+  if(!acctIn())return;
+  const serverTitle=ACCT.user.title||null;
+  ED.opts.kit=ED.opts.kit||{};
+  if(ED.opts.kit.title===serverTitle)return;
+  ED.opts.kit.title=serverTitle;
+  store.set("ad.opts",ED.opts);
+  titleUI(); kitUI();
+}
 /* the horn button is there when there is a horn to sound, and not there
    when there is not — an empty button that does nothing is worse than none */
 function hornUI(){
@@ -11357,6 +11376,7 @@ async function acctVerify(force){
   try{
     const r=await api("/api/me",{token:ACCT.token});
     ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctUI();
+    syncEquippedTitle();
     acctStats();
   }catch(e){
     /* Only a refusal means the session is gone. Asleep, offline or in a
@@ -11474,6 +11494,7 @@ $("authForm").addEventListener("submit",async ev=>{
       body:{username,password},
     });
     ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind(); acctStats();
+    syncEquippedTitle();
     TK.list=[]; TK.loaded=false;         // fetch this account's own
 
     $("auPass").value="";                  // not left sitting in the DOM

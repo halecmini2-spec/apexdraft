@@ -125,6 +125,15 @@ function fileStore(file) {
       await save();
       return u.coins;
     },
+    /* The title worn on the account itself — see the equipped_title
+       migration above for why this exists apart from a lap's own title. */
+    async setEquippedTitle(id, title) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return null;
+      u.equipped_title = title || null;
+      await save();
+      return u.equipped_title;
+    },
     /* ---- Apex Pass XP ----
        Only ever climbs; level is worked out from it rather than stored
        beside it, so the two can never drift apart. */
@@ -491,6 +500,12 @@ function pgStore(url) {
          what the retired playtime system paid against and could not tell
          apart from an idle tab or an autoclicker. */
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS drive_ms BIGINT NOT NULL DEFAULT 0`);
+      /* The title worn on the account itself, not just in one browser's
+         storage — so it is the same title on a phone as on a desktop,
+         and the one a new lap's own title (see laps.title) is sent as by
+         default. Checked against the inventory shelf at the point it is
+         set, the same as everywhere else a title is claimed. */
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS equipped_title TEXT`);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           token_hash TEXT PRIMARY KEY,
@@ -754,6 +769,12 @@ function pgStore(url) {
     async addCoins(id, delta) {
       const r = await one(`UPDATE users SET coins=GREATEST(0,coins+$2) WHERE id=$1 RETURNING coins`, [id, delta | 0]);
       return r ? Number(r.coins) : null;
+    },
+    /* The title worn on the account itself — see the equipped_title
+       migration above for why this exists apart from a lap's own title. */
+    async setEquippedTitle(id, title) {
+      const r = await one(`UPDATE users SET equipped_title=$2 WHERE id=$1 RETURNING equipped_title`, [id, title || null]);
+      return r ? r.equipped_title : null;
     },
     /* ---- Apex Pass XP ----
        Only ever climbs; level is worked out from it rather than stored
