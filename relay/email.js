@@ -43,13 +43,13 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-/* A sign-in link stands in for "your password" — clicking it signs the
-   account in directly rather than asking for a new password to be chosen,
-   which is one fewer thing to get wrong (and one fewer password-strength
-   rule to enforce) for the same actual need: getting back in. */
+/* The link itself proves the click came from this inbox; what it leads to
+   is a page asking for a new password, not a silent sign-in — so getting
+   back in still ends with a password this account's owner actually chose
+   and knows. */
 function loginLinkHtml(name, link) {
   return "<p>Hi " + name + ",</p>" +
-    "<p>Here's your sign-in link for Apex Drawn:</p>" +
+    "<p>Here's your link to reset your Apex Drawn password:</p>" +
     "<p><a href=\"" + link + "\">" + link + "</a></p>" +
     "<p>It works once, and only for the next 30 minutes. If you didn't ask for this, nothing has changed — just ignore it.</p>";
 }

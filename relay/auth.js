@@ -2,10 +2,10 @@
  *
  * A username, an email and a password. The email exists for exactly one
  * reason beyond a receipt: getting back in when the password is forgotten,
- * through a one-time sign-in link (see /api/reset/request and
- * /api/reset/consume below) rather than a "choose a new password" flow —
- * one fewer thing to type, and one fewer password-strength rule to argue
- * with, for the same actual need.
+ * through a one-time link (see /api/reset/request and
+ * /api/reset/set-password below) that leads to choosing a new one —
+ * proves the click came from that inbox, nothing more; the account still
+ * ends up with a password its owner actually picked.
  *
  * What it does take seriously is the password. It is hashed with scrypt and
  * never stored, logged or echoed back, and sessions are held as a hash of
@@ -353,7 +353,7 @@ function makeAuth(store) {
       return json(res, 200, { token, user: publicUser(user) }), true;
     }
 
-    /* --- getting back in, without the password --- */
+    /* --- getting back in, by replacing the forgotten password --- */
     if (url.pathname === "/api/reset/request") {
       if (overRate("rr:" + ip, 6, 15 * 60_000))
         return json(res, 429, { error: "Slow down a moment." }), true;
@@ -367,23 +367,29 @@ function makeAuth(store) {
           if (u) {
             const raw = await store.createLoginToken(u.id);
             const link = GAME_ORIGIN + "/?login=" + encodeURIComponent(raw);
-            await email.sendEmail(u.email, "Sign in to Apex Drawn", email.loginLinkHtml(u.name, link));
+            await email.sendEmail(u.email, "Reset your Apex Drawn password", email.loginLinkHtml(u.name, link));
           }
         } catch (e) { console.error("reset request:", e && e.message); }
       }
       return json(res, 200, { ok: true }), true;
     }
 
-    /* The other end of the link above: a raw token in, a fresh session
-       out — the same shape /api/signin already answers with, so the page
-       can hand it to the exact same code path either way. */
-    if (url.pathname === "/api/reset/consume") {
+    /* The other end of the link above: a raw token and a new password in,
+       a fresh session out — the token is only ever consumed here, once
+       the new password has already passed passProblem, so a link that is
+       clicked but never followed through (the page loading, nothing
+       submitted) hasn't spent it. */
+    if (url.pathname === "/api/reset/set-password") {
       if (overRate("rc:" + ip, 20, 10 * 60_000))
         return json(res, 429, { error: "Slow down a moment." }), true;
       const raw = String(body.token || "");
       if (!raw) return json(res, 400, { error: "No link." }), true;
+      const pass = String(body.password || "");
+      const problem = passProblem(pass);
+      if (problem) return json(res, 400, { error: problem }), true;
       const user = await store.consumeLoginToken(raw);
       if (!user) return json(res, 400, { error: "That link has expired or already been used." }), true;
+      await store.setPassword(user.id, await hash(pass));
       const token = await startSession(user);
       return json(res, 200, { token, user: publicUser(user) }), true;
     }

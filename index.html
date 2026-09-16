@@ -2635,9 +2635,9 @@ body.daily .gar-arrow{display:none}
           <button class="go" id="auGo" type="submit">Sign in</button>
         </form>
 
-        <!-- The way back in without the password: an email, if the account
-             has one on file, gets a one-time sign-in link rather than a
-             chance to pick a new password — see relay/email.js. -->
+        <!-- The way back in without the old password: an email, if the
+             account has one on file, gets a one-time link to this same
+             page — see #authNewPass below for what clicking it leads to. -->
         <div id="authReset" hidden>
           <label class="afield">
             <span>Email</span>
@@ -2645,8 +2645,20 @@ body.daily .gar-arrow{display:none}
                    autocapitalize="none" autocorrect="off" spellcheck="false">
           </label>
           <p class="amsg" id="rsMsg"></p>
-          <button class="go" id="rsGo" type="button">Send sign-in link</button>
+          <button class="go" id="rsGo" type="button">Send reset link</button>
           <button type="button" class="alink" id="rsBack">Back to sign in</button>
+        </div>
+
+        <!-- Where the emailed link actually leads — a new password to
+             choose, not a silent sign-in. loginLinkReturn() shows this. -->
+        <div id="authNewPass" hidden>
+          <p class="ahint" style="margin-top:0">Choose a new password.</p>
+          <label class="afield">
+            <span>New password</span>
+            <input id="npPass" type="password" maxlength="200" autocomplete="new-password">
+          </label>
+          <p class="amsg" id="npMsg"></p>
+          <button class="go" id="npGo" type="button">Set password and sign in</button>
         </div>
 
         <p class="ahint" id="auWhy">An account puts your own name on your car when you
@@ -11448,22 +11460,23 @@ function acctUI(){
    which /verify checks against Stripe itself rather than trusting the
    query string alone — a driver could type ?checkout=success into the
    address bar just as easily as Stripe could put it there. */
-/* The tab that comes back from clicking a sign-in link — the raw token
-   only ever appears here and in the emailed link itself, and /consume
-   accepts each one exactly once, so this is safe to run on whatever the
-   address bar happens to hold. */
-async function loginLinkReturn(){
+/* The tab that comes back from clicking a password-reset link. The raw
+   token only ever appears here and in the emailed link itself, and it
+   is not spent by loading this page — only by actually submitting a new
+   password (see the npGo handler below) — so a link that's clicked and
+   then abandoned hasn't burned itself for nothing. */
+let RESET_TOKEN=null;
+function loginLinkReturn(){
   const p=new URLSearchParams(location.search);
   const token=p.get("login");
   if(!token)return;
   history.replaceState(null,"",location.pathname+location.hash);
-  try{
-    const r=await api("/api/reset/consume",{method:"POST",body:{token}});
-    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind(); acctStats();
-    syncEquippedTitle();
-    TK.list=[]; TK.loaded=false;
-    acctUI();
-  }catch(e){ /* expired or already used — quietly stays signed out */ }
+  RESET_TOKEN=token;
+  showAuth(true);
+  $("authForms").hidden=true;
+  $("authNewPass").hidden=false;
+  $("npMsg").textContent="";
+  setTimeout(()=>{ try{$("npPass").focus();}catch(e){} },60);
 }
 async function checkoutReturn(){
   const p=new URLSearchParams(location.search);
@@ -11595,12 +11608,33 @@ $("rsGo").addEventListener("click",async()=>{
   $("rsMsg").classList.remove("bad");
   try{
     await api("/api/reset/request",{method:"POST",body:{email}});
-    $("rsMsg").textContent="If that email has an account, a sign-in link is on its way. It's good for thirty minutes.";
+    $("rsMsg").textContent="If that email has an account, a reset link is on its way. It's good for thirty minutes.";
   }catch(e){
     $("rsMsg").textContent=e.message; $("rsMsg").classList.add("bad");
   }
   btn.disabled=false; btn.textContent=was;
 });
+$("npGo").addEventListener("click",async()=>{
+  if(!RESET_TOKEN)return;
+  const password=$("npPass").value;
+  const btn=$("npGo"); btn.disabled=true; const was=btn.textContent; btn.textContent="Setting…";
+  $("npMsg").classList.remove("bad");
+  try{
+    const r=await api("/api/reset/set-password",{method:"POST",body:{token:RESET_TOKEN,password}});
+    RESET_TOKEN=null;
+    ACCT.token=r.token; ACCT.user=r.user; ACCT.checked=Date.now(); acctSave(); acctBind(); acctStats();
+    syncEquippedTitle();
+    TK.list=[]; TK.loaded=false;
+    $("authNewPass").hidden=true; $("authForms").hidden=false;
+    $("npPass").value="";
+    acctUI();
+    showAuth(false);
+  }catch(e){
+    $("npMsg").textContent=e.message; $("npMsg").classList.add("bad");
+    btn.disabled=false; btn.textContent=was;
+  }
+});
+$("npPass").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("npGo").click(); } });
 addEventListener("keydown",e=>{ if(e.code==="Escape"&&!$("auth").hidden)showAuth(false); });
 
 /* Says whether a name is free while you are still typing it, because being

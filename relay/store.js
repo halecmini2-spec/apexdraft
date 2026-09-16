@@ -105,6 +105,15 @@ function fileStore(file) {
       await save();
       return true;
     },
+    /* Already hashed by the caller — this never sees the plain password,
+       the same as createUser never has. */
+    async setPassword(id, passHash) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return false;
+      u.pass = passHash;
+      await save();
+      return true;
+    },
     /* Only ever adds. A car bought twice — a webhook and a browser tab both
        settling the same purchase — costs nothing the second time. */
     async addCar(id, carId) {
@@ -818,6 +827,12 @@ function pgStore(url) {
     /* ---- what an admin can see and undo ---- */
     async setNotice(id, text) {
       const r = await pool.query(`UPDATE users SET notice=$2 WHERE id=$1`, [id, text || null]);
+      return r.rowCount > 0;
+    },
+    /* Already hashed by the caller — this never sees the plain password,
+       the same as createUser never has. */
+    async setPassword(id, passHash) {
+      const r = await pool.query(`UPDATE users SET pass=$2 WHERE id=$1`, [id, passHash]);
       return r.rowCount > 0;
     },
     async addCar(id, carId) {
