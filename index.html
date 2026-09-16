@@ -4654,23 +4654,21 @@ const KITS={
     {id:"prism", label:"Prismatic Chrome", rarity:"mythic",    metal:1.00,rough:0.012,env:2.9,
       iri:{bands:9.0, speed:0.45, mix:1.00, glow:0.90, sat:1.00, hard:true}},
     /* Not in the pass or a pack's pool — cosmo38 only, gated the same way
-       in kitAllowed() below the test cars already are. A genuinely dark
-       purple, not a bright one with stars on it: low metal/env/glow so it
-       stops picking up reflections and its own emissive doesn't wash the
-       whole panel toward white the way the first two passes both did —
-       small, dim, sparse points (starGlow/starSize both well down from
-       where they overshot) rather than the bright, oversized ones that
-       read as a white car with dark bits, not the other way round. */
-    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.20,rough:0.42,env:0.30,tint:0x0A0518,
-      iri:{bands:6.0, speed:0.10, mix:0.22, glow:0.08, sat:0.60, hueMin:0.62, hueMax:0.84,
-           stars:true, starGlow:0.9, starSize:0.08}},
-    /* Galaxy's own first pass, kept on rather than thrown away once Galaxy
-       itself went darker — a legendary of its own now, and pushed further
-       toward the vivid, glowing cosmic-energy look Galaxy started from:
-       wider hue range (blue clear through violet into magenta, not just
-       blue-violet), more saturated, more lit. Where Galaxy reads as night
-       sky, this reads as the nebula itself. cosmo38 only, same as its
-       sibling. */
+       in kitAllowed() below the test cars already are. Built to an actual
+       reference this time rather than a guess at "dark purple": a rich
+       magenta-purple base (not the near-black the previous pass wrongly
+       read "dark" as), a cyan-through-violet energy glow rather than pure
+       blue-violet (hueMin pulled down to cover the cyan the reference's
+       glowing accents actually are), and white points sized and lit to
+       read as stars rather than either a wash or a whisper. */
+    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.40,rough:0.28,env:1.4,tint:0x5A2159,
+      iri:{bands:6.0, speed:0.10, mix:0.40, glow:0.30, sat:0.55, hueMin:0.52, hueMax:0.78,
+           stars:true, starGlow:1.2, starSize:0.09}},
+    /* An early pass at Galaxy, kept on as a legendary of its own rather
+       than thrown away once Galaxy moved to the magenta-purple above — a
+       cooler, blue-violet-into-magenta counterpart to it rather than the
+       same colour twice: wider hue range, more saturated, more lit.
+       cosmo38 only, same as its sibling. */
     {id:"nebula", label:"Nebula", rarity:"legendary", metal:0.55,rough:0.16,env:1.9,tint:0x120A22,
       iri:{bands:6.0, speed:0.11, mix:0.55, glow:0.42, sat:0.85, hueMin:0.60, hueMax:0.98, stars:true}},
 
