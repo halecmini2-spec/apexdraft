@@ -120,7 +120,9 @@ function makeCheckout(store, userFor) {
       try {
         const session = await stripe.checkout.sessions.create({
           mode: "payment",
-          payment_method_types: ["card"],
+          /* Not set: Managed Payments (on by default for newer Stripe
+             accounts) picks the payment methods itself and rejects the
+             session outright if this legacy parameter is present at all. */
           line_items: [{
             price_data: { currency: "gbp", product_data: { name: car.name }, unit_amount: car.pence },
             quantity: 1,
