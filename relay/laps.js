@@ -192,9 +192,10 @@ function makeLaps(store, userFor, quests) {
        the one thing an Apex Pass XP grant needs to actually be seen, not
        just eventually true next time the pass screen happens to be open. */
     let passXp = null;
-    /* A lap under half a minute is a lap around something built to be
-       farmed, not raced — the XP for one only pays out at a real length. */
-    if (ms >= 30_000) {
+    /* A lap under half a minute, or a circuit under a kilometre, is a lap
+       around something built to be farmed rather than raced — the XP for
+       one only pays out at a real length, on a real length of circuit. */
+    if (ms >= 30_000 && C.len >= 1000) {
       try { passXp = await store.addXp(user.id, 100); } catch (e) {}
     }
     /* Drive-time XP: milestones against accumulated SERVER-VERIFIED lap

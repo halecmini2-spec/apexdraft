@@ -10226,7 +10226,13 @@ function goPass(){ closeScreens(); setApp("home"); $("home").hidden=true; $("edi
    relay that cannot watch a race itself can promise. */
 function passReportXp(event,key,amount,caption){
   if(!acctIn())return;
-  api("/api/pass/xp",{method:"POST",token:ACCT.token,body:{event,key,amount}})
+  /* What the relay checks this claim against: the circuit it was driven
+     on, and — for an overtake — the field it was driven against. Both
+     only as trustworthy as the page reporting them, same as the claim
+     itself. */
+  const body={event,key,amount,circuitLen:Math.round((G.T&&G.T.len)||0)};
+  if(event==="overtake"){ body.aiOn=!!AI.on; body.aiStrength=AI.strength|0; }
+  api("/api/pass/xp",{method:"POST",token:ACCT.token,body})
     .then(r=>{ if(r&&r.granted){ PASS.xp=r.xp; PASS.level=passLevel(r.xp); xpToast(amount,r.xp,caption); passUI(); } })
     .catch(()=>{});
 }

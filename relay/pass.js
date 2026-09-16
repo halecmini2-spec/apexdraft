@@ -324,6 +324,17 @@ function makePass(store, userFor, dailyMod, quests) {
         if (!Number.isFinite(claimedMs) || claimedMs < 5000 || claimedMs > 30 * 60_000)
           return json(res, 400, { error: "That doesn't look like a finish." }), true;
       }
+      /* Nothing here pays out on a circuit built short enough to lap in
+         seconds — same floor relay/laps.js holds a verified lap to,
+         applied to the length the page itself reports, since a
+         multiplayer circuit is never saved here to measure independently. */
+      if (!(Number(body.circuitLen) >= 1000))
+        return json(res, 400, { error: "Too short a circuit for that." }), true;
+      /* An overtake only pays out against a field actually worth passing —
+         weak AI is not a race. No such thing to check for a human-only
+         field, so this only ever fires with AI actually in it. */
+      if (event === "overtake" && body.aiOn && !(Number(body.aiStrength) >= 75))
+        return json(res, 400, { error: "That AI wasn't strong enough." }), true;
       const { granted, xp } = await store.grantXpOnce(user.id, event + ":" + key, amount);
       /* Quest progress: a finished race, at the same once-only, rate
          limited trust level its own XP already carries. Not overtakes —
