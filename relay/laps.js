@@ -28,6 +28,15 @@ const dailyMod = require("./daily");
 /* Apex Pass XP for a lap: for every account now, and only once a lap has
    already cleared everything above — the same verified lap the board
    itself trusts, so this cannot be spoofed independently of it. */
+/* [threshold in ms, grantXpOnce key, XP amount] — checked against the
+   account's own total accumulated verified drive time, which only ever
+   climbs. See DRIVE_MS_TIERS' use in route() below for the repeating
+   60-minutes-and-beyond tier past this fixed list. */
+const DRIVE_MS_TIERS = [
+  [10 * 60_000, "drivetime:10m", 500],
+  [20 * 60_000, "drivetime:20m", 750],
+  [30 * 60_000, "drivetime:30m", 900],
+];
 /* A lap has to have begun before it can end: the page asks for a ticket
    as it crosses the line, and the finish has to come at least the lap's
    own length later. One ticket, one lap, and only for the driver and the
@@ -182,6 +191,28 @@ function makeLaps(store, userFor) {
        just eventually true next time the pass screen happens to be open. */
     let passXp = null;
     try { passXp = await store.addXp(user.id, 100); } catch (e) {}
+    /* Drive-time XP: milestones against accumulated SERVER-VERIFIED lap
+       time — never a client-reported clock — so this is the one form
+       "playtime" XP can take that an idle tab or an autoclicker earns
+       nothing from: neither one drives a lap that passes everything
+       above (ticket, timing bound, lapBound, checkTrace). Every lap that
+       reaches this point, kept or not, adds its own ms to the total. */
+    let driveBonus = null;
+    try {
+      const totalMs = await store.addDriveMs(user.id, ms);
+      for (const [thresholdMs, key, amount] of DRIVE_MS_TIERS) {
+        if (totalMs < thresholdMs) continue;
+        const r = await store.grantXpOnce(user.id, key, amount);
+        if (r.granted) { driveBonus = { amount, minutes: Math.round(thresholdMs / 60_000), xp: r.xp }; passXp = r.xp; }
+      }
+      /* past the last fixed tier, every further 60 minutes pays the same
+         1,000 XP again — each 60-minute block only ever grants once */
+      if (totalMs >= 60 * 60_000) {
+        const block = Math.floor(totalMs / (60 * 60_000));
+        const r = await store.grantXpOnce(user.id, "drivetime:60x" + block, 1000);
+        if (r.granted) { driveBonus = { amount: 1000, minutes: block * 60, xp: r.xp }; passXp = r.xp; }
+      }
+    } catch (e) {}
     /* The lap itself travels with an improvement on a daily circuit, so the
        record can be driven against. */
     if (kept && isDaily(circuit) && body.ghost) {
@@ -199,7 +230,7 @@ function makeLaps(store, userFor) {
     const board = await store.board(circuit, TOP);
     const rank = await store.rank(circuit, user.id);
     return json(res, 200, {
-      board: board.map(row), best, kept, you: user.name, top: TOP, rank, passXp,
+      board: board.map(row), best, kept, you: user.name, top: TOP, rank, passXp, driveBonus,
     }), true;
   }
 

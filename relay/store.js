@@ -134,6 +134,16 @@ function fileStore(file) {
       await save();
       return u.pass_xp;
     },
+    /* Adds to the account's total verified drive time and hands back the
+       new total, so the caller (relay/laps.js) can check it against the
+       drive-time XP tiers in the same round trip a lap is already making. */
+    async addDriveMs(id, deltaMs) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return null;
+      u.drive_ms = Math.max(0, (Number(u.drive_ms) || 0) + (deltaMs | 0));
+      await save();
+      return u.drive_ms;
+    },
     /* A one-off grant — playtime crossing a threshold, a daily result the
        day after, an account just made — filed under a key that can only
        ever be claimed once. Two heartbeats racing each other, or a retry
@@ -438,6 +448,13 @@ function pgStore(url) {
          — one number, so the two can never disagree with each other */
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS coins BIGINT NOT NULL DEFAULT 0`);
       await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS pass_xp BIGINT NOT NULL DEFAULT 0`);
+      /* Total milliseconds of server-verified lap time this account has
+         ever driven, across every accepted lap — not a session clock, and
+         nothing a client reports. Drive-time XP milestones (relay/laps.js)
+         are paid out against this instead of wall-clock playtime, which is
+         what the retired playtime system paid against and could not tell
+         apart from an idle tab or an autoclicker. */
+      await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS drive_ms BIGINT NOT NULL DEFAULT 0`);
       await pool.query(`
         CREATE TABLE IF NOT EXISTS sessions (
           token_hash TEXT PRIMARY KEY,
@@ -692,6 +709,13 @@ function pgStore(url) {
     async addXp(id, delta) {
       const r = await one(`UPDATE users SET pass_xp=GREATEST(0,pass_xp+$2) WHERE id=$1 RETURNING pass_xp`, [id, delta | 0]);
       return r ? Number(r.pass_xp) : null;
+    },
+    /* Adds to the account's total verified drive time and hands back the
+       new total, so the caller (relay/laps.js) can check it against the
+       drive-time XP tiers in the same round trip a lap is already making. */
+    async addDriveMs(id, deltaMs) {
+      const r = await one(`UPDATE users SET drive_ms=GREATEST(0,drive_ms+$2) WHERE id=$1 RETURNING drive_ms`, [id, deltaMs | 0]);
+      return r ? Number(r.drive_ms) : null;
     },
     async grantXpOnce(id, key, amount) {
       const r = await pool.query(
