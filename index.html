@@ -2658,20 +2658,24 @@ body.daily .gar-arrow{display:none}
           <button type="button" class="alink" id="authResetBack">Back to sign in</button>
         </div>
 
-        <!-- Where the emailed link actually leads — a new password to
-             choose, not a silent sign-in. loginLinkReturn() shows this. -->
-        <div id="authNewPass" hidden>
-          <p class="ahint" style="margin-top:0">Choose a new password.</p>
-          <label class="afield">
-            <span>New password</span>
-            <input id="npPass" type="password" maxlength="200" autocomplete="new-password">
-          </label>
-          <p class="amsg" id="npMsg"></p>
-          <button class="go" id="npGo" type="button">Set password and sign in</button>
-        </div>
-
         <p class="ahint" id="auWhy">An account puts your own name on your car when you
           race other people, and keeps anyone else from turning up wearing it.</p>
+      </div>
+
+      <!-- Where the emailed link actually leads — a new password to choose,
+           not a silent sign-in. loginLinkReturn() shows this. A sibling of
+           #authForms rather than nested in it: hiding that form to make
+           room for this one used to take this down with it, since a
+           hidden ancestor hides everything inside it regardless of its
+           own hidden state. -->
+      <div id="authNewPass" hidden>
+        <p class="ahint" style="margin-top:0">Choose a new password.</p>
+        <label class="afield">
+          <span>New password</span>
+          <input id="npPass" type="password" maxlength="200" autocomplete="new-password">
+        </label>
+        <p class="amsg" id="npMsg"></p>
+        <button class="go" id="npGo" type="button">Set password and sign in</button>
       </div>
 
       <div id="authWho" hidden>
@@ -7228,111 +7232,116 @@ function bodyGolfKart(b,M){
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
-/* ---- MONSTER TRUCK: a pickup cab standing on tyres of its own ----
-   Everything else here fits under the tyres it has; this one is built the
-   other way round — the tyres are the whole point, the cab and bed are just
-   what stands on them. Chassis rails run visible below the body sides, the
-   same way a real one's do once it has been lifted, and each corner gets a
-   spring you can actually see, wound about its own damper rather than
-   implied by one. Not the fastest thing here by a long way — what a tyre
-   this tall gears for is climbing over things, not outrunning them.
-   3.75 long, 2.30 across the tyres, 1.85 to the roof, on a 2.05 wheelbase. */
+/* ---- MONSTER TRUCK: a shell riding a tube chassis of its own, not a
+   lifted pickup ----
+   A real one has no fenders at all — the tyres stand in the open, and
+   what covers the middle of the truck is a thin fibreglass shell sitting
+   well clear of the chassis that actually carries it, tube visible the
+   whole way round: rails at cab-floor height, a cage rising through the
+   glass, straight axles slung underneath on links and coilovers a driver
+   could reach out and touch. Built to that, not to a car with big wheels
+   under it. Not the fastest thing here by a long way — what a tyre this
+   tall gears for is climbing over things, not outrunning them.
+   3.3 long, 2.6 across the tyres, 1.9 to the roof, on a 1.95 wheelbase. */
 function bodyMonsterTruck(b,M){
-  const FR=0.620, RR=0.620;                 // the tyres are the whole point
-  const FZ=1.05,  RZ=-1.00;
-  const FX=0.940, RX=0.940;
-  const frameM =new THREE.MeshStandardMaterial({color:SRGB(0x1B1E20),roughness:0.50,metalness:0.55});
+  const FR=0.780, RR=0.780;                 // the tyres are the whole point
+  const FZ=1.00,  RZ=-0.95;
+  const FX=1.050, RX=1.050;
+  const frameM =new THREE.MeshStandardMaterial({color:SRGB(0x16181A),roughness:0.42,metalness:0.62});
+  const axleM  =new THREE.MeshStandardMaterial({color:SRGB(0x0E0F10),roughness:0.48,metalness:0.55});
   const shockM =new THREE.MeshStandardMaterial({color:SRGB(0x101214),roughness:0.35,metalness:0.60});
-  const coilM  =new THREE.MeshStandardMaterial({color:SRGB(0xB9C0C4),roughness:0.24,metalness:0.90});
+  /* the one thing every one of these wears bright: a coilover spring you
+     are meant to see from across a car park */
+  const coilM  =new THREE.MeshStandardMaterial({color:SRGB(0xC21E2E),roughness:0.34,metalness:0.58});
+  const linkM  =new THREE.MeshStandardMaterial({color:SRGB(0xC9A227),roughness:0.30,metalness:0.85});
   const bumperM=new THREE.MeshStandardMaterial({color:SRGB(0x15171A),roughness:0.55,metalness:0.20});
   const lampM  =new THREE.MeshStandardMaterial({
     color:SRGB(0xFFF6E2),emissive:SRGB(0xFFEBC4),emissiveIntensity:0.9,roughness:0.14,metalness:0.1});
   const T=(a,c,r,mat,seg)=>tubeTo(b,a,c,r,mat,seg);
 
-  /* hood, cab sides and bed, one lofted shell riding well above the sills a
-     car would sit on — a lifted truck's rocker panel is another car's roofline */
+  /* a short cab-and-bed shell, its floor riding at the chassis rail rather
+     than down near the axles — everything below this line is chassis and
+     tyre, in the open, not bodywork */
   const shell=new THREE.Mesh(loft([
-    {z: 1.78,w:0.480,y0:0.660,y1:0.840,n:2.4},   // blunt, rounded nose
-    {z: 1.45,w:0.900,y0:0.620,y1:0.960,n:3.4},   // hood widening out
-    {z: 1.05,w:0.980,y0:0.600,y1:0.980,n:3.8},   // over the front arches
-    {z: 0.55,w:0.960,y0:0.600,y1:1.000,n:3.8},   // cab, front doors
-    {z: 0.00,w:0.940,y0:0.600,y1:1.000,n:3.8},   // cab, rear doors
-    {z:-0.45,w:0.920,y0:0.620,y1:0.900,n:3.4},   // behind the cab, into the bed
-    {z:-1.05,w:0.980,y0:0.600,y1:0.840,n:3.6},   // over the rear arches
-    {z:-1.55,w:0.920,y0:0.580,y1:0.800,n:2.8},   // bed sides
-    {z:-1.95,w:0.640,y0:0.580,y1:0.780,n:2.0}    // tailgate, rounded off
-  ],26),M.paint);
+    {z: 1.55,w:0.360,y0:1.150,y1:1.300,n:2.4},   // blunt, rounded nose
+    {z: 1.25,w:0.680,y0:1.090,y1:1.410,n:3.2},   // hood widening out
+    {z: 0.90,w:0.760,y0:1.060,y1:1.460,n:3.6},   // cowl
+    {z: 0.50,w:0.750,y0:1.050,y1:1.480,n:3.6},   // cab, front doors
+    {z: 0.05,w:0.730,y0:1.050,y1:1.480,n:3.6},   // cab, rear doors
+    {z:-0.40,w:0.710,y0:1.080,y1:1.360,n:3.2},   // behind the cab, into the bed
+    {z:-0.85,w:0.740,y0:1.060,y1:1.300,n:3.2},   // bed sides
+    {z:-1.25,w:0.480,y0:1.060,y1:1.260,n:2.2}    // tailgate, rounded off
+  ],24),M.paint);
   shell.castShadow=true; b.add(shell);
 
   /* the greenhouse, glazed the same way the GT's own cabin is: one lofted
      surface doubling as windscreen, side glass and rear glass at once */
   const cabin=new THREE.Mesh(loft([
-    {z: 1.00,w:0.660,y0:0.980,y1:1.050,n:3.0},
-    {z: 0.65,w:0.860,y0:1.000,y1:1.420,n:3.6},
-    {z: 0.15,w:0.900,y0:1.000,y1:1.500,n:3.8},
-    {z:-0.20,w:0.880,y0:1.000,y1:1.480,n:3.6},
-    {z:-0.48,w:0.700,y0:1.000,y1:1.280,n:3.0}
+    {z: 0.85,w:0.520,y0:1.460,y1:1.520,n:3.0},
+    {z: 0.55,w:0.660,y0:1.480,y1:1.800,n:3.4},
+    {z: 0.10,w:0.700,y0:1.480,y1:1.860,n:3.6},
+    {z:-0.30,w:0.660,y0:1.460,y1:1.780,n:3.2},
+    {z:-0.55,w:0.500,y0:1.440,y1:1.600,n:2.6}
   ],20),M.glass);
   cabin.castShadow=true; b.add(cabin);
 
   const roof=new THREE.Mesh(loft([
-    {z: 0.52,w:0.860,y0:1.470,y1:1.540,n:4.0},
-    {z:-0.02,w:0.880,y0:1.460,y1:1.560,n:4.2},
-    {z:-0.46,w:0.820,y0:1.440,y1:1.500,n:3.6}
-  ],18),M.paint);
+    {z: 0.50,w:0.660,y0:1.820,y1:1.900,n:4.0},
+    {z:-0.05,w:0.680,y0:1.810,y1:1.920,n:4.2},
+    {z:-0.35,w:0.620,y0:1.800,y1:1.860,n:3.4}
+  ],16),M.paint);
   roof.castShadow=true; b.add(roof);
 
-  /* a ladder frame standing proud below the body sides — two rails and
-     three crossmembers, the one thing that says "lifted" before the tyres
-     do, because it is the part that used to be hidden and now is not */
-  for(const sx of [-1,1]) T([sx*0.52,0.520,1.35],[sx*0.52,0.500,-1.95],0.055,frameM,10);
-  for(const z of [1.10,0.05,-1.35]) T([-0.52,0.510,z],[0.52,0.510,z],0.045,frameM,8);
+  /* the chassis rail each side runs the whole length at cab-floor height,
+     outboard of the shell rather than hidden under it — this is the part
+     of a tube-frame truck a fender would normally have covered up */
+  for(const sx of [-1,1]) T([sx*0.800,1.070,1.60],[sx*0.800,1.030,-1.55],0.048,frameM,10);
+  for(const z of [1.20,0.30,-0.65,-1.35]) T([-0.800,1.05,z],[0.800,1.05,z],0.040,frameM,8);
 
-  /* the front bumper and a pair of bull-bar guards ahead of it */
-  const bumper=new THREE.Mesh(lens(0.940,0.150,0.10),bumperM);
-  bumper.position.set(0,0.560,1.560); bumper.rotation.x=Math.PI/2; bumper.castShadow=true; b.add(bumper);
-  for(const sx of [-0.640,0.640]) T([sx,0.900,1.560],[sx,0.560,1.560],0.028,bumperM,8);
-  for(const sx of [-0.780,0.780]){
-    const l=new THREE.Mesh(lens(0.200,0.170,0.06),lampM);
-    l.position.set(sx,0.780,1.700); b.add(l);
+  /* the roll cage, rising off that rail and through the glass — the part
+     of the truck a driver is actually sitting inside of */
+  for(const z of [0.55,-0.15]) for(const sx of [-1,1])
+    T([sx*0.800,1.060,z],[sx*0.350,1.860,z],0.034,frameM,8);
+  T([-0.350,1.860,0.55],[0.350,1.860,0.55],0.030,frameM,8);
+  T([-0.350,1.860,-0.15],[0.350,1.860,-0.15],0.030,frameM,8);
+  T([-0.350,1.860,0.55],[-0.350,1.860,-0.15],0.030,frameM,8);
+  T([ 0.350,1.860,0.55],[ 0.350,1.860,-0.15],0.030,frameM,8);
+  /* an A-pillar tube down to the nose of the rail, ahead of the glass */
+  for(const sx of [-1,1]) T([sx*0.350,1.820,0.85],[sx*0.800,1.070,1.35],0.028,frameM,8);
+
+  /* the front bumper, high on the rail the way everything else here is */
+  const bumper=new THREE.Mesh(lens(0.860,0.140,0.10),bumperM);
+  bumper.position.set(0,1.080,1.640); bumper.rotation.x=Math.PI/2; bumper.castShadow=true; b.add(bumper);
+  for(const sx of [-0.720,0.720]) T([sx,1.320,1.640],[sx,1.080,1.640],0.026,bumperM,8);
+  for(const sx of [-0.560,0.560]){
+    const l=new THREE.Mesh(lens(0.190,0.160,0.06),lampM);
+    l.position.set(sx,1.240,1.680); b.add(l);
   }
 
-  /* a roll hoop over the bed, braced back to the tailgate — the classic
-     silhouette behind any pickup cab that has been built to go racing */
-  for(const sx of [-1,1]){
-    T([sx*0.720,0.900,-0.520],[sx*0.720,1.520,-0.520],0.032,frameM,8);
-    T([sx*0.720,1.100,-0.960],[sx*0.720,0.680,-1.780],0.024,frameM,8);
-  }
-  T([-0.720,1.520,-0.520],[0.720,1.520,-0.520],0.030,frameM,8);
-
-  /* a light bar along the front of the roof */
-  const bar=new THREE.Mesh(new THREE.BoxGeometry(0.760,0.060,0.060),frameM);
-  bar.position.set(0,1.560,0.960); bar.castShadow=true; b.add(bar);
-  for(let i=0;i<5;i++){
-    const l=new THREE.Mesh(lens(0.090,0.050,0.05),lampM);
-    l.position.set(-0.300+i*0.150,1.560,0.995); b.add(l);
+  /* straight axles: one solid tube each end, hung well under the chassis
+     rail, with the differential a fatter bulge at its centre — everything
+     from here down is suspension, not body */
+  for(const [z,R] of [[FZ,FR],[RZ,RR]]){
+    T([-FX*0.90,R,z],[FX*0.90,R,z],0.050,axleM,12);
+    const diff=new THREE.Mesh(new THREE.CylinderGeometry(0.115,0.115,0.220,14),axleM);
+    diff.rotation.z=Math.PI/2; diff.position.set(0,R,z-Math.sign(z||1)*0.02); diff.castShadow=true; b.add(diff);
   }
 
-  /* four coilover shocks, each spring wound about its own damper, standing
-     as close to upright as the corner they are bolted to allows */
-  /* mounted well inboard of the tyre's own face — at the wheel's own x this
-     would stand inside the rim rather than beside it */
-  for(const [sx,z] of [[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]){
-    const x=sx*0.640;
-    T([x,1.150,z],[x,0.360,z],0.040,shockM,10);
-    coilSpring(b,x,z,0.400,1.100,0.082,5,0.013,coilM,64);
-    /* a lower link out to the hub, so the shock is not floating with
-       nothing tying the axle to the chassis */
-    T([sx*0.52,0.510,z*0.55],[sx*FX,0.360,z],0.030,frameM,8);
+  /* one coilover per corner, angled in from the rail to the axle end,
+     wound in the one colour every one of these actually wears — and a
+     pair of links alongside it doing the locating a spring can't */
+  for(const [sx,z,R] of [[-1,FZ,FR],[1,FZ,FR],[-1,RZ,RR],[1,RZ,RR]]){
+    const topX=sx*0.760, botX=sx*0.960;
+    T([topX,1.640,z],[botX,R*1.05,z],0.038,shockM,10);
+    coilSpring(b,(topX+botX)/2,z,R*1.02,1.580,0.095,5,0.014,coilM,64);
+    T([sx*0.800,1.060,z*0.55],[sx*FX*0.85,R,z],0.026,linkM,8);      // upper link
+    T([sx*0.800,0.980,z*0.55],[sx*FX*0.92,R*0.85,z],0.024,linkM,8); // lower link
   }
 
-  addFenders(b,M,FZ,FR,1.020,FX,0.660);
-  addFenders(b,M,RZ,RR,0.980,RX,0.640);
-
-  const tailMats=addLamps(b,null,{w:0.180,h:0.070,y:0.660,z:-2.000,x:[-0.460,0.460]});
+  const tailMats=addLamps(b,null,{w:0.170,h:0.065,y:1.200,z:-1.640,x:[-0.420,0.420]});
   return {tailMats,
     wheels:{race:true,
-            r:FR,tw:0.460, rR:RR,twR:0.460,
+            r:FR,tw:0.520, rR:RR,twR:0.520,
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
@@ -11734,6 +11743,10 @@ function showAuth(on){
   baseShow(!on);
   document.body.classList.toggle("authing",on);
   if(on){
+    /* the normal way in, not the one a reset link drops you into — an
+       abandoned reset (Back to the track, never submitted) must not leave
+       this showing the next time the account screen opens on its own */
+    $("authNewPass").hidden=true;
     acctUI();
     titleUI();
     if(acctIn()) acctStats(false);
