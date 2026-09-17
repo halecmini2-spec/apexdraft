@@ -2443,7 +2443,7 @@ body.daily .gar-arrow{display:none}
         <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span><b class="big">360 km/h</b><i>Far and away the fastest thing here. 1,450 kg, heavy and stable.</i></span></button>
         <button class="gar-card test" data-car="lmp1"><canvas width="360" height="220"></canvas><b>LMP1 Prototype</b><span>275+ km/h, 875 kg. Built to hold that pace for hours, not one lap.</span></button>
         <button class="gar-card test" data-car="golfkart"><canvas width="360" height="220"></canvas><b>Golf Kart</b><span>A golf cart somebody has turned into a racing machine.</span></button>
-        <button class="gar-card test" data-car="monster"><canvas width="360" height="220"></canvas><b>Monster Truck</b><span>Huge wheels, huger suspension. Nowhere near the fastest thing here.</span></button>
+        <button class="gar-card test" data-car="monster"><canvas width="360" height="220"></canvas><b>Monster Truck</b><span>Huge wheels, huger suspension, and a real engine behind them.</span></button>
         </div>
         <button class="gar-arrow" id="garNext" aria-label="The car after this one">›</button>
       </div>
@@ -4963,12 +4963,12 @@ const CAR_PERF={
      of anything above it, but a short wheelbase and a wheel that answers
      straight away, so it is quick to place even if it is not quick. */
   golfkart:{power:0.85, top:0.62, grip:1.05, turnin:1.05, front:0.95},
-  /* Huge wheels and a suspension to match: a fat contact patch gives it more
-     grip than its height has any right to, but the gearing behind those
-     tyres was never chosen for a straight, and the travel that lets it
-     shrug off a landing is the same travel that makes the nose slow to
-     answer and the body slow to settle once it has. */
-  monster:{power:0.90, top:0.42, grip:1.05, turnin:0.45, front:0.60}
+  /* Huge wheels and a suspension to match: a fat contact patch gives real
+     grip, and a proper engine behind those tyres now — quicker than the
+     kart or the golf cart, if not among the quickest things here. The
+     travel that lets it shrug off a landing is still the same travel that
+     makes the nose slow to answer and the body slow to settle once it has. */
+  monster:{power:1.05, top:0.72, grip:1.12, turnin:0.45, front:0.60}
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -7233,9 +7233,8 @@ function bodyGolfKart(b,M){
    whole way round: rails at cab-floor height, a cage rising through the
    glass, straight axles slung underneath on links and coilovers a driver
    could reach out and touch. Built to that, not to a car with big wheels
-   under it. Not the fastest thing here by a long way — what a tyre this
-   tall gears for is climbing over things, not outrunning them.
-   3.3 long, 2.6 across the tyres, 1.9 to the roof, on a 1.95 wheelbase. */
+   under it.
+   3.3 long, 2.85 across the tyres, 2.5 to the roof, on a 1.95 wheelbase. */
 function bodyMonsterTruck(b,M){
   const FR=0.780, RR=0.780;                 // the tyres are the whole point
   const FZ=1.00,  RZ=-0.95;
@@ -7252,63 +7251,64 @@ function bodyMonsterTruck(b,M){
     color:SRGB(0xFFF6E2),emissive:SRGB(0xFFEBC4),emissiveIntensity:0.9,roughness:0.14,metalness:0.1});
   const T=(a,c,r,mat,seg)=>tubeTo(b,a,c,r,mat,seg);
 
-  /* a short cab-and-bed shell, its floor riding at the chassis rail rather
-     than down near the axles — everything below this line is chassis and
-     tyre, in the open, not bodywork */
+  /* a short cab-and-bed shell, its floor riding above the tyres rather than
+     between them — the whole point of the redesign below: a real one's
+     body sits on top of what carries it, not nested down inside the arc
+     of its own wheels */
   const shell=new THREE.Mesh(loft([
-    {z: 1.55,w:0.360,y0:1.150,y1:1.300,n:2.4},   // blunt, rounded nose
-    {z: 1.25,w:0.680,y0:1.090,y1:1.410,n:3.2},   // hood widening out
-    {z: 0.90,w:0.760,y0:1.060,y1:1.460,n:3.6},   // cowl
-    {z: 0.50,w:0.750,y0:1.050,y1:1.480,n:3.6},   // cab, front doors
-    {z: 0.05,w:0.730,y0:1.050,y1:1.480,n:3.6},   // cab, rear doors
-    {z:-0.40,w:0.710,y0:1.080,y1:1.360,n:3.2},   // behind the cab, into the bed
-    {z:-0.85,w:0.740,y0:1.060,y1:1.300,n:3.2},   // bed sides
-    {z:-1.25,w:0.480,y0:1.060,y1:1.260,n:2.2}    // tailgate, rounded off
+    {z: 1.55,w:0.360,y0:1.750,y1:1.900,n:2.4},   // blunt, rounded nose
+    {z: 1.25,w:0.680,y0:1.690,y1:2.010,n:3.2},   // hood widening out
+    {z: 0.90,w:0.760,y0:1.660,y1:2.060,n:3.6},   // cowl
+    {z: 0.50,w:0.750,y0:1.650,y1:2.080,n:3.6},   // cab, front doors
+    {z: 0.05,w:0.730,y0:1.650,y1:2.080,n:3.6},   // cab, rear doors
+    {z:-0.40,w:0.710,y0:1.680,y1:1.960,n:3.2},   // behind the cab, into the bed
+    {z:-0.85,w:0.740,y0:1.660,y1:1.900,n:3.2},   // bed sides
+    {z:-1.25,w:0.480,y0:1.660,y1:1.860,n:2.2}    // tailgate, rounded off
   ],24),M.paint);
   shell.castShadow=true; b.add(shell);
 
   /* the greenhouse, glazed the same way the GT's own cabin is: one lofted
      surface doubling as windscreen, side glass and rear glass at once */
   const cabin=new THREE.Mesh(loft([
-    {z: 0.85,w:0.520,y0:1.460,y1:1.520,n:3.0},
-    {z: 0.55,w:0.660,y0:1.480,y1:1.800,n:3.4},
-    {z: 0.10,w:0.700,y0:1.480,y1:1.860,n:3.6},
-    {z:-0.30,w:0.660,y0:1.460,y1:1.780,n:3.2},
-    {z:-0.55,w:0.500,y0:1.440,y1:1.600,n:2.6}
+    {z: 0.85,w:0.520,y0:2.060,y1:2.120,n:3.0},
+    {z: 0.55,w:0.660,y0:2.080,y1:2.400,n:3.4},
+    {z: 0.10,w:0.700,y0:2.080,y1:2.460,n:3.6},
+    {z:-0.30,w:0.660,y0:2.060,y1:2.380,n:3.2},
+    {z:-0.55,w:0.500,y0:2.040,y1:2.200,n:2.6}
   ],20),M.glass);
   cabin.castShadow=true; b.add(cabin);
 
   const roof=new THREE.Mesh(loft([
-    {z: 0.50,w:0.660,y0:1.820,y1:1.900,n:4.0},
-    {z:-0.05,w:0.680,y0:1.810,y1:1.920,n:4.2},
-    {z:-0.35,w:0.620,y0:1.800,y1:1.860,n:3.4}
+    {z: 0.50,w:0.660,y0:2.420,y1:2.500,n:4.0},
+    {z:-0.05,w:0.680,y0:2.410,y1:2.520,n:4.2},
+    {z:-0.35,w:0.620,y0:2.400,y1:2.460,n:3.4}
   ],16),M.paint);
   roof.castShadow=true; b.add(roof);
 
   /* the chassis rail each side runs the whole length at cab-floor height,
-     outboard of the shell rather than hidden under it — this is the part
-     of a tube-frame truck a fender would normally have covered up */
-  for(const sx of [-1,1]) T([sx*0.800,1.070,1.60],[sx*0.800,1.030,-1.55],0.048,frameM,10);
-  for(const z of [1.20,0.30,-0.65,-1.35]) T([-0.800,1.05,z],[0.800,1.05,z],0.040,frameM,8);
+     inboard of the tyre's own face — at the old, wider mark it would now
+     run straight through rubber that thick */
+  for(const sx of [-1,1]) T([sx*0.640,1.670,1.60],[sx*0.640,1.630,-1.55],0.048,frameM,10);
+  for(const z of [1.20,0.30,-0.65,-1.35]) T([-0.640,1.65,z],[0.640,1.65,z],0.040,frameM,8);
 
   /* the roll cage, rising off that rail and through the glass — the part
      of the truck a driver is actually sitting inside of */
   for(const z of [0.55,-0.15]) for(const sx of [-1,1])
-    T([sx*0.800,1.060,z],[sx*0.350,1.860,z],0.034,frameM,8);
-  T([-0.350,1.860,0.55],[0.350,1.860,0.55],0.030,frameM,8);
-  T([-0.350,1.860,-0.15],[0.350,1.860,-0.15],0.030,frameM,8);
-  T([-0.350,1.860,0.55],[-0.350,1.860,-0.15],0.030,frameM,8);
-  T([ 0.350,1.860,0.55],[ 0.350,1.860,-0.15],0.030,frameM,8);
+    T([sx*0.640,1.660,z],[sx*0.350,2.460,z],0.034,frameM,8);
+  T([-0.350,2.460,0.55],[0.350,2.460,0.55],0.030,frameM,8);
+  T([-0.350,2.460,-0.15],[0.350,2.460,-0.15],0.030,frameM,8);
+  T([-0.350,2.460,0.55],[-0.350,2.460,-0.15],0.030,frameM,8);
+  T([ 0.350,2.460,0.55],[ 0.350,2.460,-0.15],0.030,frameM,8);
   /* an A-pillar tube down to the nose of the rail, ahead of the glass */
-  for(const sx of [-1,1]) T([sx*0.350,1.820,0.85],[sx*0.800,1.070,1.35],0.028,frameM,8);
+  for(const sx of [-1,1]) T([sx*0.350,2.420,0.85],[sx*0.640,1.670,1.35],0.028,frameM,8);
 
   /* the front bumper, high on the rail the way everything else here is */
   const bumper=new THREE.Mesh(lens(0.860,0.140,0.10),bumperM);
-  bumper.position.set(0,1.080,1.640); bumper.rotation.x=Math.PI/2; bumper.castShadow=true; b.add(bumper);
-  for(const sx of [-0.720,0.720]) T([sx,1.320,1.640],[sx,1.080,1.640],0.026,bumperM,8);
+  bumper.position.set(0,1.680,1.640); bumper.rotation.x=Math.PI/2; bumper.castShadow=true; b.add(bumper);
+  for(const sx of [-0.720,0.720]) T([sx,1.920,1.640],[sx,1.680,1.640],0.026,bumperM,8);
   for(const sx of [-0.560,0.560]){
     const l=new THREE.Mesh(lens(0.190,0.160,0.06),lampM);
-    l.position.set(sx,1.240,1.680); b.add(l);
+    l.position.set(sx,1.840,1.680); b.add(l);
   }
 
   /* straight axles: one solid tube each end, hung well under the chassis
@@ -7322,19 +7322,21 @@ function bodyMonsterTruck(b,M){
 
   /* one coilover per corner, angled in from the rail to the axle end,
      wound in the one colour every one of these actually wears — and a
-     pair of links alongside it doing the locating a spring can't */
+     pair of links alongside it doing the locating a spring can't. Long
+     travel now: the rail sits well clear of the tyre, so the spring
+     genuinely spans from the axle up to it rather than stopping short. */
   for(const [sx,z,R] of [[-1,FZ,FR],[1,FZ,FR],[-1,RZ,RR],[1,RZ,RR]]){
-    const topX=sx*0.760, botX=sx*0.960;
-    T([topX,1.640,z],[botX,R*1.05,z],0.038,shockM,10);
-    coilSpring(b,(topX+botX)/2,z,R*1.02,1.580,0.095,5,0.014,coilM,64);
-    T([sx*0.800,1.060,z*0.55],[sx*FX*0.85,R,z],0.026,linkM,8);      // upper link
-    T([sx*0.800,0.980,z*0.55],[sx*FX*0.92,R*0.85,z],0.024,linkM,8); // lower link
+    const topX=sx*0.600, botX=sx*0.960;
+    T([topX,2.240,z],[botX,R*1.05,z],0.038,shockM,10);
+    coilSpring(b,(topX+botX)/2,z,R*1.02,2.180,0.095,9,0.014,coilM,64);
+    T([sx*0.640,1.660,z*0.55],[sx*FX*0.85,R,z],0.026,linkM,8);      // upper link
+    T([sx*0.640,1.580,z*0.55],[sx*FX*0.92,R*0.85,z],0.024,linkM,8); // lower link
   }
 
-  const tailMats=addLamps(b,null,{w:0.170,h:0.065,y:1.200,z:-1.640,x:[-0.420,0.420]});
+  const tailMats=addLamps(b,null,{w:0.170,h:0.065,y:1.800,z:-1.640,x:[-0.420,0.420]});
   return {tailMats,
     wheels:{race:true,
-            r:FR,tw:0.520, rR:RR,twR:0.520,
+            r:FR,tw:0.700, rR:RR,twR:0.700,
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
@@ -10678,7 +10680,7 @@ const CAR_BLURB={
   v12:"360 km/h — far and away the fastest thing here. 1,450 kg of it.",
   lmp1:"275+ km/h, 875 kg. Built to hold that pace for hours, not one lap.",
   golfkart:"A golf cart somebody has turned into a racing machine. Wider tyres, lower springs, more nerve than sense.",
-  monster:"Huge wheels, huger suspension. Nowhere near the fastest thing here — it was never built to be."
+  monster:"Huge wheels, huger suspension, and a real engine behind them."
 };
 const ITEM_BLURB={
   "title:trackday":"For the ones who turn up on a Tuesday and mean it.",
