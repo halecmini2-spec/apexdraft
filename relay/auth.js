@@ -183,7 +183,7 @@ const passLevel = (xp) => Math.min(50, Math.floor(Math.max(0, xp | 0) / 1000) + 
 /* Cars everyone can drive, and cars that have to be owned first (matching
    CAR_MODELS' test:true set in index.html). A claimed car id is only ever
    trusted once it's checked against one of these — never taken as given. */
-const TEST_CARS = new Set(["bike", "trike", "v12", "lmp1", "golfkart"]);
+const TEST_CARS = new Set(["bike", "trike", "v12", "lmp1", "golfkart", "monster"]);
 const carAllowedFor = (cars, carId) => {
   if (!TEST_CARS.has(carId)) return true;
   const owned = String(cars || "").split(",").map((s) => s.trim());

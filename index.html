@@ -2450,6 +2450,7 @@ body.daily .gar-arrow{display:none}
         <button class="gar-card test" data-car="v12"><canvas width="360" height="220"></canvas><b>V12 Monster</b><span><b class="big">360 km/h</b><i>Far and away the fastest thing here. 1,450 kg, heavy and stable.</i></span></button>
         <button class="gar-card test" data-car="lmp1"><canvas width="360" height="220"></canvas><b>LMP1 Prototype</b><span>275+ km/h, 875 kg. Built to hold that pace for hours, not one lap.</span></button>
         <button class="gar-card test" data-car="golfkart"><canvas width="360" height="220"></canvas><b>Golf Kart</b><span>A golf cart somebody has turned into a racing machine.</span></button>
+        <button class="gar-card test" data-car="monster"><canvas width="360" height="220"></canvas><b>Monster Truck</b><span>Huge wheels, huger suspension. Nowhere near the fastest thing here.</span></button>
         </div>
         <button class="gar-arrow" id="garNext" aria-label="The car after this one">›</button>
       </div>
@@ -2566,6 +2567,7 @@ body.daily .gar-arrow{display:none}
             <button class="chip test" data-car="v12">V12 Monster</button>
             <button class="chip test" data-car="lmp1">LMP1 Prototype</button>
             <button class="chip test" data-car="golfkart">Golf Kart</button>
+            <button class="chip test" data-car="monster">Monster Truck</button>
           </div>
           <button class="pbtn" id="pSound">Engine sound <span class="s on" id="soundState">On</span></button>
           <!-- A car's own music, made in the browser as it plays. The row
@@ -4615,7 +4617,8 @@ const CAR_MODELS=[
   /* the Apex Pass's own Level 30 — not for sale, only ever handed over by
      the pass itself, so it stays gated the same way the others are until
      there is a real way to grant it outside a shop purchase */
-  {id:"golfkart",label:"Golf Kart",  test:true, rarity:"epic"}
+  {id:"golfkart",label:"Golf Kart",  test:true, rarity:"epic"},
+  {id:"monster", label:"Monster Truck", test:true, rarity:"legendary"}
 ];
 const carRarity=k=>{ const m=CAR_MODELS.find(x=>x.id===k); return (m&&RARITY[m.rarity])||null; };
 
@@ -4962,7 +4965,13 @@ const CAR_PERF={
   /* Golf-cart proportions rather than a car's: nowhere near the top end
      of anything above it, but a short wheelbase and a wheel that answers
      straight away, so it is quick to place even if it is not quick. */
-  golfkart:{power:0.85, top:0.62, grip:1.05, turnin:1.05, front:0.95}
+  golfkart:{power:0.85, top:0.62, grip:1.05, turnin:1.05, front:0.95},
+  /* Huge wheels and a suspension to match: a fat contact patch gives it more
+     grip than its height has any right to, but the gearing behind those
+     tyres was never chosen for a straight, and the travel that lets it
+     shrug off a landing is the same travel that makes the nose slow to
+     answer and the body slow to settle once it has. */
+  monster:{power:0.90, top:0.42, grip:1.05, turnin:0.45, front:0.60}
 };
 const carPerf=k=>CAR_PERF[k]||CAR_PERF.gt;
 
@@ -5006,7 +5015,7 @@ function hitbox(kind){
    compressed scale the kart already sits on: a 165 kg bike is not a
    seventh of a GT to lean on, only a good deal less than one. */
 const CAR_MASS={gt:1.00, formula:0.78, yaris:0.92, kart:0.42,
-                bike:0.46, trike:0.54, v12:1.12, lmp1:0.86, golfkart:0.50};
+                bike:0.46, trike:0.54, v12:1.12, lmp1:0.86, golfkart:0.50, monster:1.25};
 const carMass=k=>CAR_MASS[k]||1;
 const openWheel=k=>k==="formula"||k==="kart"||k==="bike"||k==="trike";
 /* the circles of one car, in the world */
@@ -6251,6 +6260,18 @@ function tubeTo(b,a,c,r,mat,seg){
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
   m.castShadow=true; b.add(m); return m;
 }
+/* a wound coilover spring, standing on its own rather than borrowed from a
+   damper tube — wound about a vertical axis at (x,z), so it only reads right
+   on a strut that stands close to upright, which is every one that calls it */
+function coilSpring(b,x,z,y0,y1,rad,turns,th,mat,seg){
+  const h=new THREE.Curve();
+  h.getPoint=(t)=>{
+    const a=t*turns*TAU;
+    return new THREE.Vector3(x+Math.cos(a)*rad, y0+(y1-y0)*t, z+Math.sin(a)*rad);
+  };
+  const m=new THREE.Mesh(new THREE.TubeGeometry(h,Math.max(24,Math.round(turns*16)),th,6,false),mat);
+  m.castShadow=true; b.add(m); return m;
+}
 
 /* ---- SUPERVIKR X: a litre superbike, riderless ----
    Two wheels in line, so it is the one thing here with no track at all: it
@@ -7207,6 +7228,114 @@ function bodyGolfKart(b,M){
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
 
+/* ---- MONSTER TRUCK: a pickup cab standing on tyres of its own ----
+   Everything else here fits under the tyres it has; this one is built the
+   other way round — the tyres are the whole point, the cab and bed are just
+   what stands on them. Chassis rails run visible below the body sides, the
+   same way a real one's do once it has been lifted, and each corner gets a
+   spring you can actually see, wound about its own damper rather than
+   implied by one. Not the fastest thing here by a long way — what a tyre
+   this tall gears for is climbing over things, not outrunning them.
+   3.75 long, 2.30 across the tyres, 1.85 to the roof, on a 2.05 wheelbase. */
+function bodyMonsterTruck(b,M){
+  const FR=0.620, RR=0.620;                 // the tyres are the whole point
+  const FZ=1.05,  RZ=-1.00;
+  const FX=0.940, RX=0.940;
+  const frameM =new THREE.MeshStandardMaterial({color:SRGB(0x1B1E20),roughness:0.50,metalness:0.55});
+  const shockM =new THREE.MeshStandardMaterial({color:SRGB(0x101214),roughness:0.35,metalness:0.60});
+  const coilM  =new THREE.MeshStandardMaterial({color:SRGB(0xB9C0C4),roughness:0.24,metalness:0.90});
+  const bumperM=new THREE.MeshStandardMaterial({color:SRGB(0x15171A),roughness:0.55,metalness:0.20});
+  const lampM  =new THREE.MeshStandardMaterial({
+    color:SRGB(0xFFF6E2),emissive:SRGB(0xFFEBC4),emissiveIntensity:0.9,roughness:0.14,metalness:0.1});
+  const T=(a,c,r,mat,seg)=>tubeTo(b,a,c,r,mat,seg);
+
+  /* hood, cab sides and bed, one lofted shell riding well above the sills a
+     car would sit on — a lifted truck's rocker panel is another car's roofline */
+  const shell=new THREE.Mesh(loft([
+    {z: 1.78,w:0.480,y0:0.660,y1:0.840,n:2.4},   // blunt, rounded nose
+    {z: 1.45,w:0.900,y0:0.620,y1:0.960,n:3.4},   // hood widening out
+    {z: 1.05,w:0.980,y0:0.600,y1:0.980,n:3.8},   // over the front arches
+    {z: 0.55,w:0.960,y0:0.600,y1:1.000,n:3.8},   // cab, front doors
+    {z: 0.00,w:0.940,y0:0.600,y1:1.000,n:3.8},   // cab, rear doors
+    {z:-0.45,w:0.920,y0:0.620,y1:0.900,n:3.4},   // behind the cab, into the bed
+    {z:-1.05,w:0.980,y0:0.600,y1:0.840,n:3.6},   // over the rear arches
+    {z:-1.55,w:0.920,y0:0.580,y1:0.800,n:2.8},   // bed sides
+    {z:-1.95,w:0.640,y0:0.580,y1:0.780,n:2.0}    // tailgate, rounded off
+  ],26),M.paint);
+  shell.castShadow=true; b.add(shell);
+
+  /* the greenhouse, glazed the same way the GT's own cabin is: one lofted
+     surface doubling as windscreen, side glass and rear glass at once */
+  const cabin=new THREE.Mesh(loft([
+    {z: 1.00,w:0.660,y0:0.980,y1:1.050,n:3.0},
+    {z: 0.65,w:0.860,y0:1.000,y1:1.420,n:3.6},
+    {z: 0.15,w:0.900,y0:1.000,y1:1.500,n:3.8},
+    {z:-0.20,w:0.880,y0:1.000,y1:1.480,n:3.6},
+    {z:-0.48,w:0.700,y0:1.000,y1:1.280,n:3.0}
+  ],20),M.glass);
+  cabin.castShadow=true; b.add(cabin);
+
+  const roof=new THREE.Mesh(loft([
+    {z: 0.52,w:0.860,y0:1.470,y1:1.540,n:4.0},
+    {z:-0.02,w:0.880,y0:1.460,y1:1.560,n:4.2},
+    {z:-0.46,w:0.820,y0:1.440,y1:1.500,n:3.6}
+  ],18),M.paint);
+  roof.castShadow=true; b.add(roof);
+
+  /* a ladder frame standing proud below the body sides — two rails and
+     three crossmembers, the one thing that says "lifted" before the tyres
+     do, because it is the part that used to be hidden and now is not */
+  for(const sx of [-1,1]) T([sx*0.52,0.520,1.35],[sx*0.52,0.500,-1.95],0.055,frameM,10);
+  for(const z of [1.10,0.05,-1.35]) T([-0.52,0.510,z],[0.52,0.510,z],0.045,frameM,8);
+
+  /* the front bumper and a pair of bull-bar guards ahead of it */
+  const bumper=new THREE.Mesh(lens(0.940,0.150,0.10),bumperM);
+  bumper.position.set(0,0.560,1.560); bumper.rotation.x=Math.PI/2; bumper.castShadow=true; b.add(bumper);
+  for(const sx of [-0.640,0.640]) T([sx,0.900,1.560],[sx,0.560,1.560],0.028,bumperM,8);
+  for(const sx of [-0.780,0.780]){
+    const l=new THREE.Mesh(lens(0.200,0.170,0.06),lampM);
+    l.position.set(sx,0.780,1.700); b.add(l);
+  }
+
+  /* a roll hoop over the bed, braced back to the tailgate — the classic
+     silhouette behind any pickup cab that has been built to go racing */
+  for(const sx of [-1,1]){
+    T([sx*0.720,0.900,-0.520],[sx*0.720,1.520,-0.520],0.032,frameM,8);
+    T([sx*0.720,1.100,-0.960],[sx*0.720,0.680,-1.780],0.024,frameM,8);
+  }
+  T([-0.720,1.520,-0.520],[0.720,1.520,-0.520],0.030,frameM,8);
+
+  /* a light bar along the front of the roof */
+  const bar=new THREE.Mesh(new THREE.BoxGeometry(0.760,0.060,0.060),frameM);
+  bar.position.set(0,1.560,0.960); bar.castShadow=true; b.add(bar);
+  for(let i=0;i<5;i++){
+    const l=new THREE.Mesh(lens(0.090,0.050,0.05),lampM);
+    l.position.set(-0.300+i*0.150,1.560,0.995); b.add(l);
+  }
+
+  /* four coilover shocks, each spring wound about its own damper, standing
+     as close to upright as the corner they are bolted to allows */
+  /* mounted well inboard of the tyre's own face — at the wheel's own x this
+     would stand inside the rim rather than beside it */
+  for(const [sx,z] of [[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]){
+    const x=sx*0.640;
+    T([x,1.150,z],[x,0.360,z],0.040,shockM,10);
+    coilSpring(b,x,z,0.400,1.100,0.082,5,0.013,coilM,64);
+    /* a lower link out to the hub, so the shock is not floating with
+       nothing tying the axle to the chassis */
+    T([sx*0.52,0.510,z*0.55],[sx*FX,0.360,z],0.030,frameM,8);
+  }
+
+  addFenders(b,M,FZ,FR,1.020,FX,0.660);
+  addFenders(b,M,RZ,RR,0.980,RX,0.640);
+
+  const tailMats=addLamps(b,null,{w:0.180,h:0.070,y:0.660,z:-2.000,x:[-0.460,0.460]});
+  return {tailMats,
+    wheels:{race:true,
+            r:FR,tw:0.460, rR:RR,twR:0.460,
+            pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
+}
+
 function buildCar(bodyColor,kind,kit){
   const g=new THREE.Group();
   const b=new THREE.Group();
@@ -7222,7 +7351,8 @@ function buildCar(bodyColor,kind,kit){
             :kind==="trike"  ?bodyTrike
             :kind==="v12"    ?bodyV12
             :kind==="lmp1"   ?bodyLMP1
-            :kind==="golfkart"?bodyGolfKart:bodyGT;
+            :kind==="golfkart"?bodyGolfKart
+            :kind==="monster"?bodyMonsterTruck:bodyGT;
   const spec=make(b,M);
   g.userData.body=b;
   g.userData.wheels=buildWheels(g,M,spec.wheels);
@@ -8448,6 +8578,7 @@ const ENGINE={
   v12:    {pitch:1.52, sub:0.03, hi:0.55, cut:1.50, gears:7}, // even, high and smooth
   lmp1:   {pitch:1.10, sub:0.24, hi:0.26, cut:1.15, gears:7}, // a turbo hybrid, closed in by the bodywork
   golfkart:{pitch:0.98, sub:0.20, hi:0.05, cut:0.70, gears:2}, // small, modest, never far from idle
+  monster:{pitch:0.60, sub:0.80, hi:0.06, cut:0.82, gears:3}, // a big-block lump, all torque and no rev
 };
 const engineVoice=k=>ENGINE[k]||ENGINE.gt;
 
@@ -10544,7 +10675,8 @@ const CAR_BLURB={
   trike:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back.",
   v12:"360 km/h — far and away the fastest thing here. 1,450 kg of it.",
   lmp1:"275+ km/h, 875 kg. Built to hold that pace for hours, not one lap.",
-  golfkart:"A golf cart somebody has turned into a racing machine. Wider tyres, lower springs, more nerve than sense."
+  golfkart:"A golf cart somebody has turned into a racing machine. Wider tyres, lower springs, more nerve than sense.",
+  monster:"Huge wheels, huger suspension. Nowhere near the fastest thing here — it was never built to be."
 };
 const ITEM_BLURB={
   "title:trackday":"For the ones who turn up on a Tuesday and mean it.",

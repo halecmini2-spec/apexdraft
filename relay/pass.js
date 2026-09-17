@@ -61,7 +61,7 @@ const ITEM_POOL = [
   ["badge", "champion", "legendary"],
   // the cars being tried out — the only ones a pack is ever allowed to give
   ["car", "bike", "epic"], ["car", "trike", "epic"], ["car", "v12", "mythic"],
-  ["car", "lmp1", "legendary"], ["car", "golfkart", "epic"],
+  ["car", "lmp1", "legendary"], ["car", "golfkart", "epic"], ["car", "monster", "legendary"],
 ];
 const poolOf = (rarity) => ITEM_POOL.filter((x) => x[2] === rarity);
 
