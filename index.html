@@ -10619,6 +10619,11 @@ const SHOP_CARS=[
   {id:"trike",price:0.75, blurb:"240+ km/h, 210 kg. Three wheels and a rocket. Fire out the back."},
   {id:"v12",  price:1.50, blurb:"360 km/h — far and away the fastest thing here. 1,450 kg of it."}
 ];
+/* All three, for less than buying them one at a time (75p+75p+150p=£3.00
+   apart, £2.89 together) — matches relay/checkout.js's own BUNDLES entry,
+   which is what actually charges and grants it; this is only the shelf. */
+const SHOP_BUNDLE={id:"bundle3", price:2.89, cars:["bike","trike","v12"],
+  blurb:"Superbike X, Rocket Trike and V12 Monster, together — cheaper than buying them one at a time."};
 const SHOP_PACKS=[
   {name:"Starter pack",  blurb:"A car, a handful of coins and a colour or two."},
   {name:"Racer pack",    blurb:"More of the same, and something that isn't sold on its own."},
@@ -10792,7 +10797,18 @@ function shopSay(t){ $("shSaid").textContent=t||""; }
 function shopCarsUI(){
   const mine=myCars();
   for(const b of document.querySelectorAll("#shCars .sh-card")){
-    const owned=mine.indexOf(b.dataset.car)>=0, btn=b.querySelector(".sh-buy button");
+    const btn=b.querySelector(".sh-buy button");
+    if(b.dataset.car===SHOP_BUNDLE.id){
+      /* Three cars, three states: none of them yet, all of them already,
+         or some of them — bought some other way, or one at a time — where
+         paying the bundle price again would only be buying twice. */
+      const has=SHOP_BUNDLE.cars.filter(c=>mine.indexOf(c)>=0).length;
+      const owned=has===SHOP_BUNDLE.cars.length, partial=has>0&&!owned;
+      b.classList.toggle("owned",owned);
+      if(btn){ btn.disabled=owned||partial; btn.textContent=owned?"Owned":partial?"Already have one":"Buy"; }
+      continue;
+    }
+    const owned=mine.indexOf(b.dataset.car)>=0;
     b.classList.toggle("owned",owned);
     if(!btn)continue;
     btn.disabled=owned; btn.textContent=owned?"Owned":"Buy";
@@ -10802,7 +10818,9 @@ function shopCarsUI(){
    is — the relay prices it again from its own table. This only starts the
    checkout and hands the tab to Stripe; nothing here marks a car bought. */
 async function buyCar(carId,btn){
-  if(myCars().indexOf(carId)>=0)return;
+  if(carId===SHOP_BUNDLE.id){
+    if(SHOP_BUNDLE.cars.every(c=>myCars().indexOf(c)>=0))return;
+  } else if(myCars().indexOf(carId)>=0)return;
   if(!acctIn()){ shopSay("Sign in first, then come back and buy it."); AU_MODE="in"; showAuth(true); return; }
   /* Real money, no way back to the account if it's forgotten — an email
      is asked for before this, not after. */
@@ -10842,6 +10860,17 @@ function shopBuild(){
       b.querySelector("button").addEventListener("click",(e)=>buyCar(it.id,e.currentTarget));
       cars.appendChild(b);
     }
+    /* No picture of its own — three cars don't fit in one canvas — so this
+       one leans on its price and its list of names instead, the same way
+       a pack card (below) already does without a car to draw. */
+    const bb=document.createElement("div");
+    bb.className="sh-card bundle"; bb.dataset.car=SHOP_BUNDLE.id;
+    bb.innerHTML='<em class="rar">Bundle</em><b>All three</b><span></span>'+
+      '<div class="sh-buy"><i></i><button class="chip go">Buy</button></div>';
+    bb.querySelector("span").textContent=SHOP_BUNDLE.blurb;
+    bb.querySelector(".sh-buy i").textContent=money(SHOP_BUNDLE.price);
+    bb.querySelector("button").addEventListener("click",(e)=>buyCar(SHOP_BUNDLE.id,e.currentTarget));
+    cars.appendChild(bb);
   }
   shopCarsUI();
   /* packs and coins stay behind the same gate the rest of what's still

@@ -24,6 +24,14 @@ const CARS = {
   trike:{ name: "Rocket Trike",    pence: 75   },  // epic
   v12:  { name: "V12 Monster",     pence: 150  },  // mythic
 };
+/* All three, for less than buying them one at a time — 75p+75p+150p=£3.00
+   apart, £2.89 together. Priced and granted here exactly like a single
+   car, just against a list of them instead of one — fulfil() and the
+   session route below both read either table off the same id, the id
+   just tells them which kind of thing it is. */
+const BUNDLES = {
+  bundle3: { name: "Superbike X, Rocket Trike and V12 Monster — bundle", pence: 289, cars: ["bike", "trike", "v12"] },
+};
 
 /* Where the tab comes back to. Render sets this on the relay itself if it's
    ever put behind a custom domain; until then the static site's own address
@@ -68,14 +76,17 @@ function makeCheckout(store, userFor) {
      against what the account already owns before addCar runs, not
      after, so the settlement that lost the race sees it as already
      theirs and logs nothing. */
-  async function fulfil(userId, carId) {
-    const car = CARS[carId];
-    if (!car) return false;
+  async function fulfil(userId, itemId) {
+    const bundle = BUNDLES[itemId];
+    const cars = bundle ? bundle.cars : (CARS[itemId] ? [itemId] : null);
+    if (!cars) return false;
     const user = await store.userById(userId);
-    const already = user && String(user.cars || "").split(",").map((s) => s.trim()).includes(carId);
-    await store.addCar(userId, carId);
-    if (!already) {
-      try { await store.logPurchase(userId, (user && user.name) || "?", carId, car.pence); }
+    const already = user ? String(user.cars || "").split(",").map((s) => s.trim()) : [];
+    const gained = cars.some((c) => !already.includes(c));
+    for (const c of cars) await store.addCar(userId, c);
+    if (gained) {
+      const pence = bundle ? bundle.pence : CARS[itemId].pence;
+      try { await store.logPurchase(userId, (user && user.name) || "?", itemId, pence); }
       catch (e) { console.error("logPurchase:", e && e.message); }
     }
     return true;
@@ -121,12 +132,23 @@ function makeCheckout(store, userFor) {
       } catch (e) { return json(res, 400, { error: "That request didn't make sense." }), true; }
 
       const carId = String(body.carId || "");
-      const car = CARS[carId];
-      if (!car) return json(res, 400, { error: "That isn't a car the shop sells." }), true;
+      const bundle = BUNDLES[carId];
+      const item = bundle || CARS[carId];
+      if (!item) return json(res, 400, { error: "That isn't something the shop sells." }), true;
 
       const owned = String(user.cars || "").split(",").map((s) => s.trim());
-      if (owned.includes(carId))
+      if (bundle) {
+        if (bundle.cars.every((c) => owned.includes(c)))
+          return json(res, 409, { error: "You already own all three." }), true;
+        /* Paying the bundle price again for cars already had, however they
+           were had, buys the same car twice — the shelf itself keeps this
+           from ever being clicked, but the price is only ever actually set
+           here, so it is checked here too. */
+        if (bundle.cars.some((c) => owned.includes(c)))
+          return json(res, 409, { error: "You already own one of these — buy what's missing on its own instead." }), true;
+      } else if (owned.includes(carId)) {
         return json(res, 409, { error: "That one's already yours." }), true;
+      }
 
       try {
         const session = await stripe.checkout.sessions.create({
@@ -144,7 +166,7 @@ function makeCheckout(store, userFor) {
              all once this is off. */
           managed_payments: { enabled: false },
           line_items: [{
-            price_data: { currency: "gbp", product_data: { name: car.name }, unit_amount: car.pence },
+            price_data: { currency: "gbp", product_data: { name: item.name }, unit_amount: item.pence },
             quantity: 1,
           }],
           success_url: GAME_ORIGIN + "/?checkout=success&session_id={CHECKOUT_SESSION_ID}",
