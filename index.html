@@ -5000,8 +5000,16 @@ function carAllowed(k){
    Coins, XP and level ride along with the account itself (ACCT.user), the
    same way cars do; what is actually owned and still unopened is heavier
    and asked for on its own, only once the pass screen or the kit drawer
-   is actually open. */
-const PASS={loaded:false,coins:0,xp:0,level:1,season:"s1",claimed:[],owned:[],packs:[],packOdds:null};
+   is actually open.
+
+   Seeded from whatever passRefresh() last actually heard back, the same
+   way the account itself starts from a cached copy rather than blank —
+   without this, every load showed level 1 and no coins for however long
+   the fetch took, then jumped to the real numbers, which is what read as
+   "slower than everything else": it was not slower, it was the one thing
+   here with nothing to show while it worked. */
+const PASS=Object.assign({loaded:false,coins:0,xp:0,level:1,season:"s1",claimed:[],owned:[],packs:[],packOdds:null},
+  store.get("ad.pass",null)||{});
 function myItems(){ return (acctIn()&&Array.isArray(PASS.owned))?PASS.owned:[]; }
 /* Whether this account can put a given cosmetic on — the six plain colours
    and "nothing on" are free, same as they always were; everything else has
@@ -10694,6 +10702,11 @@ async function passRefresh(){
     const r=await api("/api/pass/state",{token:ACCT.token});
     PASS.loaded=true; PASS.coins=r.coins; PASS.xp=r.xp; PASS.level=r.level; PASS.season=r.season;
     PASS.claimed=r.claimed||[]; PASS.owned=r.owned||[]; PASS.packs=r.packs||[]; PASS.packOdds=r.packOdds||null;
+    /* so the next load starts from this rather than level 1 and nothing
+       owned again — packOdds excluded, it is fixed per rarity rather
+       than per account and not worth the bytes of saying so every time */
+    store.set("ad.pass",{coins:PASS.coins,xp:PASS.xp,level:PASS.level,season:PASS.season,
+      claimed:PASS.claimed,owned:PASS.owned,packs:PASS.packs});
     passUI();
   }catch(e){ /* the pass is not worth interrupting anything over */ }
 }
@@ -10818,7 +10831,10 @@ function passReportXp(event,key,amount,caption){
    relay already checks or rate-limits for its own reasons
    (relay/quests.js), so this screen only ever asks for a snapshot and
    claims what has already been earned server-side. */
-const QUESTS={loaded:false,tab:"daily",tabs:{daily:[],weekly:[],seasonal:[]}};
+/* Seeded from the last snapshot actually heard back, same as PASS just
+   above and for the same reason — otherwise every load showed three
+   empty tabs for however long the fetch took. */
+const QUESTS={loaded:false,tab:"daily",tabs:store.get("ad.quests",null)||{daily:[],weekly:[],seasonal:[]}};
 function questsUI(){
   const card=$("hmQuests"); if(card) card.hidden=!acctIn();
   if(!acctIn())return;
@@ -10852,6 +10868,7 @@ async function questsRefresh(){
   try{
     const r=await api("/api/quests/state",{token:ACCT.token});
     QUESTS.loaded=true; QUESTS.tabs=r.tabs||{daily:[],weekly:[],seasonal:[]};
+    store.set("ad.quests",QUESTS.tabs);
     questsUI();
   }catch(e){ /* not worth interrupting anything over */ }
 }
