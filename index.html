@@ -600,6 +600,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .home-card.red i{background:var(--party)} .home-card.red:hover{border-color:var(--party);background:var(--party-glow)}
 .home-card.purple i{background:var(--purple)} .home-card.purple:hover{border-color:var(--purple);background:rgba(178,79,232,.12)}
 .home-card.green i{background:var(--green)} .home-card.green:hover{border-color:var(--green);background:rgba(46,212,122,.12)}
+.home-card.gold i{background:#E8B32A} .home-card.gold:hover{border-color:#E8B32A;background:rgba(232,179,42,.12)}
 .home-card.grey{cursor:default;opacity:.6} .home-card.grey:hover{transform:none;border-color:var(--line)}
 .home-card.static{cursor:default} .home-card.static:hover{transform:none}
 .home-links{justify-content:center}
@@ -637,7 +638,7 @@ body.mudoor .lb-party,body.mudoor #btnTracks{display:none!important}
 @media (pointer:coarse) and (max-height:500px){
   :root{--cutL:max(var(--sal),34px);--cutR:max(var(--sar),34px)}
   #lobbybar{padding-left:calc(10px + var(--cutL));padding-right:calc(10px + var(--cutR))}
-  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#raceSet,#auth,#shop,#questsScreen{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
+  #home,#multiScreen,#dailyScreen,#aboutScreen,#tracks,#adminScreen,#garage,#raceSet,#auth,#shop,#questsScreen,#packsScreen{padding-left:calc(12px + var(--cutL));padding-right:calc(12px + var(--cutR))}
 }
 body:not([data-app="home"]) #btnAbout,body:not([data-app="home"]) #btnAccount,body:not([data-app="home"]) #btnAdmin{display:none}
 body[data-app="daily"] #btnTracks{display:none}
@@ -761,6 +762,8 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .pass-premium{margin-top:26px;padding:14px;border:1px dashed var(--line);border-radius:3px;color:var(--faint);
   display:flex;gap:10px;align-items:baseline;letter-spacing:.08em}
 .pass-premium b{color:var(--dim)}
+/* ---- packs ---- */
+#packsScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 /* ---- quests ---- */
 #questsScreen{overflow-y:auto;padding:calc(20px + var(--sat)) calc(20px + var(--sar)) calc(24px + var(--sab)) calc(20px + var(--sal))}
 .quest-card{background:var(--panel2);border:1px solid var(--line);border-radius:4px;
@@ -1982,6 +1985,7 @@ body.daily .gar-arrow{display:none}
              signed-in account otherwise. -->
         <button class="home-card purple" id="hmPass" hidden><i></i><b>Apex Pass</b><span id="hmPassSub">Season 1 — Free track.</span></button>
         <button class="home-card green" id="hmQuests" hidden><i></i><b>Quests</b><span id="hmQuestsSub">Daily, weekly and seasonal challenges.</span></button>
+        <button class="home-card gold" id="hmPacks" hidden><i></i><b>Packs</b><span id="hmPacksSub">Nothing unopened right now.</span></button>
       </div>
       <!-- The account, sold rather than mentioned: it is free and takes a
            moment, and it is what puts your name on your car and your laps
@@ -2081,6 +2085,27 @@ body.daily .gar-arrow{display:none}
       <div class="pass-track-wrap">
         <div class="pass-track" id="passTrack"></div>
       </div>
+      <div class="pass-premium">
+        <b>PREMIUM</b><span>— COMING SOON</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Packs: won but not yet opened, its own tab rather than a section at
+       the bottom of the pass — passUI() still keeps #passPacks filled in
+       every time it refreshes (a claim, a level up, opening one of these
+       itself), wherever on the page that element actually lives. -->
+  <section id="packsScreen" class="screen" hidden>
+    <div class="tk-wrap">
+      <div class="tk-head pass-head">
+        <div>
+          <h1 class="auth-brand">Packs</h1>
+          <p class="auth-sub">Won, not yet opened — the odds are on each one</p>
+        </div>
+        <div class="chips">
+          <button class="chip" id="pkBack">Back</button>
+        </div>
+      </div>
       <!-- cosmo38 only: drops one real, unopened pack of the chosen rarity
            onto the shelf below, so the actual PACK_ODDS can be tried
            through the real open flow rather than only via Level 20/40 -->
@@ -2091,12 +2116,8 @@ body.daily .gar-arrow{display:none}
         <button class="chip" data-rarity="legendary">Legendary</button>
         <button class="chip" data-rarity="mythic">Mythic</button>
       </div>
-      <h2 class="sh-h">Packs <span>Won, not yet opened — the odds are on each one</span></h2>
       <div class="sh-grid" id="passPacks"></div>
       <p class="sh-note" id="passPacksNote">Nothing unopened right now.</p>
-      <div class="pass-premium">
-        <b>PREMIUM</b><span>— COMING SOON</span>
-      </div>
     </div>
   </section>
 
@@ -10492,8 +10513,8 @@ function baseShow(v){
   else { $("home").hidden=true; $("editor").hidden=!v; if(v)fitPad(); }
 }
 function closeScreens(){
-  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet","shop","passScreen","questsScreen"]) $(id).hidden=true;
-  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting","shopping","passing","questing"]) document.body.classList.remove(c);
+  for(const id of ["auth","tracks","adminScreen","aboutScreen","dailyScreen","garage","multiScreen","raceSet","shop","passScreen","questsScreen","packsScreen"]) $(id).hidden=true;
+  for(const c of ["garaging","dailying","abouting","authing","shelving","admining","mudoor","racesetting","shopping","passing","questing","packing"]) document.body.classList.remove(c);
 }
 
 /* ---- the Apex Pass ----
@@ -10666,6 +10687,7 @@ function passPacksUI(){
    as level 1, nothing claimed) */
 function passUI(){
   const card=$("hmPass"); if(card) card.hidden=!acctIn();
+  const pcard=$("hmPacks"); if(pcard) pcard.hidden=!acctIn();
   if(!acctIn())return;
   /* the grant-all shortcut and the rarity-pack test row both stay
      cosmo38-only even though the rest of the pass is open to everyone now
@@ -10695,6 +10717,8 @@ function passUI(){
   kitUI();
   shopUI();
   $("hmPassSub").textContent="Season 1 — Level "+PASS.level+" / 50, "+PASS.coins.toLocaleString()+" coins";
+  const packN=(PASS.packs||[]).length;
+  $("hmPacksSub").textContent=packN?(packN+(packN===1?" pack":" packs")+" waiting to be opened"):"Nothing unopened right now.";
 }
 async function passRefresh(){
   if(!acctIn()){ PASS.loaded=false; passUI(); return; }
@@ -10894,6 +10918,17 @@ function showQuests(on){
   if(!on) fitPad();
 }
 function goQuests(){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showQuests(true); }
+function showPacks(on){
+  if(on&&!acctIn())return;
+  /* the shelf itself is passUI()'s to fill in, and passRefresh() is what
+     actually calls that — freshest on opening, rather than showing
+     whatever was last drawn there from some earlier refresh */
+  if(on) passRefresh();
+  $("packsScreen").hidden=!on; baseShow(!on);
+  document.body.classList.toggle("packing",on);
+  if(!on) fitPad();
+}
+function goPacks(){ closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showPacks(true); }
 
 /* ---- the shop ----
    The cars are the three still being tried out, priced. Rarity comes off
@@ -11555,6 +11590,8 @@ $("passBack").addEventListener("click",goHome);
 $("passGrantAll").addEventListener("click",passGrantAll);
 $("hmQuests").addEventListener("click",goQuests);
 $("qBack").addEventListener("click",goHome);
+$("hmPacks").addEventListener("click",goPacks);
+$("pkBack").addEventListener("click",goHome);
 for(const b of document.querySelectorAll("#qTabs .kit-tab"))
   b.addEventListener("click",()=>{ QUESTS.tab=b.dataset.tab; questsUI(); });
 for(const b of document.querySelectorAll("#passTestPacks button[data-rarity]"))
