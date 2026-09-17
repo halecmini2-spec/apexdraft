@@ -9597,6 +9597,66 @@ function glowArt(cv,colourHex){
   x.beginPath(); x.ellipse(cx,cy,r,r*0.42,0,0,Math.PI*2); x.fill();
   x.globalAlpha=1;
 }
+/* A tin of paint, not a car wearing it — the same idea as the wheel on its
+   own for rims: the one part of the kit that IS the reward, close up. */
+function paintBucketArt(cv,colourHex){
+  const x=cv.getContext("2d"), W=cv.width, H=cv.height;
+  x.clearRect(0,0,W,H);
+  x.fillStyle="#12171A"; x.fillRect(0,0,W,H);
+  const cx=W/2, topY=H*0.34, baseY=H*0.82, topW=H*0.52, botW=H*0.40, rimRy=H*0.048;
+  /* the tin itself, tapered narrower at the base like a real one */
+  const metal=x.createLinearGradient(cx-topW/2,0,cx+topW/2,0);
+  metal.addColorStop(0,"#7C8286"); metal.addColorStop(0.5,"#DDE3E4"); metal.addColorStop(1,"#6E7478");
+  x.fillStyle=metal;
+  x.beginPath();
+  x.moveTo(cx-topW/2,topY); x.lineTo(cx+topW/2,topY);
+  x.lineTo(cx+botW/2,baseY); x.lineTo(cx-botW/2,baseY);
+  x.closePath(); x.fill();
+  x.strokeStyle="rgba(8,10,11,.4)"; x.lineWidth=Math.max(1,W*0.004); x.stroke();
+  /* a label band, stamped rather than left blank */
+  x.fillStyle="rgba(8,10,11,.24)";
+  x.fillRect(cx-botW*0.32,baseY-H*0.20,botW*0.64,H*0.09);
+  /* drips of the actual colour, running down from the rim */
+  x.fillStyle=colourHex;
+  for(const dx of [-topW*0.24,topW*0.12]){
+    x.beginPath();
+    x.moveTo(cx+dx-7,topY+3);
+    x.quadraticCurveTo(cx+dx-7,baseY*0.58,cx+dx,baseY*0.66);
+    x.quadraticCurveTo(cx+dx+7,baseY*0.58,cx+dx+7,topY+3);
+    x.closePath(); x.fill();
+  }
+  /* the open top, filled with the paint itself */
+  const paint=x.createRadialGradient(cx,topY,2,cx,topY,topW/2);
+  paint.addColorStop(0,shadeHex(colourHex,0.28)); paint.addColorStop(0.6,colourHex); paint.addColorStop(1,shadeHex(colourHex,-0.22));
+  x.fillStyle=paint;
+  x.beginPath(); x.ellipse(cx,topY,topW/2,rimRy,0,0,Math.PI*2); x.fill();
+  x.strokeStyle="rgba(255,255,255,.55)"; x.lineWidth=Math.max(1,W*0.006);
+  x.beginPath(); x.ellipse(cx,topY,topW/2*0.96,rimRy*0.88,0,0,Math.PI*2); x.stroke();
+  /* the wire handle, standing clear above the rim */
+  x.strokeStyle="#54595C"; x.lineWidth=Math.max(2,W*0.011); x.lineCap="round";
+  x.beginPath(); x.moveTo(cx-topW*0.36,topY-1); x.quadraticCurveTo(cx,topY-H*0.22,cx+topW*0.36,topY-1); x.stroke();
+}
+/* Coins, the way a pile of them actually reads — overlapping discs rather
+   than one flat circle, so it says "money" and not "badge." */
+function coinArt(cv){
+  const x=cv.getContext("2d"), W=cv.width, H=cv.height;
+  x.clearRect(0,0,W,H);
+  x.fillStyle="#12171A"; x.fillRect(0,0,W,H);
+  const cx=W/2, cy=H*0.58, r=H*0.165, tilt=0.56;
+  const coin=(ox,oy,rr)=>{
+    const g=x.createLinearGradient(cx+ox-rr,cy+oy-rr*tilt,cx+ox+rr,cy+oy+rr*tilt);
+    g.addColorStop(0,"#FFEBAE"); g.addColorStop(0.5,"#E8B32A"); g.addColorStop(1,"#B07E1E");
+    x.fillStyle=g;
+    x.beginPath(); x.ellipse(cx+ox,cy+oy,rr,rr*tilt,0,0,Math.PI*2); x.fill();
+    x.strokeStyle="rgba(110,74,10,.6)"; x.lineWidth=Math.max(1,W*0.004); x.stroke();
+    x.strokeStyle="rgba(255,255,255,.4)"; x.lineWidth=Math.max(1,W*0.003);
+    x.beginPath(); x.ellipse(cx+ox,cy+oy,rr*0.72,rr*0.72*tilt,0,0,Math.PI*2); x.stroke();
+  };
+  coin(-r*0.95,r*0.60,r*0.85);
+  coin(r*0.80,r*0.66,r*0.80);
+  coin(-r*0.18,r*0.12,r*1.00);
+  coin(r*0.02,-r*0.58,r*0.92);
+}
 /* ---- the rail ----
    Pushed past the last car you get the first one, and there is no seam to
    see: rather than cloning the row and jumping between copies, the card at
@@ -10445,14 +10505,18 @@ function passReward(entry){
    title and a horn have nothing to look at, and the mystery car stays a
    mystery on purpose, so those five carry on with words alone. */
 function passHasPicture(entry){
-  return entry.kind==="pack"
+  return entry.kind==="pack"||entry.kind==="coins"
     || (entry.kind==="item"&&["car","paint","rims","glow"].indexOf(entry.slot)>=0);
 }
 function passRewardPicture(entry,cv){
+  if(entry.kind==="coins") return coinArt(cv);
   if(entry.kind==="pack") return packArt(cv,entry.packType);
   if(entry.slot==="car") return renderCarPreview(cv,entry.id,"#8FA3A0",null);
   if(entry.slot==="rims") return renderWheelPreview(cv,kitItem("rims",entry.id));
-  if(entry.slot==="paint") return renderCarPreview(cv,"gt","#8FA3A0",{paint:kitItem("paint",entry.id)});
+  /* a tin of the paint itself, not a car wearing it — the same reasoning
+     as rims showing a wheel rather than a whole car */
+  if(entry.slot==="paint"){ const it=kitItem("paint",entry.id);
+    return paintBucketArt(cv,it?paintPreviewColour(it):"#B9C2C8"); }
   if(entry.slot==="glow"){ const it=kitItem("glow",entry.id);
     return glowArt(cv,it?"#"+it.colour.toString(16).padStart(6,"0"):"#4A6A66"); }
 }
