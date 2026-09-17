@@ -3527,11 +3527,16 @@ function buildPitLane(T,TH){
   const span=clear+slots*step+pad;
   if(span>=N)return null;                    // too small a circuit for one
   const O=[hw+2.2,hw+2.5,hw+6.0], ST=O.length-1;
-  const cAsph=SRGB(TH.asphalt).multiplyScalar(0.88), cLine=SRGB(TH.line);
+  /* the same asphalt as the track itself, not a tint of its own — this is
+     meant to read as more of the one surface, not a second material laid
+     beside it */
+  const cAsph=SRGB(TH.asphalt), cLine=SRGB(TH.line);
   const rings=span+1, perRing=ST*2;
   const pos=new Float32Array(rings*perRing*3), col=new Float32Array(rings*perRing*3);
+  const uv=new Float32Array(rings*perRing*2);
   const idx=new Uint32Array(span*ST*6);
   const tmp=new THREE.Color();
+  const TILE=2.5;
   /* starting from the back of the lane and stepping the same way the
      track's own index does, so the winding matches buildRoad's — stepped
      the other way, the strip renders face-down and vanishes. */
@@ -3548,6 +3553,7 @@ function buildPitLane(T,TH){
         pos[vi*3+1]=T.Y[i]+sinB*o+0.01*cosB;      // a hair proud of the terrain
         pos[vi*3+2]=T.Z[i]+T.RZ[i]*o;
         col[vi*3]=tmp.r; col[vi*3+1]=tmp.g; col[vi*3+2]=tmp.b;
+        uv[vi*2]=o/TILE; uv[vi*2+1]=T.S[i]/TILE;
         vi++;
       }
     }
@@ -3561,10 +3567,14 @@ function buildPitLane(T,TH){
   const g=new THREE.BufferGeometry();
   g.setAttribute("position",new THREE.BufferAttribute(pos,3));
   g.setAttribute("color",new THREE.BufferAttribute(col,3));
+  g.setAttribute("uv",new THREE.BufferAttribute(uv,2));
   g.setIndex(new THREE.BufferAttribute(idx,1));
   g.computeVertexNormals();
+  const tex=surfaceTextures();
   const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
-    vertexColors:true, roughness:0.92, metalness:0.0, envMapIntensity:0.28
+    vertexColors:true, map:tex.albedo, normalMap:tex.normal,
+    normalScale:new THREE.Vector2(1.05,1.05),
+    roughness:0.92, metalness:0.0, envMapIntensity:0.28
   }));
   mesh.receiveShadow=true;
   return mesh;
@@ -4354,6 +4364,11 @@ function buildStreetLights(T,TH){
   const every=21;                                   // metres between lamps
   const n=Math.max(2,Math.floor(T.len/every));
   const off=T.halfW+3.4, H=8.4;
+  /* the same reach buildPitLane()/resetCar() give the pit lane, so a lamp
+     never lands standing over a car parked there — the lane sits on the
+     +1 side always, the last stretch of the lap before the line */
+  const spacing=T.len/T.N;
+  const pitLenM=(Math.max(1,Math.round(6/spacing))+8*Math.max(1,Math.round(8/spacing))+1)*spacing;
   const poleG=mergeGeos([
     {geo:new THREE.CylinderGeometry(0.16,0.22,H,6),color:0x2A2E33,
      matrix:new THREE.Matrix4().makeTranslation(0,H/2,0)},
@@ -4370,19 +4385,23 @@ function buildStreetLights(T,TH){
     new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false,fog:true}),n);
   const m=new THREE.Matrix4(), q=new THREE.Quaternion(), up=new THREE.Vector3(0,1,0);
   const pos=new THREE.Vector3(), one=new THREE.Vector3(1,1,1);
+  let placed=0;
   for(let i=0;i<n;i++){
     const s=i*T.len/n;
+    const side=(i%2)?1:-1;
+    if(side>0&&s>=T.len-pitLenM)continue;    // standing in the pit lane
     const u=s/(T.len/T.N); const j=Math.floor(u)%T.N, t=u-Math.floor(u);
     const k=(j+1)%T.N;
     const x=lerp(T.X[j],T.X[k],t), z=lerp(T.Z[j],T.Z[k],t);
     const rx=lerp(T.RX[j],T.RX[k],t), rz=lerp(T.RZ[j],T.RZ[k],t);
-    const side=(i%2)?1:-1;
     pos.set(x+rx*off*side, heightAt(T,x+rx*off*side,z+rz*off*side)-0.1, z+rz*off*side);
     /* the arm points at the road, whichever side the lamp is on */
     q.setFromAxisAngle(up,Math.atan2(-rx*side,-rz*side));
     m.compose(pos,q,one);
-    poles.setMatrixAt(i,m); heads.setMatrixAt(i,m);
+    poles.setMatrixAt(placed,m); heads.setMatrixAt(placed,m);
+    placed++;
   }
+  poles.count=placed; heads.count=placed;
   poles.instanceMatrix.needsUpdate=true; heads.instanceMatrix.needsUpdate=true;
   fitInstancedBounds(poles); fitInstancedBounds(heads);
   grp.add(poles); grp.add(heads);
@@ -11520,14 +11539,27 @@ for(const b of document.querySelectorAll("#passTestPacks button[data-rarity]"))
   b.addEventListener("click",()=>passTestPack(b.dataset.rarity,b));
 $("packX").addEventListener("click",packOverlayClose);
 $("pcClose").addEventListener("click",packOverlayClose);
-$("pcAgain").addEventListener("click",()=>{
+$("pcAgain").addEventListener("click",async()=>{
   if(PACK_LAST){
-    /* the real pack this reveal was of is already spent — offer whichever
-       real one is next off the shelf, if there is one, rather than ever
-       falling through to a free-roll nobody actually earned */
-    const next=(PASS.packs||[])[0];
-    if(next) passOpenPack(next);
-    else packOverlayClose();
+    /* the real pack this reveal was of is already spent — another of the
+       SAME rarity, if one is sat on the shelf, rather than whichever
+       happens to be first there regardless of what it actually is */
+    const type=PACK_LAST.pack_type;
+    const next=(PASS.packs||[]).find(p=>p.pack_type===type);
+    if(next){ passOpenPack(next); return; }
+    /* cosmo38 only: nothing of that rarity left owned, but the point of
+       the test row is trying the odds over and over, so this grants one
+       more the same way pressing its own button would rather than making
+       every repeat a separate click */
+    if(isTester()){
+      try{
+        await api("/api/pass/test/pack",{method:"POST",token:ACCT.token,body:{rarity:type}});
+        await passRefresh();
+        const fresh=(PASS.packs||[]).find(p=>p.pack_type===type);
+        if(fresh){ passOpenPack(fresh); return; }
+      }catch(e){}
+    }
+    packOverlayClose();
     return;
   }
   openPack();
