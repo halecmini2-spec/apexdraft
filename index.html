@@ -3510,6 +3510,66 @@ function mergeGeos(parts){
   return out;
 }
 
+/* ---- pit lane: an actual strip of tarmac, not just a spot on the grass ----
+   Runs alongside the main ribbon, over exactly the stretch resetCar()
+   stages pit spots across — same clearance behind the line, same spacing
+   between cars, eight of them deep — a few metres wide, with a painted
+   line down the edge nearest the circuit. Built the same way buildRoad()
+   is, a strip of quads between lateral offsets, just narrower, shorter,
+   and open-ended rather than a closed loop. */
+function buildPitLane(T,TH){
+  const N=T.N, hw=T.halfW, spacing=T.len/N;
+  /* has to match resetCar()'s own numbers, or the tarmac and the cars
+     parked on it part ways */
+  const clear=Math.max(1,Math.round(6/spacing));
+  const step=Math.max(1,Math.round(8/spacing));
+  const slots=8, pad=1;
+  const span=clear+slots*step+pad;
+  if(span>=N)return null;                    // too small a circuit for one
+  const O=[hw+2.2,hw+2.5,hw+6.0], ST=O.length-1;
+  const cAsph=SRGB(TH.asphalt).multiplyScalar(0.88), cLine=SRGB(TH.line);
+  const rings=span+1, perRing=ST*2;
+  const pos=new Float32Array(rings*perRing*3), col=new Float32Array(rings*perRing*3);
+  const idx=new Uint32Array(span*ST*6);
+  const tmp=new THREE.Color();
+  /* starting from the back of the lane and stepping the same way the
+     track's own index does, so the winding matches buildRoad's — stepped
+     the other way, the strip renders face-down and vanishes. */
+  const iStart=((0-clear-span)%N+N)%N;
+  let vi=0;
+  for(let r=0;r<rings;r++){
+    const i=(iStart+r)%N;
+    const sinB=Math.sin(T.B[i]), cosB=Math.cos(T.B[i]);
+    for(let k=0;k<ST;k++){
+      tmp.copy(k===0?cLine:cAsph);
+      for(let e=0;e<2;e++){
+        const o=O[k+e];
+        pos[vi*3]  =T.X[i]+T.RX[i]*o;
+        pos[vi*3+1]=T.Y[i]+sinB*o+0.01*cosB;      // a hair proud of the terrain
+        pos[vi*3+2]=T.Z[i]+T.RZ[i]*o;
+        col[vi*3]=tmp.r; col[vi*3+1]=tmp.g; col[vi*3+2]=tmp.b;
+        vi++;
+      }
+    }
+  }
+  let f=0;
+  for(let r=0;r<span;r++)for(let k=0;k<ST;k++){
+    const a=r*perRing+k*2, b=a+1, cI=(r+1)*perRing+k*2, d=cI+1;
+    idx[f++]=a; idx[f++]=b;  idx[f++]=cI;
+    idx[f++]=b; idx[f++]=d;  idx[f++]=cI;
+  }
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  g.setAttribute("color",new THREE.BufferAttribute(col,3));
+  g.setIndex(new THREE.BufferAttribute(idx,1));
+  g.computeVertexNormals();
+  const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({
+    vertexColors:true, roughness:0.92, metalness:0.0, envMapIntensity:0.28
+  }));
+  mesh.receiveShadow=true;
+  return mesh;
+}
+
 /* ---- road ribbon: asphalt, painted lines, kerbs, verges ---- */
 function buildRoad(T,TH){
   const N=T.N, hw=T.halfW;
@@ -7527,6 +7587,7 @@ function buildWorld(T){
   scene.add(sun); scene.add(sun.target);
 
   const road=buildRoad(T,TH); scene.add(road);
+  const pit=buildPitLane(T,TH); if(pit)scene.add(pit);
   const terrain=buildTerrain(T,TH); scene.add(terrain);
   const bar=buildBarriers(T,TH); if(bar)scene.add(bar);
   const brg=buildBridges(T,TH); if(brg)scene.add(brg);
@@ -10693,6 +10754,7 @@ async function passOpenPack(pack,btn){
   try{
     const r=await api("/api/pass/packs/open",{method:"POST",token:ACCT.token,body:{packId:pack.id}});
     await acctVerify(true);               // the pack is off the shelf; a car or coins may have moved
+    PACK_LAST=pack;
     packRoll(passAdaptPackResult(r));
   }catch(e){
     if(btn)btn.disabled=false;
@@ -11366,8 +11428,15 @@ function packReveal(reward){
   card.hidden=false;
   PACK_BUSY=false;
 }
+/* Which kind of reveal is on screen: null for the test free-roll, or the
+   real pack (from the pass's own shelf) this one actually was — "Open
+   another" reads this rather than always repeating the free-roll, which
+   is what let it show a fabricated reward after a real pack, whatever
+   was actually earned. */
+let PACK_LAST=null;
 function openPack(){
   if(PACK_BUSY)return;
+  PACK_LAST=null;
   packRoll(rollPack());
 }
 function packOverlayClose(){
@@ -11451,7 +11520,18 @@ for(const b of document.querySelectorAll("#passTestPacks button[data-rarity]"))
   b.addEventListener("click",()=>passTestPack(b.dataset.rarity,b));
 $("packX").addEventListener("click",packOverlayClose);
 $("pcClose").addEventListener("click",packOverlayClose);
-$("pcAgain").addEventListener("click",()=>openPack());
+$("pcAgain").addEventListener("click",()=>{
+  if(PACK_LAST){
+    /* the real pack this reveal was of is already spent — offer whichever
+       real one is next off the shelf, if there is one, rather than ever
+       falling through to a free-roll nobody actually earned */
+    const next=(PASS.packs||[])[0];
+    if(next) passOpenPack(next);
+    else packOverlayClose();
+    return;
+  }
+  openPack();
+});
 $("shPackTest").addEventListener("click",()=>packSimulate(500));
 $("hmAccount").addEventListener("click",()=>{ AU_MODE="in"; showAuth(true); });
 $("hmSignUp").addEventListener("click",()=>{ AU_MODE="up"; showAuth(true); });
