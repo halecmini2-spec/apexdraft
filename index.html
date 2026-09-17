@@ -2646,7 +2646,7 @@ body.daily .gar-arrow{display:none}
           </label>
           <p class="amsg" id="rsMsg"></p>
           <button class="go" id="rsGo" type="button">Send reset link</button>
-          <button type="button" class="alink" id="rsBack">Back to sign in</button>
+          <button type="button" class="alink" id="authResetBack">Back to sign in</button>
         </div>
 
         <!-- Where the emailed link actually leads — a new password to
@@ -11485,6 +11485,13 @@ function loginLinkReturn(){
   $("npMsg").textContent="";
   setTimeout(()=>{ try{$("npPass").focus();}catch(e){} },60);
 }
+/* Landing on a page this browser already had open (or recently had open)
+   at the same path, with only the fragment different, is something some
+   mobile browsers treat as an in-page jump rather than a real navigation
+   — the script never re-runs, so the call above, at boot, never sees the
+   new token at all. This is the same check firing again on the fragment
+   itself actually changing, which a same-page jump still does. */
+addEventListener("hashchange",loginLinkReturn);
 async function checkoutReturn(){
   const p=new URLSearchParams(location.search);
   const status=p.get("checkout");
@@ -11607,7 +11614,7 @@ $("auBack").addEventListener("click",()=>showAuth(false));
 $("tabIn").addEventListener("click",()=>authTab("in"));
 $("tabUp").addEventListener("click",()=>authTab("up"));
 $("auForgot").addEventListener("click",()=>authReset(true));
-$("rsBack").addEventListener("click",()=>authReset(false));
+$("authResetBack").addEventListener("click",()=>authReset(false));
 $("rsGo").addEventListener("click",async()=>{
   const email=$("rsEmail").value.trim();
   if(!email){ $("rsMsg").textContent="Enter the email on the account."; $("rsMsg").classList.add("bad"); return; }
