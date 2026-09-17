@@ -2148,6 +2148,7 @@ body.daily .gar-arrow{display:none}
         </div>
       </div>
       <div class="mu-cards">
+        <button class="home-card red" id="muOpen"><i></i><b>Open Track</b><span>One room, open to anyone — no code needed. A new circuit every hour, and every car is allowed on it. <b id="muOpenCount">—</b></span></button>
         <button class="home-card red" id="muHost"><i></i><b>Host a party</b><span>You get a four-letter code. Draw a circuit or load a saved one, then start the race for everyone.</span></button>
         <div class="home-card red static">
           <i></i><b>Join a party</b><span>Enter the host's code.</span>
@@ -4903,6 +4904,8 @@ function carAllowed(k){
   /* the daily hands one out for the day, and only for the day */
   if(DAILY.on&&k===dailyCar()) return true;
   if(myCars().indexOf(k)>=0) return true;
+  /* the one room where the point is that every car is */
+  if(NET.status==="in"&&NET.openTrack) return true;
   return isTester();
 }
 /* ---- the Apex Pass ----
@@ -11204,6 +11207,7 @@ function goMulti(){
   if(NET.status==="in"){ baseShow(true); return; }
   $("home").hidden=true; $("editor").hidden=true; $("multiScreen").hidden=false; $("muHint").textContent="";
   document.body.classList.add("mudoor");
+  muOpenPoll();
 }
 function goDaily(){
   if(NET.status==="in") $("btnLeave").click();
@@ -11253,13 +11257,36 @@ $("hmSignUp").addEventListener("click",()=>{ AU_MODE="up"; showAuth(true); });
 })();
 $("hmAdmin").addEventListener("click",()=>showAdmin(true));
 $("hmAbout").addEventListener("click",()=>showAbout(true));
-$("muHost").addEventListener("click",()=>{ $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true); $("btnHost").click(); });
+$("muHost").addEventListener("click",()=>{ NET.openTrack=false; $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true); $("btnHost").click(); });
 $("muJoin").addEventListener("click",()=>{
   const code=($("muCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   if(code.length<4){ $("muHint").textContent="A party code is four characters."; return; }
+  NET.openTrack=false;
   $("netCode").value=code; $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true); $("btnJoinGo").click();
 });
 $("muCode").addEventListener("keydown",e=>{ if(e.key==="Enter")$("muJoin").click(); });
+$("muOpen").addEventListener("click",()=>{
+  NET.openTrack=true;
+  $("multiScreen").hidden=true; document.body.classList.remove("mudoor"); baseShow(true);
+  leaveDaily();
+  netOpen(()=>{ NET.status="joining"; netSend({t:"join",code:OPEN_CODE,token:ACCT.token,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });
+});
+/* How many are out on it right now, shown before anyone has actually
+   joined — polled only while the multiplayer screen is actually open,
+   and self-stopping the moment it isn't, however it was left: there is
+   no single place that always closes this screen to hook a stop into. */
+let MU_POLL=null;
+async function muOpenRefresh(){
+  try{
+    const d=await api("/api/open-track");
+    $("muOpenCount").textContent=d.count===0?"Nobody's on it yet — be the first.":d.count===1?"1 racing now.":(d.count+" racing now.");
+  }catch(e){ $("muOpenCount").textContent=""; }
+}
+function muOpenPoll(){
+  if($("multiScreen").hidden){ if(MU_POLL){clearInterval(MU_POLL);MU_POLL=null;} return; }
+  muOpenRefresh();
+  if(!MU_POLL) MU_POLL=setInterval(muOpenPoll,20000);
+}
 $("pHome").addEventListener("click",()=>{ goHome(); });
 function showAbout(on){
   $("aboutScreen").hidden=!on; baseShow(!on);
@@ -11415,7 +11442,8 @@ const NET={
   status:"off", sendAt:0, wantTrack:false, left:false,
   live:false,       // the host is out on track, and the room is open to join
   raceLaps:3,       // what the host will start: 0 is practice
-  grid:[]           // player ids, front of the grid first; empty = join order
+  grid:[],          // player ids, front of the grid first; empty = join order
+  openTrack:false   // in the open track's room, where every car is allowed
 };
 /* A race, once one has been started: how many laps, who started where,
    and who has crossed the line for the last time, in order. */
@@ -11435,6 +11463,10 @@ const NET_RATE=1000/15;              // position updates per second
    versions disagree about the same points. */
 const NET_VER=3;
 const NET_LAG=120;                   // render remote cars this far in the past
+/* A reserved party code, outside the alphabet a real one is ever drawn
+   from (no O in it) — so the relay can never hand this exact code out to
+   somebody hosting, and joining it is never a coincidence. */
+const OPEN_CODE="OPEN";
 
 /* Same host as the page by default, with the service name the blueprint
    gives the relay. ?relay= overrides it for a local or staging server. */
@@ -12714,7 +12746,7 @@ function netOpen(then){
   ws.onclose=()=>{
     done();
     const wasIn=NET.status==="in";
-    NET.ws=null; NET.status="off"; NET.peers.clear(); netDropCars(); netUI();
+    NET.ws=null; NET.status="off"; NET.openTrack=false; NET.peers.clear(); netDropCars(); netUI();
     /* an error already explains itself; do not replace it with the idle text */
     if(NET.err) netSay(NET.err);
     else if(wasIn&&!NET.left) netSay("Party ended — the connection dropped.");
@@ -13609,6 +13641,7 @@ function netTakeTrack(d){
   else netSay("Circuit received from the host.");
 }
 $("btnHost").addEventListener("click",()=>{
+  NET.openTrack=false;
   leaveDaily();
   netOpen(()=>{ NET.status="joining"; netSend({t:"host",token:ACCT.token,name:"Host",car:ED.opts.car,colour:ED.opts.color}); });
 });
@@ -13625,6 +13658,9 @@ $("btnJoinCancel").addEventListener("click",()=>joinBox(false));
 $("btnJoinGo").addEventListener("click",()=>{
   const code=($("netCode").value||"").toUpperCase().replace(/[^A-Z0-9]/g,"");
   if(code.length<4){ netSay("A party code is four characters."); return; }
+  /* Typed by hand rather than pressed as the Open Track card, but it is
+     the same room either way — the flag follows the code, not the button. */
+  NET.openTrack=(code===OPEN_CODE);
   joinBox(false);
   leaveDaily();
   netOpen(()=>{ NET.status="joining"; netSend({t:"join",code,token:ACCT.token,name:"Driver",car:ED.opts.car,colour:ED.opts.color}); });

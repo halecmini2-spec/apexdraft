@@ -22,6 +22,7 @@ const { makeDaily } = require("./daily");
 const { makeCheckout } = require("./checkout");
 const { makePass } = require("./pass");
 const { makeQuests } = require("./quests");
+const { OPEN_CODE, openHour, openTrackFor } = require("./open");
 
 /* Accounts are the one thing here that does outlive a connection. The rooms
    above still know nothing and keep nothing; all an account does is settle
@@ -52,6 +53,24 @@ const liveNow = () => ({
   racing: [...rooms.values()].filter((r) => r.live && r.players.size).length,
 });
 const admin = makeAdmin(store, auth.userFor, liveNow, presence);
+
+/* How many are on the open track right now, and what it is, for the
+   multiplayer screen to show before anyone has actually joined it — the
+   room itself (rooms.get(OPEN_CODE)) only exists once somebody has. */
+async function openTrackRoute(req, res, url) {
+  const { json, cors } = require("./auth");
+  if (req.method === "OPTIONS") { cors(res); res.writeHead(204).end(); return true; }
+  if (req.method !== "GET") return json(res, 405, { error: "Not allowed." }), true;
+  const hour = openHour();
+  const t = openTrackFor(hour);
+  const room = rooms.get(OPEN_CODE);
+  return json(res, 200, {
+    code: OPEN_CODE,
+    count: room ? room.players.size : 0,
+    theme: t.opts.theme,
+    endsAt: (hour + 1) * 3_600_000,
+  }), true;
+}
 
 const PORT = process.env.PORT || 8080;
 const MAX_PLAYERS = 8;
@@ -141,6 +160,7 @@ const server = http.createServer((req, res) => {
                 : url.pathname === "/api/presence" ? presence.route
                 : (url.pathname === "/api/me/stats" || url.pathname === "/api/wins") ? stats.route
                 : url.pathname === "/api/daily" ? daily.route
+                : url.pathname === "/api/open-track" ? openTrackRoute
                 : url.pathname.startsWith("/api/checkout") ? checkout.route
                 : url.pathname.startsWith("/api/pass") ? pass.route
                 : url.pathname.startsWith("/api/quests") ? quests.route
@@ -199,9 +219,14 @@ wss.on("connection", (ws) => {
 
   /* A car a room hears about — at host, at join, or later in a "meta" — only
      ever reaches another player's screen once it is checked against what
-     the account actually owns; a guest (no account) gets the free set. */
-  function ownedCar(ws, claimed) {
+     the account actually owns; a guest (no account) gets the free set.
+     The one exception is the open track, where every car is the point:
+     a room is passed in so that bypass is a property of which room this
+     is, not of who is asking, and carAllowedFor itself — shared with the
+     lap route — stays exactly as strict as it has always been. */
+  function ownedCar(ws, claimed, room) {
     const id = String(claimed || "gt").slice(0, 16);
+    if (room && room.openTrack) return id;
     return carAllowedFor(ws.cars, id) ? id : "gt";
   }
 
@@ -217,7 +242,7 @@ wss.on("connection", (ws) => {
       const room = { code, hostId: ws.id, players: new Map() };
       rooms.set(code, room);
       ws.room = code;
-      ws.car = ownedCar(ws, m.car); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
+      ws.car = ownedCar(ws, m.car, room); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
       room.players.set(ws.id, ws);
       send(ws, { t: "hosted", code, id: ws.id });
       played();
@@ -227,15 +252,26 @@ wss.on("connection", (ws) => {
     if (m.t === "join") {
       leave(ws);
       const code = String(m.code || "").toUpperCase().trim();
-      const room = rooms.get(code);
+      let room = rooms.get(code);
+      /* The open track isn't hosted by anyone in particular — whoever
+         turns up first on a given hour makes the room exist, on the
+         circuit the hour itself already decided, not one they drew. */
+      if (!room && code === OPEN_CODE) {
+        const hour = openHour();
+        room = { code: OPEN_CODE, hostId: null, players: new Map(),
+                 openTrack: true, trackHour: hour, track: openTrackFor(hour) };
+        rooms.set(OPEN_CODE, room);
+      }
       if (!room) return send(ws, { t: "err", m: "No party with that code." });
-      if (room.players.size >= MAX_PLAYERS) return send(ws, { t: "err", m: "That party is full." });
+      if (room.players.size >= MAX_PLAYERS)
+        return send(ws, { t: "err", m: room.openTrack ? "The open track is full for now — try again shortly." : "That party is full." });
       await named(ws, m, "Driver");
       if (ws.readyState !== 1) return;
       ws.room = code;
-      ws.car = ownedCar(ws, m.car); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
+      ws.car = ownedCar(ws, m.car, room); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
       const peers = roomPeers(room, ws.id);
       room.players.set(ws.id, ws);
+      if (room.openTrack && room.hostId == null) room.hostId = ws.id;   // first in takes the wheel
       /* The circuit the room is on and whether it is racing on it travel with
          the welcome, so a latecomer can go straight out rather than wait for
          a start that has already happened. The host is still asked below, in
@@ -246,9 +282,14 @@ wss.on("connection", (ws) => {
       played();
       broadcast(room, { t: "peer", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
       if (room.ai && room.ai.length) send(ws, { t: "aiset", cars: room.ai });
-      /* Ask the host to re-send the circuit for the newcomer. */
-      const host = room.players.get(room.hostId);
-      if (host) send(host, { t: "want-track", id: ws.id });
+      /* Ask the host to re-send the circuit for the newcomer — except on
+         the open track, where the circuit just sent above is already the
+         relay's own and final answer, not a stand-in for one the "host"
+         is about to draw. */
+      if (!room.openTrack) {
+        const host = room.players.get(room.hostId);
+        if (host) send(host, { t: "want-track", id: ws.id });
+      }
       return;
     }
 
@@ -256,7 +297,10 @@ wss.on("connection", (ws) => {
     if (!room) return;
 
     if (m.t === "track") {
-      if (ws.id !== room.hostId) return;      // only the host sets the circuit
+      /* On the open track the circuit is the relay's to set, on the hour
+         — not the "host" seat's, which only exists there so somebody can
+         still start the race. */
+      if (ws.id !== room.hostId || room.openTrack) return;
       room.track = m.data;
       broadcast(room, { t: "track", data: m.data }, ws.id);
       return;
@@ -268,7 +312,7 @@ wss.on("connection", (ws) => {
       return;
     }
     if (m.t === "meta") {
-      ws.car = ownedCar(ws, m.car); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
+      ws.car = ownedCar(ws, m.car, room); ws.colour = String(m.colour || "#8FA3A0").slice(0, 12);
       /* An account name is not the client's to change. */
       if (m.name && !ws.acct) ws.name = String(m.name).slice(0, 16);
       broadcast(room, { t: "meta", id: ws.id, name: ws.name, car: ws.car, colour: ws.colour, acct: ws.acct }, ws.id);
@@ -358,6 +402,20 @@ setInterval(() => {
     try { ws.ping(); } catch (e) {}
   }
 }, 20_000);
+
+/* The open track rotates on the hour even if it never empties out — but
+   only while nobody on it is actually racing, so the circuit never
+   changes under a lap in progress. A room mid-race just waits for the
+   next quiet minute to catch up. */
+setInterval(() => {
+  const room = rooms.get(OPEN_CODE);
+  if (!room || !room.openTrack || room.live) return;
+  const hour = openHour();
+  if (room.trackHour === hour) return;
+  room.trackHour = hour;
+  room.track = openTrackFor(hour);
+  broadcast(room, { t: "track", data: room.track }, null);
+}, 60_000).unref();
 
 /* The tables have to be made before the first request can use them, and
    nothing was making them: every signup answered 500 because users did not
