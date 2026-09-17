@@ -1857,6 +1857,13 @@ body.daily .gar-arrow{display:none}
       if(!window.__adReady) shout("The game script didn't finish loading. Reload the page; if it keeps happening, tell Claude.");
     },1200);
   });
+  /* TEMPORARY — diagnosing a password-reset link that isn't being picked
+     up. Shows the actual URL this page loaded with, captured before any
+     other script has a chance to touch it, whenever a reset token was
+     meant to be in it. Remove once that's found. */
+  if(location.hash.indexOf("login=")>=0||location.search.indexOf("login=")>=0){
+    shout("DEBUG — this page loaded with: "+location.href);
+  }
 })();
 </script>
 <div id="app">
