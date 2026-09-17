@@ -53,7 +53,7 @@ const ITEM_POOL = [
   // underglow
   ["glow", "ice", "rare"], ["glow", "violet", "epic"], ["glow", "toxic", "epic"],
   ["glow", "ember", "legendary"], ["glow", "rain", "mythic"],
-  ["glow", "neon", "rare"], ["glow", "purple", "rare"], ["glow", "gold-glow", "epic"], ["glow", "platinum", "legendary"],
+  ["glow", "neon", "rare"], ["glow", "purple", "mythic"], ["glow", "gold-glow", "epic"], ["glow", "platinum", "legendary"],
   // horn
   ["horn", "classic", "rare"], ["horn", "air", "epic"], ["horn", "truck", "epic"],
   ["horn", "cuca", "legendary"], ["horn", "train", "mythic"], ["horn", "sport", "rare"],
