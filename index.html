@@ -10722,6 +10722,12 @@ function passUI(){
 }
 async function passRefresh(){
   if(!acctIn()){ PASS.loaded=false; passUI(); return; }
+  /* Caching what PASS last held was only half of it — this still never
+     painted anywhere until the fetch below answered, which is exactly
+     as slow as showing nothing at all. Paint the cached numbers now,
+     synchronously, before the await; the real ones overwrite them a
+     moment later the same way they always did. */
+  passUI();
   try{
     const r=await api("/api/pass/state",{token:ACCT.token});
     PASS.loaded=true; PASS.coins=r.coins; PASS.xp=r.xp; PASS.level=r.level; PASS.season=r.season;
@@ -10889,6 +10895,9 @@ function questsUI(){
 }
 async function questsRefresh(){
   if(!acctIn()){ QUESTS.loaded=false; questsUI(); return; }
+  /* the cached tabs, painted now rather than only once the fetch below
+     answers — see passRefresh()'s own copy of this fix, same reason */
+  questsUI();
   try{
     const r=await api("/api/quests/state",{token:ACCT.token});
     QUESTS.loaded=true; QUESTS.tabs=r.tabs||{daily:[],weekly:[],seasonal:[]};
