@@ -744,6 +744,8 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .pass-track{display:flex;gap:10px;min-width:min-content}
 .pass-card{flex:0 0 148px;background:var(--panel2);border:1px solid var(--rarDim,var(--line));border-radius:3px;
   padding:9px 10px 10px;display:flex;flex-direction:column;gap:4px;opacity:.55}
+.pass-card .pass-pic{width:100%;height:auto;aspect-ratio:360/220;display:block;border-radius:2px;
+  background:radial-gradient(ellipse at 50% 70%,#1B2628 0%,#0D1415 70%);margin-bottom:2px}
 .pass-card.major{flex-basis:190px}
 .pass-card.available{opacity:1;box-shadow:inset 0 0 0 1px var(--rar,var(--amber))}
 .pass-card.claimed{opacity:.85}
@@ -7562,12 +7564,34 @@ function resetCar(toStart){
      last corner, moving off in your own time, and the clock starts as you
      cross the line — the way a hot lap is driven, not a standing start. */
   const rolling=toStart&&DAILY.on;
+  /* Practice, not a race — and the open track always, whether or not
+     somebody on it has started one — gets a pit spot rather than a grid
+     slot: pulled onto the verge at the side of the line, free to head out
+     whenever, the standing start and its lights kept for an actual race. */
+  const pit=toStart&&!rolling&&(!RACE.on||NET.openTrack);
+  const spacing=T.len/T.N;
   if(rolling){
-    const spacing=T.len/T.N, back=Math.round(30/spacing);
+    const back=Math.round(30/spacing);
     const last=T.corners&&T.corners.length?T.corners[T.corners.length-1]:null;
     i=last?((last.a-back)%T.N+T.N)%T.N:((T.N-Math.round(80/spacing))%T.N+T.N)%T.N;
+  }else if(toStart){
+    /* Nobody stands on the line itself, not even pole — a nose already
+       over it looked wrong, and worse, could cross the timing point before
+       the lap it belongs to has even begun. */
+    const clear=Math.max(1,Math.round(6/spacing));
+    i=(i-clear+T.N)%T.N;
   }
-  if(slot>=0&&!rolling){
+  if(pit){
+    /* Off the racing surface entirely, one behind another along the verge
+       rather than paired across it — a pit lane is single file. */
+    const step=Math.max(1,Math.round(8/spacing)), n=Math.max(0,slot);
+    i=(i-n*step+T.N*2)%T.N;
+    /* Clear of the tarmac onto the verge, well short of the barrier out at
+       halfW+8.5 (buildBarriers) — a fixed few metres past the edge reads
+       as "pulled over" whatever width this particular circuit was drawn. */
+    const lat=T.halfW+4;
+    CAR.x=T.X[i]+T.RX[i]*lat; CAR.z=T.Z[i]+T.RZ[i]*lat;
+  }else if(slot>=0&&!rolling){
     const row=Math.floor(slot/2), col=slot%2;
     i=(i-row*2+T.N*2)%T.N;                        // ~14m between rows
     const lat=(col?1:-1)*T.halfW*0.44;
@@ -7587,6 +7611,7 @@ function resetCar(toStart){
     CAR.sectors=[null,null,null];CAR.secIdx=0;CAR.secStart=0;
     CAR.state="count";CAR.countT=0;
     if(rolling){ CAR.state="out"; CAR.lastP=T.S[i]/T.len; showFlash("Out lap","#E6EEEC","the clock starts at the line"); }
+    else if(pit){ CAR.state="out"; CAR.lastP=T.S[i]/T.len; showFlash("Pit lane","#E6EEEC","cross the line whenever you're ready"); }
     CAR.bestMs=store.get("ad.best."+trackKey(T),null);
     CAR.bestSectors=store.get("ad.bsec."+trackKey(T),[null,null,null]);
     /* Whether the relay has actually seen this best, or only this browser
@@ -9492,6 +9517,86 @@ function garPicture(kind,colour,cv){
   }
   const x=cv.getContext("2d"); x.clearRect(0,0,cv.width,cv.height); x.drawImage(img,0,0,cv.width,cv.height);
 }
+/* A wheel on its own, not a whole car wearing it — the one part of a car's
+   kit you actually want a close look at rather than a shot from across
+   the garage. buildWheels() only ever hangs wheels off a car's own group,
+   so this gives it a bare one with a single wheel at the origin and asks
+   for a rim's worth of material, nothing else. */
+function renderWheelPreview(cv,rimsSpec){
+  if(!garRenderer())return;
+  const M=carMats("#20242A",rimsSpec?{rims:rimsSpec}:null);
+  const g=new THREE.Group();
+  buildWheels(g,M,{race:true,r:0.345,tw:0.235,pos:[[0,0]]});
+  GAR.scene.add(g);
+  const box=new THREE.Box3().setFromObject(g), size=new THREE.Vector3(), c=new THREE.Vector3();
+  box.getSize(size); box.getCenter(c);
+  const span=Math.max(size.x,size.y,size.z)*1.30, d=span/Math.tan(GAR.camera.fov*Math.PI/360)*0.5;
+  GAR.camera.position.set(c.x+d*0.92,c.y+d*0.30,c.z+d*0.62);
+  GAR.camera.lookAt(c.x,c.y,c.z);
+  GAR.renderer.render(GAR.scene,GAR.camera);
+  const x=cv.getContext("2d"); x.clearRect(0,0,cv.width,cv.height);
+  x.drawImage(GAR.renderer.domElement,0,0,cv.width,cv.height);
+  GAR.scene.remove(g); disposeTree(g);
+}
+/* Darken or lighten a "#RRGGBB" by a fraction either way — the one bit of
+   colour arithmetic packArt/glowArt need and canvas has no shorthand for. */
+function shadeHex(hex,amt){
+  const n=parseInt(hex.replace("#",""),16);
+  const f=(sh)=>Math.max(0,Math.min(255,((n>>sh)&255)+255*amt));
+  return "rgb("+f(16)+","+f(8)+","+f(0)+")";
+}
+/* A pack, drawn rather than rendered — a foil sachet in its own rarity's
+   colour, the way a trading-card pack reads before it's ever opened. */
+function packArt(cv,rarityKey){
+  const R=RARITY[rarityKey]||RARITY.rare;
+  const x=cv.getContext("2d"), W=cv.width, H=cv.height;
+  x.clearRect(0,0,W,H);
+  const pw=H*0.62, ph=H*0.92, px=(W-pw)/2, py=(H-ph)/2, rad=W*0.028;
+  x.save();
+  x.shadowColor=R.colour; x.shadowBlur=W*0.05;
+  const grad=x.createLinearGradient(px,py,px+pw,py+ph);
+  grad.addColorStop(0,R.colour); grad.addColorStop(0.55,shadeHex(R.colour,-0.30)); grad.addColorStop(1,shadeHex(R.colour,-0.50));
+  x.fillStyle=grad;
+  x.beginPath(); x.roundRect(px,py,pw,ph,rad); x.fill();
+  x.restore();
+  x.save();
+  x.beginPath(); x.roundRect(px,py,pw,ph,rad); x.clip();
+  /* a diagonal foil streak, the one thing that says "shiny packet" rather
+     than "coloured rectangle" */
+  x.globalAlpha=0.20; x.fillStyle="#FFFFFF";
+  x.beginPath();
+  x.moveTo(px+pw*0.10,py); x.lineTo(px+pw*0.34,py); x.lineTo(px+pw*0.02,py+ph); x.lineTo(px-pw*0.22,py+ph);
+  x.closePath(); x.fill();
+  /* the torn strip along the top, and the seam under it */
+  x.globalAlpha=1; x.fillStyle="rgba(8,10,11,.34)";
+  x.fillRect(px,py,pw,ph*0.15);
+  x.strokeStyle="rgba(255,255,255,.28)"; x.lineWidth=Math.max(1,W*0.005);
+  x.beginPath(); x.moveTo(px,py+ph*0.15); x.lineTo(px+pw,py+ph*0.15); x.stroke();
+  x.restore();
+  x.beginPath(); x.roundRect(px,py,pw,ph,rad);
+  x.strokeStyle="rgba(255,255,255,.22)"; x.lineWidth=Math.max(1,W*0.006); x.stroke();
+  x.textAlign="center"; x.fillStyle="rgba(10,12,13,.60)";
+  x.font="800 "+Math.round(H*0.088)+"px system-ui,sans-serif";
+  x.fillText(R.label.toUpperCase(),px+pw/2,py+ph*0.56);
+  x.font="700 "+Math.round(H*0.05)+"px system-ui,sans-serif";
+  x.fillStyle="rgba(10,12,13,.48)";
+  x.fillText("PACK",px+pw/2,py+ph*0.72);
+}
+/* An underglow, the way you would actually see it: a pool of its colour,
+   soft-edged, on a dark ground — the same picture the sill light itself
+   paints on the road, just without a car standing over it. */
+function glowArt(cv,colourHex){
+  const x=cv.getContext("2d"), W=cv.width, H=cv.height;
+  x.clearRect(0,0,W,H);
+  x.fillStyle="#101416"; x.fillRect(0,0,W,H);
+  const cx=W/2, cy=H*0.58, r=Math.min(W,H)*0.42;
+  const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+  g.addColorStop(0,colourHex); g.addColorStop(0.55,shadeHex(colourHex,-0.15));
+  g.addColorStop(1,"rgba(0,0,0,0)");
+  x.globalAlpha=0.9; x.fillStyle=g;
+  x.beginPath(); x.ellipse(cx,cy,r,r*0.42,0,0,Math.PI*2); x.fill();
+  x.globalAlpha=1;
+}
 /* ---- the rail ----
    Pushed past the last car you get the first one, and there is no seam to
    see: rather than cloning the row and jumping between copies, the card at
@@ -10336,6 +10441,21 @@ function passReward(entry){
   const it=kitItem(entry.slot,entry.id);
   return {label:it?it.label:entry.id,rarity:it?it.rarity:"rare"};
 }
+/* Whether a level's reward is worth a picture, and which kind — coins, a
+   title and a horn have nothing to look at, and the mystery car stays a
+   mystery on purpose, so those five carry on with words alone. */
+function passHasPicture(entry){
+  return entry.kind==="pack"
+    || (entry.kind==="item"&&["car","paint","rims","glow"].indexOf(entry.slot)>=0);
+}
+function passRewardPicture(entry,cv){
+  if(entry.kind==="pack") return packArt(cv,entry.packType);
+  if(entry.slot==="car") return renderCarPreview(cv,entry.id,"#8FA3A0",null);
+  if(entry.slot==="rims") return renderWheelPreview(cv,kitItem("rims",entry.id));
+  if(entry.slot==="paint") return renderCarPreview(cv,"gt","#8FA3A0",{paint:kitItem("paint",entry.id)});
+  if(entry.slot==="glow"){ const it=kitItem("glow",entry.id);
+    return glowArt(cv,it?"#"+it.colour.toString(16).padStart(6,"0"):"#4A6A66"); }
+}
 function passBuild(){
   const track=$("passTrack"); if(!track||track.dataset.built)return;
   track.dataset.built="1";
@@ -10345,7 +10465,10 @@ function passBuild(){
     b.className="pass-card"+(entry.major?" major":"");
     b.dataset.level=entry.level;
     if(R){ b.style.setProperty("--rar",R.colour); b.style.setProperty("--rarDim",R.dim); b.style.setProperty("--rarGlow",R.glow); }
-    b.innerHTML='<span class="lv"></span><em class="rar"></em><b></b><span class="got" hidden>Claimed</span><button>Claim</button>';
+    const pic=passHasPicture(entry);
+    b.innerHTML=(pic?'<canvas class="pass-pic" width="360" height="220"></canvas>':"")+
+      '<span class="lv"></span><em class="rar"></em><b></b><span class="got" hidden>Claimed</span><button>Claim</button>';
+    if(pic){ try{ passRewardPicture(entry,b.querySelector(".pass-pic")); }catch(e){ console.error(e); } }
     b.querySelector(".lv").textContent="LEVEL "+entry.level;
     b.querySelector(".rar").textContent=r.mystery?"":(R?R.label:"");
     b.querySelector("b").textContent=r.mystery?"???":r.label;
@@ -10370,7 +10493,8 @@ function passPacksUI(){
     const b=document.createElement("div");
     b.className="sh-card";
     if(R){ b.style.setProperty("--rar",R.colour); b.style.setProperty("--rarDim",R.dim); b.style.setProperty("--rarGlow",R.glow); }
-    b.innerHTML='<em class="rar"></em><b></b><span></span><div class="sh-buy"><i></i><button class="chip go">Open</button></div>';
+    b.innerHTML='<canvas width="360" height="220"></canvas><em class="rar"></em><b></b><span></span><div class="sh-buy"><i></i><button class="chip go">Open</button></div>';
+    try{ packArt(b.querySelector("canvas"),p.pack_type); }catch(e){ console.error(e); }
     b.querySelector(".rar").textContent=R?R.label:p.pack_type;
     b.querySelector("b").textContent=(R?R.label:p.pack_type)+" Pack";
     b.querySelector("span").textContent="Chances: "+odds.map(([rar,ch])=>(RARITY[rar]?RARITY[rar].label:rar)+" "+Math.round(ch*100)+"%").join(" · ");
