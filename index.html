@@ -14216,7 +14216,6 @@ $("pBack").addEventListener("click",()=>{
   fsUI();
   acctUI();                         // your own name, from the last visit
   checkoutReturn();                 // the tab that comes back from paying for a car
-  loginLinkReturn();                // the tab that comes back from a sign-in email
   netUI();                          // settles the screen into solo before anything else
   /* Confirmed in the background, and only every few hours: a page load must
      not wait on a sleeping server, nor keep one awake for no reason. */
@@ -14231,6 +14230,11 @@ $("pBack").addEventListener("click",()=>{
   if(window.ResizeObserver) new ResizeObserver(()=>fitPad()).observe(pad.parentElement);
   else window.addEventListener("resize",fitPad);
   setApp("home"); baseShow(true);
+  /* After the home screen has already been shown above, not before — this
+     screen's own showAuth(true)/baseShow(false) has to be the last thing
+     to touch #home this boot, or the unconditional baseShow(true) two
+     lines up wins instead and both screens end up on-screen at once. */
+  loginLinkReturn();                // the tab that comes back from a sign-in email
   window.__adReady=true;
 })();
 
