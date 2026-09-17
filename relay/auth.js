@@ -366,7 +366,12 @@ function makeAuth(store) {
           const u = await store.userByEmail(addr);
           if (u) {
             const raw = await store.createLoginToken(u.id);
-            const link = GAME_ORIGIN + "/?login=" + encodeURIComponent(raw);
+            /* A fragment (#), not a query string (?): a fragment is never
+               sent to any server at all, so a link-scanning proxy that
+               prefetches or rewrites the URL (Outlook's Safe Links being
+               the one actually seen doing this) has nothing to touch —
+               there is nothing after the # for it to see, let alone drop. */
+            const link = GAME_ORIGIN + "/#login=" + encodeURIComponent(raw);
             await email.sendEmail(u.email, "Reset your Apex Drawn password", email.loginLinkHtml(u.name, link));
           }
         } catch (e) { console.error("reset request:", e && e.message); }

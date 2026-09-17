@@ -11460,17 +11460,24 @@ function acctUI(){
    which /verify checks against Stripe itself rather than trusting the
    query string alone — a driver could type ?checkout=success into the
    address bar just as easily as Stripe could put it there. */
-/* The tab that comes back from clicking a password-reset link. The raw
-   token only ever appears here and in the emailed link itself, and it
-   is not spent by loading this page — only by actually submitting a new
-   password (see the npGo handler below) — so a link that's clicked and
-   then abandoned hasn't burned itself for nothing. */
+/* The tab that comes back from clicking a password-reset link. The token
+   travels in the URL fragment (#login=…), not the query string: a
+   driver's actual link arrived with the query-string version stripped
+   to nothing before the page ever loaded — Outlook's Safe Links, the
+   mail client involved, prefetches and rewrites links, and a fragment
+   is the fix because it is never sent to a server at all, so there is
+   nothing after the # for a proxy like that to see, let alone drop.
+   The raw token only ever appears here and in the emailed link itself,
+   and it is not spent by loading this page — only by actually submitting
+   a new password (see the npGo handler below) — so a link that's clicked
+   and then abandoned hasn't burned itself for nothing. */
 let RESET_TOKEN=null;
 function loginLinkReturn(){
-  const p=new URLSearchParams(location.search);
+  const h=location.hash.replace(/^#/,"");
+  const p=new URLSearchParams(h);
   const token=p.get("login");
   if(!token)return;
-  history.replaceState(null,"",location.pathname+location.hash);
+  history.replaceState(null,"",location.pathname+location.search);
   RESET_TOKEN=token;
   showAuth(true);
   $("authForms").hidden=true;
