@@ -186,7 +186,16 @@ function makeLaps(store, userFor, quests) {
     const tk = tickets.get(String(body.ticket || ""));
     if (!tk || tk.userId !== user.id || tk.circuit !== circuit) return refuse("no ticket for this lap");
     tickets.delete(String(body.ticket));
-    if (Date.now() - tk.at < ms - 3000) return refuse("finished before it could have");
+    /* tk.at is stamped when this process actually handles the ticket
+       request, not when the page sent it — on a free plan woken from
+       sleep by that same request, the two can be tens of seconds apart,
+       which used to show up as a fast, entirely genuine lap refused for
+       "finishing" before a relay that was still booting had said go.
+       warmRelay() on the client now wakes this ahead of a real ticket
+       request, but a margin sized only for ordinary network latency had
+       nothing left over for whatever that doesn't quite catch — fifteen
+       seconds costs an actual cheat little and covers it. */
+    if (Date.now() - tk.at < ms - 15000) return refuse("finished before it could have");
     const C = geometry(circuit, body.track);
     if (!C) return refuse("circuit unknown");
     if (ms < lapBound(C, car) * 0.92) return refuse("quicker than the car can go");

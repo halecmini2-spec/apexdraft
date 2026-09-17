@@ -9114,7 +9114,7 @@ function clearBanks(){ ED.opts.banks=[]; ED.sel=null; }
 function startDraw(cx,cy){
   /* A guest is looking at the host's circuit. Every way of drawing arrives
      here, so this is the only place that has to say no. */
-  if(document.body.dataset.mode==="guest"||DAILY.on)return;
+  if(document.body.dataset.mode==="guest"||DAILY.on||NET.openTrack)return;
   if(ED.pickStart){ pickStartAt(cx,cy); return; }     // the touch path lands here too
   const p=toPad(cx,cy);
   if(!isFinite(p.x)||!isFinite(p.y))return;
@@ -11505,6 +11505,13 @@ const myId=()=>NET.id!=null?String(NET.id):"me";
 
 /* Same host as the party relay, over http rather than websocket. */
 function apiBase(){ return relayURL().replace(/^ws/,"http").replace(/\/+$/,""); }
+/* A bare ping at the relay's own health check, wanted for nothing it says
+   back — only for the wake-up a free plan needs after it has gone to
+   sleep, started as early as the page can manage rather than waiting for
+   anything that actually needs an answer to ask for one. */
+function warmRelay(){
+  try{ fetch(apiBase()+"/health",{method:"GET"}).catch(()=>{}); }catch(e){}
+}
 
 /* ---- the heartbeat ----
    Every half minute while the page is open, one small ping says this
@@ -12659,8 +12666,9 @@ function netUI(){
     if(gc&&gc.nextElementSibling!==gl) scroll.insertBefore(gl,gc.nextElementSibling);
   }
 
-  $("boardTag").hidden=mode!=="guest"&&!DAILY.on;
+  $("boardTag").hidden=mode!=="guest"&&!DAILY.on&&!NET.openTrack;
   if(DAILY.on)dailyRailUI();
+  else if(NET.openTrack) $("boardTag").innerHTML='<span class="dot"></span>Open Track · a new circuit every hour, locked';
   driveLabel();
   /* contact: always on */
 
@@ -12861,7 +12869,9 @@ function netHandle(m){
    whether the mode makes sense of them. The daily is the exception and
    always will be: it is one timed lap against a board, and a field of cars
    to trip over is not what that is. */
-function aiAllowed(){ return !DAILY.on; }
+/* The open track is other real people's room, not a solo practice one —
+   opponents driven by the machine have no business turning up in it. */
+function aiAllowed(){ return !DAILY.on&&!(NET.status==="in"&&NET.openTrack); }
 function aiLabel(v){ return v<=25?"Rookie":v<=45?"Club":v<=65?"Quick":v<=85?"Pro":"Alien"; }
 function aiSave(){ store.set("ad.ai",{count:AI.count,strength:AI.strength,laps:AI.laps,slot:AI.slot}); }
 function aiUI(){
@@ -14125,19 +14135,19 @@ $("bankPrev").addEventListener("click",()=>cycleCorner(-1));
 $("bankNext").addEventListener("click",()=>cycleCorner(1));
 $("bankClear").addEventListener("click",()=>{ clearBanks(); rebuild(); });
 $("startPick").addEventListener("click",()=>{
-  if(document.body.dataset.mode==="guest"){ netSay("Only the host can move the start line."); return; }
+  if(document.body.dataset.mode==="guest"||NET.openTrack){ netSay("Only the host can move the start line."); return; }
   if(!ED.track)return;
   ED.pickStart=!ED.pickStart; startUI(); renderPad();
 });
 $("startAuto").addEventListener("click",()=>{ clearStart(); moveStart(); });
 
 $("btnUndo").addEventListener("click",()=>{
-  if(DAILY.on)return;
+  if(DAILY.on||NET.openTrack)return;
   if(!ED.history.length){msg("Nothing to undo.");return;}
   ED.raw=ED.history.pop(); clearBanks(); clearStart(); rebuild();
 });
 $("btnClear").addEventListener("click",()=>{
-  if(DAILY.on)return;
+  if(DAILY.on||NET.openTrack)return;
   ED.history.push(ED.raw?ED.raw.slice():null);
   ED.raw=null; ED.track=null; clearBanks(); clearStart(); syncBank();
   renderPad(); updateReadout();
@@ -14152,7 +14162,7 @@ $("btnPanel").addEventListener("click",()=>{
   fitPad();
 });
 $("btnReverse").addEventListener("click",()=>{
-  if(DAILY.on)return;
+  if(DAILY.on||NET.openTrack)return;
   if(!ED.raw){msg("Draw a circuit first.");return;}
   ED.raw=ED.raw.slice().reverse(); clearBanks(); rebuild();
   msg("Racing direction reversed.");
@@ -14396,6 +14406,17 @@ $("pBack").addEventListener("click",()=>{
   /* Confirmed in the background, and only every few hours: a page load must
      not wait on a sleeping server, nor keep one awake for no reason. */
   setTimeout(()=>acctVerify(false),1200);
+  /* acctVerify above skips its own request for up to six hours once
+     checked — right for "is this account still good," wrong for "is the
+     relay actually awake right now," since the free plan can fall back
+     asleep in a fraction of that. A lap's anti-cheat ticket is timed from
+     the moment the relay answers it, so a first lap driven before a cold
+     relay finishes waking looks, wrongly, like it took less real time
+     than it claims — this fires every load, unconditionally, so the
+     relay has the whole time between opening the game and actually
+     crossing a start line to be awake before a ticket request needs it
+     to be. */
+  warmRelay();
   syncSliders();
   const saved=store.get("ad.raw",null);
   ED.raw = (saved&&saved.length>8) ? saved : shapeLoop(DEFAULT_SHAPE);
