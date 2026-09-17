@@ -4811,7 +4811,7 @@ const KITS={
        base colour; those are turned right down, not tint further. */
     {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.32,rough:0.38,env:0.55,tint:0x0A0216,
       iri:{bands:6.0, speed:0.10, mix:0.14, glow:0.10, sat:0.55, hueMin:0.52, hueMax:0.78,
-           stars:true, starGlow:1.2, starSize:0.09}},
+           stars:true, starGlow:1.9, starSize:0.12, starDensity:0.20}},
     /* An early pass at Galaxy, kept on as a legendary of its own rather
        than thrown away once Galaxy moved to the magenta-purple above — a
        cooler, blue-violet-into-magenta counterpart to it rather than the
@@ -5391,7 +5391,7 @@ function iridescent(mat,I){
      paints built the same way but with different numbers in them are handed
      the same compiled shader, and the second one silently renders as the
      first. This is what tells them apart. */
-  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,sat,I.hard?1:0,I.hueMin||0,I.hueMax||0,I.stars?1:0,I.starGlow||0,I.starSize||0].join(",");
+  mat.customProgramCacheKey=()=>"iri:"+[I.bands,I.speed,I.mix,I.glow,sat,I.hard?1:0,I.hueMin||0,I.hueMax||0,I.stars?1:0,I.starGlow||0,I.starSize||0,I.starDensity||0].join(",");
   mat.onBeforeCompile=sh=>{
     sh.uniforms.iriTime=u;
     if(I.stars) sh.vertexShader="varying vec3 vGalPos;\n"+sh.vertexShader.replace(
@@ -5417,7 +5417,7 @@ function iridescent(mat,I){
           "vec3 galI = floor(galP);\n"+
           "float galH = fract(sin(dot(galI, vec3(12.9898,78.233,37.719))) * 43758.5453);\n"+
           "vec3 galF = fract(galP) - 0.5 - (vec3(fract(galH*7.0),fract(galH*13.0),fract(galH*31.0)) - 0.5) * 0.6;\n"+
-          "float galStar = smoothstep("+(I.starSize!=null?I.starSize:0.14).toFixed(3)+", 0.0, length(galF)) * step(0.90, galH);\n"+
+          "float galStar = smoothstep("+(I.starSize!=null?I.starSize:0.14).toFixed(3)+", 0.0, length(galF)) * step("+(I.starDensity!=null?(1-I.starDensity):0.90).toFixed(3)+", galH);\n"+
           "totalEmissiveRadiance += vec3(1.0) * galStar * "+(I.starGlow!=null?I.starGlow:1.5).toFixed(2)+";\n"
           :""));
   };
