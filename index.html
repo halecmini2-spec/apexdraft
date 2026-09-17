@@ -4802,8 +4802,15 @@ const KITS={
        to this configuration — the next attempt also cut mix/glow/env/
        metal, and that stacked change is undone here rather than judged
        alongside the tint itself. */
-    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.40,rough:0.28,env:1.0,tint:0x0A0216,
-      iri:{bands:6.0, speed:0.10, mix:0.40, glow:0.30, sat:0.55, hueMin:0.52, hueMax:0.78,
+    /* A dark tint alone was never going to read as near-black: the
+       iridescent overlay below blends toward a whitened hue (mix(white,
+       hue, sat) at sat 0.55 is still 45% white) and then adds its own
+       glow as emissive light on top, on every finish that uses it — so
+       however dark tint is set, the overlay was still washing it back
+       out. mix and glow are what actually put brightness on top of the
+       base colour; those are turned right down, not tint further. */
+    {id:"galaxy", label:"Galaxy", rarity:"mythic", metal:0.32,rough:0.38,env:0.55,tint:0x0A0216,
+      iri:{bands:6.0, speed:0.10, mix:0.14, glow:0.10, sat:0.55, hueMin:0.52, hueMax:0.78,
            stars:true, starGlow:1.2, starSize:0.09}},
     /* An early pass at Galaxy, kept on as a legendary of its own rather
        than thrown away once Galaxy moved to the magenta-purple above — a
