@@ -45,6 +45,7 @@ const ITEM_POOL = [
   ["paint", "carbon-fibre", "epic"], ["paint", "carbon-chrome", "legendary"],
   ["paint", "pearlescent", "epic"],
   ["paint", "liquid-metal", "legendary"], ["paint", "black-chrome", "legendary"],
+  ["paint", "galaxy", "mythic"], ["paint", "nebula", "legendary"],
   // rims
   ["rims", "bronze", "rare"], ["rims", "carbon", "epic"], ["rims", "chrome", "epic"],
   ["rims", "gold", "legendary"], ["rims", "neon", "mythic"],

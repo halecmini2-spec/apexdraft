@@ -5006,14 +5006,12 @@ function myItems(){ return (acctIn()&&Array.isArray(PASS.owned))?PASS.owned:[]; 
 /* Whether this account can put a given cosmetic on — the six plain colours
    and "nothing on" are free, same as they always were; everything else has
    to have actually been won, checked against what the Apex Pass says this
-   account owns. Galaxy and Nebula Paint are the deliberate exception:
-   neither is in the pass or any pack's pool at all, so no ownership check
-   could ever pass for either — cosmo38 only, the same way the test cars
-   are. */
-const COSMO_ONLY_PAINTS=new Set(["galaxy","nebula"]);
+   account owns. Galaxy and Nebula Paint used to be the deliberate
+   exception — cosmo38 only, kept out of every pack's pool so no
+   ownership check could pass for anyone else — now real pack rewards
+   like everything around them, so that exception is gone with it. */
 function kitAllowed(slot,id){
   if(!id) return true;
-  if(slot==="paint"&&COSMO_ONLY_PAINTS.has(id)) return isTester();
   const it=kitItem(slot,id);
   if(it&&it.std) return true;
   return myItems().indexOf(slot+":"+id)>=0;
