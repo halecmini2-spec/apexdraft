@@ -7531,29 +7531,55 @@ function bodyMonsterTruck(b,M){
   const mouth=new THREE.Mesh(new THREE.BoxGeometry(0.420,0.120,0.070),chromeM);
   mouth.position.set(0,WAIST+0.095,1.650); mouth.rotation.x=0.20; b.add(mouth);
 
-  /* ---- the sides ----
-     Not arches. The floor of this thing sits above the top of its own
-     tyres, so there is no arc of rubber to cover and nothing for an arch to
-     do — four of them went on as separate pods and read as orange torpedoes
-     bolted to the flanks, hiding the bonnet and the bed behind them.
+  /* ---- the sides, and the arches in them ----
+     One flare each side running the whole length, which is what stops the
+     truck looking perched on a track far wider than itself. Its lower edge
+     arcs up over each wheel and drops away between them: an arch is lowest
+     ahead of and behind the tyre and highest directly over it, and the
+     first go had that exactly the wrong way round.
 
-     What the body actually wants is width. One flare each side, running the
-     whole length and swelling over each axle, so the shoulders reach out
-     towards the track the wheels set and the truck stops looking perched on
-     something far wider than itself. */
+     Two things were learned getting this to read. Three stations to an arch
+     and the loft runs straight lines between them, which came out as a
+     chevron down the side of the truck — so the curve is worked out on a
+     cosine and sampled seven times instead of placed by hand. And an arch
+     cannot be read in silhouette here at all, because the body behind it is
+     solid all the way down to the chassis: there is no daylight for the
+     shape to show against. What draws it is the lip — a thick dark band
+     straddling the flare's lower edge, standing proud of it, cut from the
+     same curve so it cannot drift off the arch it is drawing. */
+  const REACH=0.640;                     // how far along the body an arch runs
+  const TS=[-1,-0.72,-0.42,0,0.42,0.72,1];
+  /* t is -1 at the front of the arch, 0 over the wheel, 1 at the back; the
+     cosine is 1 over the wheel and 0 at either end */
+  const archU=(t)=>Math.cos(t*Math.PI/2);
+  const archLow=(t,lo,hi)=>lo+(hi-lo)*Math.pow(archU(t),0.72);
+  const arch=(z0,lo,hi,wLo,wHi,tLo,tHi)=>TS.map(t=>({
+    z:z0+t*REACH, w:wLo+(wHi-wLo)*archU(t),
+    y0:archLow(t,lo,hi), y1:tLo+(tHi-tLo)*archU(t), n:4.8}));
+  /* the band, hung off that same lower edge */
+  const archBand=(z0,lo,hi,wLo,wHi,drop,rise)=>TS.map(t=>{
+    const base=archLow(t,lo,hi);
+    return {z:z0+t*REACH, w:wLo+(wHi-wLo)*archU(t), y0:base-drop, y1:base+rise, n:4.6};
+  });
+
+  const ALO=WAIST-0.505, AHI=WAIST-0.185;      // the arch curve both are cut from
   for(const sx of [-1,1]){
     const flank=new THREE.Mesh(loft([
-      {z: 2.000,w:0.070,y0:FLOOR+0.070,y1:WAIST-0.060,n:4.6},
-      {z: FZ+0.420,w:0.135,y0:FLOOR+0.045,y1:WAIST+0.020,n:4.8},
-      {z: FZ,      w:0.175,y0:FLOOR+0.030,y1:WAIST+0.045,n:5.0},
-      {z: FZ-0.420,w:0.140,y0:FLOOR+0.040,y1:WAIST+0.025,n:4.8},
-      {z: 0.100,   w:0.105,y0:FLOOR+0.050,y1:WAIST+0.010,n:4.6},
-      {z: RZ+0.420,w:0.140,y0:FLOOR+0.040,y1:WAIST+0.025,n:4.8},
-      {z: RZ,      w:0.175,y0:FLOOR+0.030,y1:WAIST+0.045,n:5.0},
-      {z: RZ-0.420,w:0.135,y0:FLOOR+0.045,y1:WAIST+0.020,n:4.8},
-      {z:-1.840,   w:0.070,y0:FLOOR+0.070,y1:WAIST-0.060,n:4.6}
-    ],16),M.paint);
+      {z: 2.000,w:0.065,y0:WAIST-0.335,y1:WAIST-0.040,n:4.6},
+      ...arch(FZ, ALO,AHI, 0.088,0.205, WAIST-0.010,WAIST+0.095),
+      {z: 0.120,w:0.082,y0:WAIST-0.530,y1:WAIST-0.015,n:4.6},
+      ...arch(RZ, ALO,AHI, 0.088,0.205, WAIST-0.010,WAIST+0.095),
+      {z:-1.840,w:0.065,y0:WAIST-0.335,y1:WAIST-0.040,n:4.6}
+    ],20),M.paint);
     flank.position.x=sx*0.880; flank.castShadow=true; b.add(flank);
+  }
+  for(const sx of [-1,1]) for(const z0 of [FZ,RZ]){
+    const lip=new THREE.Mesh(loft(
+      /* hung mostly below the flare edge rather than straddling it: what
+         hangs below is the only part of the band anything can be seen
+         against, and at ninety millimetres it was a pencil line */
+      archBand(z0, ALO,AHI, 0.165,0.285, 0.235,0.065),18),bumperM);
+    lip.position.x=sx*0.880; lip.castShadow=true; b.add(lip);
   }
 
   /* ---- the chassis rail ----
