@@ -13683,6 +13683,37 @@ function aiLine(T,width){
 }
 
 /* a shove from a collision, taken as a shift along and across the road */
+/* How hard a machine can be thrown sideways. Well beyond the width of any
+   road: the point is that a real hit puts one in the grass, and the steer
+   back onto the line is what recovers it. */
+const AI_DV_MAX=16;
+/* A knock, in the terms an AI car actually moves in.
+   It has no world velocity to change — it has a speed along the road and a
+   position across it — so an impulse is split into those two. The part
+   along the road goes on its speed, which is the only part that was ever
+   applied before. The part across the road becomes dv, a sideways rate the
+   car carries until the tyres take it back, and that is the half that used
+   to be thrown away: it is why a square hit in the side left a machine
+   standing exactly where it was while the car that hit it was fired off
+   the road. */
+function aiImpulse(c,ix,iz){
+  const p=aiAt(G.T,c.s);
+  c.v=Math.max(0,c.v+ix*p.tx+iz*p.tz);
+  c.dv=clamp((c.dv||0)+ix*p.rx+iz*p.rz,-AI_DV_MAX,AI_DV_MAX);
+  /* How long the car stays loose is the size of the knock, not a flat
+     time: a rub is gathered up in a moment and a real hit is not. This is
+     what decides whether a machine ends up back on the line or in the
+     grass, because while it runs the steer back onto the line is held
+     down to a third and the sideways rate is barely fought at all. */
+  c.crashT=Math.max(c.crashT||0,Math.min(AI_CRASH_T,Math.abs(c.dv)*0.24));
+}
+/* The turning a blow gives a machine: the moment of the impulse about the
+   middle of the car, exactly the sum crashTurn does for the player's, just
+   worked out in this car's own frame. */
+function aiCrashTurn(c,ov,ix,iz,scale){
+  const cross=(ov.cx-c.x)*iz-(ov.cz-c.z)*ix;
+  c.spinV=clamp(c.spinV-SPIN_PER*cross*scale*AI_SPIN_EXTRA,-SPIN_MAX,SPIN_MAX);
+}
 function aiShove(c,dx,dz){
   const T=G.T, p=aiAt(T,c.s);
   c.d+=dx*p.rx+dz*p.rz;
@@ -13721,7 +13752,7 @@ function aiSpawn(){
       wander:(Math.random()-0.5)*0.9*(1.2-k),
       gridD:(col?1:-1)*T.halfW*0.44, held:0,
       mistake:null,next:(12+90*k*k)*(0.5+Math.random()),mistakes:0,pass:0,passOf:null,passSide:1,passT:0,
-      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,aRoll:0,aRollV:0,spinV:0,crashT:0,mesh:null};
+      x:0,y:0,z:0,yaw:0,spin:0,steer:0,vx:0,vz:0,dv:0,aRoll:0,aRollV:0,spinV:0,crashT:0,mesh:null};
     const p=aiAt(T,car.s); car.x=p.x+p.rx*car.d; car.z=p.z+p.rz*car.d; car.y=heightAt(T,car.x,car.z); car.yaw=Math.atan2(p.tx,p.tz);
     car.mesh=buildCar(car.colour,car.kind);
     if(!car.mesh.userData.noShadow) car.mesh.traverse(o=>{ if(o.isMesh)o.castShadow=true; });
@@ -13874,7 +13905,18 @@ function aiTick(dt){
     if(c.crashT>0) c.crashT=Math.max(0,c.crashT-dt);
     const crashEase=c.crashT>0?clamp(c.crashT/AI_CRASH_T,0,1):0;
     const rate=Math.min(1.6+c.v*0.045,c.v*0.16)*dt*(1-crashEase*0.85);
-    const dPrev=c.d; c.d+=clamp(dWant-c.d,-rate,rate); c.dMax=Math.max(c.dMax||0,Math.abs(c.d));
+    const dPrev=c.d; c.d+=clamp(dWant-c.d,-rate,rate);
+    /* The sideways rate a knock left behind, running out against the
+       tyres — slowly while the car is still loose from the hit, quickly
+       once it has gathered itself up. dWant above is clamped to the road,
+       so this is the only thing that can put a machine off it, and the
+       steer back towards dWant is what eventually recovers it. */
+    if(c.dv){
+      c.d+=c.dv*dt;
+      c.dv-=c.dv*Math.min(1,dt*(c.crashT>0?1.05:4.2));
+      if(Math.abs(c.dv)<0.02)c.dv=0;
+    }
+    c.dMax=Math.max(c.dMax||0,Math.abs(c.d));
     /* along the lap; a lap is a lap */
     const sPrev=c.s; c.s+=c.v*dt;
     if(c.s>=T.len){ c.s-=T.len; c.laps++;
@@ -13974,16 +14016,29 @@ function aiTick(dt){
     const mA=carMass(a.kind), mB=carMass(b.kind);
     aiShove(a,ov.nx*ov.over*(mB/(mA+mB)),ov.nz*ov.over*(mB/(mA+mB)));
     aiShove(b,-ov.nx*ov.over*(mA/(mA+mB)),-ov.nz*ov.over*(mA/(mA+mB)));
-    const ta=Math.sin(a.yaw), tz=Math.cos(a.yaw);
-    const aAhead=(ov.nx*ta+ov.nz*tz)<0;         // b is behind a along a's nose
-    /* Nose to tail in a queue they touch for a long time, so a knock is
-       only a knock when one is genuinely catching the other — otherwise
-       running in company would bleed the whole field's speed away. */
-    const front=aAhead?a:b, behind=aAhead?b:a;
-    const closing=behind.v-front.v;
-    if(closing>0.5&&bumpReady(behind)){
-      front.v+=closing*0.45;
-      behind.v=Math.max(front.v*0.92,behind.v-closing*0.20);
+    /* Two machines hitting each other is the same collision the player's
+       own gets, and it was not before: what they had was an exchange of
+       speed nose to tail, which is right for a queue shuffling along and
+       nothing at all for one car putting another in the grass. The
+       impulse below is the player's, shared by mass, each car taking it
+       through aiImpulse in its own terms.
+
+       Only when they are genuinely coming together, though. Two cars
+       running side by side touch for a long time, and making every frame
+       of that a collision would bleed the whole field's speed away. */
+    const closing=-((a.vx-b.vx)*ov.nx+(a.vz-b.vz)*ov.nz);
+    if(closing>0.5&&bumpReady(a)){
+      const e=clamp(0.26-closing/110,0.04,0.26);
+      const jN=closing*(1+e)/(1/mA+1/mB);
+      aiImpulse(a, ov.nx*jN/mA, ov.nz*jN/mA);
+      aiImpulse(b,-ov.nx*jN/mB,-ov.nz*jN/mB);
+      const sc=crashScale(closing);
+      if(sc>0){
+        aiCrashTurn(a,ov, ov.nx*jN/mA, ov.nz*jN/mA,sc);
+        aiCrashTurn(b,ov,-ov.nx*jN/mB,-ov.nz*jN/mB,sc);
+        a.crashT=Math.max(a.crashT,AI_CRASH_T*sc);
+        b.crashT=Math.max(b.crashT,AI_CRASH_T*sc);
+      }
       const rax=-Math.cos(a.yaw), raz=Math.sin(a.yaw);
       const lat=Math.abs(ov.nx*rax+ov.nz*raz);
       /* wheel over wheel: whichever met the other further forward on itself
@@ -14576,6 +14631,12 @@ function bumpReady(o){ const t=performance.now()/1000; if(o.bumpT&&t-o.bumpT<BUM
    changed before. */
 const SPIN_PER=0.190;           // rad/s per unit of turning impulse
 const SPIN_MAX=5.5;
+/* A car you have just rammed should look and feel more knocked about than
+   your own does, so a machine is thrown further round by the same blow
+   than the player would be. It costs the driver nothing either way: it is
+   the same temporary loss of control a wall gives, not damage, and it
+   fades and gathers itself back up on its own. */
+const AI_SPIN_EXTRA=2.5;
 /* How long an AI car stays loose after a hard enough hit — its own
    equivalent of SLIDE_T below, but simpler: rather than touching the grip
    model an AI doesn't have, this just loosens how fast it steers back
@@ -14696,9 +14757,12 @@ function netCollide(){
     const m=meet(ov,c.kind,Math.sin(c.yaw)*c.v,Math.cos(c.yaw)*c.v,c);
     if(!m)continue;
     takeIt(ov,m);
-    /* they take their share along their own line of travel */
+    /* And they take their share of it — all of it, now, not just the part
+       pointing along their own nose. The lateral half used to be dropped
+       on the floor, and that one omission is the whole of why ramming a
+       machine barely moved it while the player went off. */
     const cfx=Math.sin(c.yaw), cfz=Math.cos(c.yaw);
-    c.v=Math.max(0,c.v-((ov.nx*m.jN+m.tx*m.jT)*cfx+(ov.nz*m.jN+m.tz*m.jT)*cfz)/m.oM);
+    aiImpulse(c,-(ov.nx*m.jN+m.tx*m.jT)/m.oM,-(ov.nz*m.jN+m.tz*m.jT)/m.oM);
     /* The physics run several times per drawn frame while the machines move
        once, so their world velocity has to be brought up to date here. */
     c.vx=cfx*c.v; c.vz=cfz*c.v;
