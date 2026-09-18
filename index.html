@@ -1233,6 +1233,13 @@ body.admining #lobbybar{display:none}
 .ast span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 /* the flag: the winner over the line, seen from beside the track */
 #fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* The corners closing in as the speed comes up. Nothing is ever painted
+   here — only an opacity moved from the frame loop — so it costs the
+   compositor and not the paint, which matters because the one place it
+   shows is the one place there is least frame left to spend. */
+#rushv{position:absolute;inset:0;opacity:0;pointer-events:none;will-change:opacity;
+  background:radial-gradient(ellipse 60% 58% at 50% 52%,
+    rgba(0,0,0,0) 42%,rgba(0,0,0,.30) 74%,rgba(4,6,8,.66) 100%)}
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 /* A word left on an account by an admin. It is the one thing on the page
    that is allowed to shout, because the alternative to somebody reading it
@@ -2537,6 +2544,7 @@ body.daily .gar-arrow{display:none}
            elements being moved every frame. -->
       <canvas class="tagcv" id="tagcv"></canvas>
       <canvas id="fx"></canvas>
+      <div id="rushv"></div>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
         <div><span id="hintHorn" hidden><kbd>H</kbd> horn · </span>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover · <kbd>R</kbd><kbd>R</kbd> restart</div>
@@ -8632,6 +8640,31 @@ function completeLap(ms){
 /* ---------- camera ---------- */
 const camPos=new THREE.Vector3(), camLook=new THREE.Vector3();
 let camInit=false;
+/* ---- the rush ----
+   A V12 at 360 looked exactly like the same V12 at 250, and it was the
+   camera's fault: the field of view finished opening at about 190 km/h and
+   everything above that was the identical picture with a bigger number in
+   the corner.
+
+   What it reads off now is two things at once. How near the car is to its
+   own top speed decides when any of this starts, so a kart flat out gets a
+   top end that feels like one instead of getting nothing; and how fast that
+   actually is decides how hard it lands, so the quick cars stay
+   unmistakably quicker. A kart at its 134 km/h limit gets a whisper. A V12
+   at 360 gets all of it. */
+function rushAt(){
+  const v=Math.hypot(CAR.vx,CAR.vz);
+  const vmax=DRIVE.topSpeed*(((G.perf||CAR_PERF.gt).top)||1);
+  const near=clamp((v-vmax*0.58)/(vmax*0.44),0,1);   // near its own limit
+  const abs =clamp((v-36)/60,0,1);                   // and quick in absolute terms
+  /* Mostly the second, because the complaint that started this was about
+     absolute speed: 360 has to look like more than 250 in the same car,
+     which it cannot if the scale resets to each car's own top end. The
+     first term is the smaller share, and all it buys is that a kart flat
+     out gets a whisper of this rather than nothing at all. */
+  return {v,abs,amt:clamp(0.28*near+0.72*abs,0,1)};
+}
+
 /* How close the chase camera sits, per car. Everything is measured against
    the GT; the kart is the one that needs pulling in. */
 const CAM_FIT={
@@ -8661,7 +8694,9 @@ function updateCamera(dt){
     /* A kart is a fraction of a car's size, and at a car's chase distance it
        is a speck with a helmet. Sit closer and lower behind it. */
     const fit=CAM_FIT[ED.opts.car]||CAM_FIT.gt;
-    const back=(G.camMode===0?9.2:6.4)*near*fit.back;
+    /* easing back as the speed comes up, the way a camera struggling to
+       keep up with something would */
+    const back=(G.camMode===0?9.2:6.4)*near*fit.back*(1+0.075*clamp(speed/98,0,1));
     const up  =(G.camMode===0?3.5:2.6)*(mob?(wide?0.96:0.84):1)*fit.up;
     const tx=CAR.x-fx*back, tz=CAR.z-fz*back;
     /* The hint again. This samples the ground behind the car to keep the
@@ -8686,8 +8721,22 @@ function updateCamera(dt){
     cam.position.z+=(Math.random()-.5)*s*0.7;
     G.shake*=Math.exp(-4*dt);
   }
-  const fov=clamp(G.fovBase+speed*0.30,G.fovBase,G.fovBase+16);
+  /* This used to be linear and clamped, and the clamp arrived at 53 m/s —
+     192 km/h. Every car quick enough to matter spent its whole top end
+     pinned against it. The curve below is still most of the way open by
+     the time a GT is flat out, but it never actually stops, so there are
+     six degrees left between a V12 at 250 and the same car at 360. */
+  const fov=G.fovBase+21*Math.pow(clamp(speed/98,0,1),0.78);
   if(Math.abs(cam.fov-fov)>0.05){ cam.fov+=(fov-cam.fov)*Math.min(1,dt*4); cam.updateProjectionMatrix(); }
+  /* and the car starts to shiver in the frame, which is the cue no amount
+     of field of view gives you — squared, so it is nothing at all until
+     the speed is genuinely silly */
+  const rz=rushAt().amt;
+  if(rz>0.02){
+    const j=rz*rz*0.055;
+    cam.position.x+=(Math.random()-.5)*j;
+    cam.position.y+=(Math.random()-.5)*j*0.7;
+  }
 }
 function updateCarMesh(){
   const T=G.T, c=G.car;
@@ -9230,7 +9279,7 @@ function setSound(on){
 /* ---------- main loop ---------- */
 function frame(now){
   G.raf=requestAnimationFrame(frame);
-  if(!G.running)return;
+  if(!G.running){ rushOff(); return; }
   let dt=(now-G.lastT)/1000; G.lastT=now;
   if(!isFinite(dt))dt=0;
   dt=Math.min(dt,0.1);
@@ -9278,7 +9327,7 @@ function frame(now){
   updateHUD(dt);
   updateAudio();
   if(flashT>0){ flashT-=dt; if(flashT<=0)$("flash").classList.remove("on"); }
-  G.renderer.render(G.scene,G.camera);
+  rushRender();
 }
 function startGame(){
   G.running=true; G.lastT=performance.now(); G.acc=0; camInit=false;
@@ -14116,11 +14165,178 @@ function winCamera(dt){
   if(Math.abs(cam.fov-fov)>0.2){ cam.fov+=(fov-cam.fov)*Math.min(1,dt*3); cam.updateProjectionMatrix(); }
   return true;
 }
+/* The air tearing past, drawn as streaks flowing out of the point the car
+   is driving at. They are the cue that carries the top end: field of view
+   runs out of room long before the speed does, and a number in the corner
+   is not something you feel. Each one accelerates away from the vanishing
+   point at a rate set by how far out it already is, which is what makes
+   the flow read as perspective rather than as a firework. */
+const RUSH={n:0,a:[],r:[],l:[],o:[]};
+let rushVig=-1;
+const rushVP=new THREE.Vector3();
+let rushVX=0.5, rushVY=0.54;      // the vanishing point, as a fraction across the frame
+/* Where it all flows out of. Not the middle of the screen — the point the
+   car is actually driving at, projected through the same camera that drew
+   the road. Screen centre was close enough on a straight and obviously
+   wrong everywhere else: the world would swing through a corner while the
+   streaks sat square to the frame. Off this, the streaks lean into the
+   corner and tip with the hill for free, and so does the blur, which is
+   the whole reason both of them read as the car's own motion rather than
+   as something laid over the top of it. */
+function rushVanish(){
+  rushVP.set(CAR.x+Math.sin(CAR.yaw)*900, CAR.y+2.0, CAR.z+Math.cos(CAR.yaw)*900);
+  rushVP.project(G.camera);
+  let x=rushVP.x*0.5+0.5, y=rushVP.y*0.5+0.5;
+  /* behind the camera, or off in the weeds after a spin: fall back to the
+     middle rather than flinging the whole field off one edge */
+  if(!isFinite(x)||!isFinite(y)||rushVP.z>1){ x=0.5; y=0.54; }
+  rushVX=clamp(x,0.12,0.88); rushVY=clamp(y,0.22,0.86);
+}
+function rushOrigin(W,H){ rushVanish(); return [rushVX*W,(1-rushVY)*H]; }
+/* Paused, or back in the garage: the frame loop stops calling any of this
+   and whatever was on screen would otherwise stay there — a darkened
+   vignette and a frozen spray of streaks sitting behind the pause menu. */
+function rushOff(){
+  if(rushVig===0)return;
+  const v=$("rushv"); if(v)v.style.opacity=0;
+  rushVig=0; RUSH.n=0;
+  const cv=$("fx");
+  if(cv&&cv.width){ const c=cv.getContext("2d"); c.setTransform(1,0,0,1,0,0); c.clearRect(0,0,cv.width,cv.height); }
+}
+function rushDraw(c,W,H,dt){
+  const amt=rushAt().amt;
+  const vig=$("rushv");
+  if(vig){ const o=Math.round(amt*0.88*100)/100; if(o!==rushVig){ vig.style.opacity=o; rushVig=o; } }
+  if(amt<=0.015){ RUSH.n=0; return; }
+  const want=Math.round(amt*76);
+  while(RUSH.a.length<want){
+    RUSH.a.push(Math.random()*Math.PI*2); RUSH.r.push(0.07+Math.random()*0.5);
+    RUSH.l.push(0.55+Math.random()*1.0);  // no two the same length
+    RUSH.o.push(0.45+Math.random()*0.75); // or the same weight
+  }
+  RUSH.n=want;
+  const [cx,cy]=rushOrigin(W,H);
+  const RAD=Math.hypot(W,H)*0.5;
+  const k=1.5+5.4*amt;                        // how hard they accelerate outward
+  const len=0.075+0.42*amt;
+  c.save(); c.lineCap="round"; c.strokeStyle="#E4EFF7";
+  for(let i=0;i<want;i++){
+    let r=RUSH.r[i]+RUSH.r[i]*k*dt;
+    if(r>1.34){ r=0.05+Math.random()*0.10; RUSH.a[i]=Math.random()*Math.PI*2;
+                RUSH.l[i]=0.55+Math.random()*1.0; RUSH.o[i]=0.45+Math.random()*0.75; }
+    RUSH.r[i]=r;
+    const a=RUSH.a[i], ca=Math.cos(a), sa=Math.sin(a);
+    const r0=Math.max(0.03,r-r*len*RUSH.l[i]);
+    /* Faint where it is born near the origin, so nothing ever pops into
+       being on top of the car, and faded again on the way out of frame.
+       Kept thin and low: these are meant to be air going past, not a
+       diagram of it, and the first pass drew them solid enough to read as
+       scratches on the lens. */
+    c.globalAlpha=amt*0.36*RUSH.o[i]*clamp((r-0.09)/0.20,0,1)*clamp((1.34-r)/0.32,0,1);
+    c.lineWidth=(0.75+1.05*amt)*RUSH.o[i];
+    c.beginPath();
+    c.moveTo(cx+ca*r0*RAD, cy+sa*r0*RAD);
+    c.lineTo(cx+ca*r *RAD, cy+sa*r *RAD);
+    c.stroke();
+  }
+  c.restore();
+}
+/* ---- motion blur ----
+   How much of it there is, on absolute speed alone and nothing else: this
+   is the one cue that is simply about how fast the car is going. It starts
+   around 110 km/h, which is where a road actually begins to smear, and
+   goes on climbing all the way to 360 rather than giving up at 190 the way
+   the field of view used to. */
+function blurAmount(){
+  return clamp((Math.hypot(CAR.vx,CAR.vz)-30)/68,0,1);
+}
+/* A radial smear away from the point the car is driving at: every pixel is
+   averaged with the ones between it and that point, which is the path it
+   just travelled across the screen. Sharp at the vanishing point, heaviest
+   at the edges — exactly the way real motion blur falls when you are
+   driving into the distance.
+
+   It costs a render target and a full-screen pass, so it is only ever
+   switched on above the speed where it shows. Below that the scene still
+   goes straight to the canvas the way it always did, with the multisampling
+   the canvas was made with and no extra fill at all. */
+const BLUR={rt:null,scene:null,cam:null,mat:null,w:0,h:0,size:new THREE.Vector2()};
+function blurInit(){
+  if(BLUR.scene)return;
+  BLUR.mat=new THREE.ShaderMaterial({
+    uniforms:{tDiffuse:{value:null},uCenter:{value:new THREE.Vector2(0.5,0.54)},uAmount:{value:0}},
+    depthTest:false, depthWrite:false,
+    vertexShader:
+      "varying vec2 vUv;"+
+      "void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }",
+    fragmentShader:
+      "uniform sampler2D tDiffuse; uniform vec2 uCenter; uniform float uAmount;"+
+      "varying vec2 vUv;"+
+      "void main(){"+
+      "  vec2 d=vUv-uCenter;"+
+      "  vec4 sum=vec4(0.0); float wsum=0.0;"+
+      /* the sharp sample carries the most weight, so the image stays
+         legible instead of dissolving */
+      "  for(int i=0;i<7;i++){"+
+      "    float t=float(i)/6.0;"+
+      "    float w=1.0-t*0.66;"+
+      "    sum+=texture2D(tDiffuse,vUv-d*uAmount*t)*w; wsum+=w;"+
+      "  }"+
+      "  gl_FragColor=sum/wsum;"+
+      "}"
+  });
+  BLUR.scene=new THREE.Scene();
+  BLUR.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),BLUR.mat));
+  BLUR.cam=new THREE.Camera();
+}
+function blurTarget(w,h){
+  if(BLUR.rt&&BLUR.w===w&&BLUR.h===h)return BLUR.rt;
+  if(BLUR.rt)BLUR.rt.dispose();
+  /* The canvas was made with antialiasing and a plain render target has
+     none, so on WebGL2 the target is multisampled too — otherwise every
+     edge in the scene would go jagged the moment the blur switched on,
+     which is not a trade worth making for a smear. */
+  const opt={minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,
+             format:THREE.RGBAFormat,
+             /* encoded on the way in, so the composite can hand the pixels
+                to the canvas untouched and nothing shifts colour when the
+                blur comes on */
+             encoding:THREE.sRGBEncoding,
+             stencilBuffer:false};
+  BLUR.rt=(G.renderer.capabilities.isWebGL2&&THREE.WebGLMultisampleRenderTarget)
+    ? new THREE.WebGLMultisampleRenderTarget(w,h,opt)
+    : new THREE.WebGLRenderTarget(w,h,opt);
+  if(BLUR.rt.samples!==undefined)BLUR.rt.samples=4;
+  BLUR.w=w; BLUR.h=h;
+  return BLUR.rt;
+}
+function rushRender(){
+  rushVanish();
+  const amt=blurAmount();
+  if(amt<0.04||WIN.t>0){ G.renderer.render(G.scene,G.camera); return; }
+  blurInit();
+  G.renderer.getDrawingBufferSize(BLUR.size);
+  const w=Math.max(2,Math.round(BLUR.size.x)), h=Math.max(2,Math.round(BLUR.size.y));
+  const rt=blurTarget(w,h);
+  G.renderer.setRenderTarget(rt);
+  G.renderer.render(G.scene,G.camera);
+  G.renderer.setRenderTarget(null);
+  BLUR.mat.uniforms.tDiffuse.value=rt.texture;
+  BLUR.mat.uniforms.uCenter.value.set(rushVX,rushVY);
+  /* bent rather than squared: squaring held almost all of it back until
+     the last third, which left the middle of the range — where most cars
+     spend their time — looking untouched */
+  BLUR.mat.uniforms.uAmount.value=Math.pow(amt,1.6)*0.082;
+  G.renderer.render(BLUR.scene,BLUR.cam);
+}
 function fxTick(dt){
   const cv=$("fx"); if(!cv)return;
   const W=cv.clientWidth||1, H=cv.clientHeight||1, dpr=Math.min(window.devicePixelRatio||1,2);
   if(cv.width!==Math.round(W*dpr)||cv.height!==Math.round(H*dpr)){ cv.width=Math.round(W*dpr); cv.height=Math.round(H*dpr); }
   const c=cv.getContext("2d"); c.setTransform(dpr,0,0,dpr,0,0); c.clearRect(0,0,W,H);
+  /* under the confetti, and gone the moment the lap is over */
+  if(WIN.t<=0) rushDraw(c,W,H,dt);
+  else if(rushVig!==0){ const v=$("rushv"); if(v){ v.style.opacity=0; rushVig=0; } }
   if(WIN.t<=0)return;
   WIN.t-=dt;
   for(const b of WIN.bits){
