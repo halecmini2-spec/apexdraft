@@ -96,14 +96,16 @@ function makeCheckout(store, userFor) {
       try { await store.logPurchase(userId, (user && user.name) || "?", packType + "-pack", PACKS[packType].pence); }
       catch (e) { console.error("logPurchase:", e && e.message); }
     }
-    return true;
+    /* Named back to the caller so the tab coming home from Stripe can open
+       it on the spot rather than pointing at a shelf. */
+    return { pack: { id: "cs:" + sessionId, pack_type: packType } };
   }
 
   async function fulfil(userId, itemId, sessionId) {
     if (PACKS[itemId]) return fulfilPack(userId, itemId, sessionId);
     const bundle = BUNDLES[itemId];
     const cars = bundle ? bundle.cars : (CARS[itemId] ? [itemId] : null);
-    if (!cars) return false;
+    if (!cars) return null;
     const user = await store.userById(userId);
     const already = user ? String(user.cars || "").split(",").map((s) => s.trim()) : [];
     const gained = cars.some((c) => !already.includes(c));
@@ -113,7 +115,7 @@ function makeCheckout(store, userFor) {
       try { await store.logPurchase(userId, (user && user.name) || "?", itemId, pence); }
       catch (e) { console.error("logPurchase:", e && e.message); }
     }
-    return true;
+    return { cars };
   }
 
   async function route(req, res, url) {
@@ -219,9 +221,9 @@ function makeCheckout(store, userFor) {
         if (session.payment_status !== "paid" || !session.metadata
             || session.metadata.userId !== user.id)
           return json(res, 200, { ok: false }), true;
-        await fulfil(session.metadata.userId, session.metadata.carId, session.id);
+        const done = await fulfil(session.metadata.userId, session.metadata.carId, session.id);
         return json(res, 200, { ok: true, carId: session.metadata.carId,
-                                pack: !!PACKS[session.metadata.carId] }), true;
+                                pack: (done && done.pack) || null }), true;
       } catch (e) {
         return json(res, 502, { error: "Couldn't check that with Stripe just now." }), true;
       }

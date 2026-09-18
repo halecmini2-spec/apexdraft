@@ -2056,9 +2056,9 @@ body.daily .gar-arrow{display:none}
           <button class="chip" id="shBack">Back</button>
         </div>
       </div>
-      <p class="sh-note">A car is yours for good once it's bought, and a pack goes
-        straight onto the Packs shelf to be opened there — sign in first, so
-        there's an account for either to belong to.</p>
+      <p class="sh-note">A car is yours for good once it's bought, and a pack opens
+        the moment you buy it — sign in first, so there's an account for
+        either to belong to.</p>
       <h2 class="sh-h">Cars <span>Yours for good, once bought</span></h2>
       <div class="sh-grid" id="shCars"></div>
       <h2 class="sh-h">Packs <span>One item each, of the pack's rarity or better</span></h2>
@@ -11551,17 +11551,26 @@ function shopPacksUI(){
 }
 /* Coins rather than money. The relay checks the balance and takes the
    coins in one statement, so there is no window where a second click
-   spends the same coins twice; this only asks and then repaints. */
+   spends the same coins twice; this only asks, opens it, and repaints.
+
+   Bought here, opened here: an errand to another screen between paying
+   for a pack and finding out what was in it is the one thing that can be
+   put between those two, and there is no reason to. The pack shelf is
+   for the ones the pass handed over while you were busy elsewhere. */
 async function buyPackWithCoins(p,btn){
   if(!acctIn()){ shopSay("Sign in first — coins live on the account."); AU_MODE="in"; showAuth(true); return; }
   const was=btn.textContent; btn.disabled=true; btn.textContent="…";
   try{
     const r=await api("/api/pass/packs/buy",{method:"POST",token:ACCT.token,body:{packType:p.type}});
     PASS.coins=r.coins;
+    shopSay("");
+    /* If the opening itself fails — a dropped connection between paying
+       and pulling — the pack is still bought and still on the shelf, and
+       that is what to say rather than pretending nothing happened. */
+    await passOpenPack(r.pack);
     await passRefresh();                 // the shelf, the badge and the balance
-    const label=(RARITY[p.type]?RARITY[p.type].label:p.type)+" Pack";
-    shopSay(label+" bought. It's waiting on the Packs shelf — open it there.");
-    showFlash(label+" bought","#2ED47A","Open it from Packs");
+    if((PASS.packs||[]).some(q=>q.id===r.pack.id))
+      shopSay("Bought, but it wouldn't open just now — it's on the Packs shelf.");
   }catch(e){
     shopSay(e&&e.message||"Couldn't buy that just now.");
   }
@@ -12392,8 +12401,13 @@ async function checkoutReturn(){
       ownedCarsUI();
       closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true);
       if(r.pack){
+        /* straight into the reveal, the same as buying one with coins:
+           the tab has only just come back from paying for it */
         await passRefresh();
-        shopSay("Bought. It's waiting on the Packs shelf — open it there.");
+        await passOpenPack(r.pack);
+        await passRefresh();
+        if((PASS.packs||[]).some(q=>q.id===r.pack.id))
+          shopSay("Bought, but it wouldn't open just now — it's on the Packs shelf.");
       } else {
         shopSay("That one's yours now — it's in the garage.");
       }
