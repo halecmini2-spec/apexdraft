@@ -5581,8 +5581,57 @@ function buildWheels(g,M,spec){
     g.rotateZ(Math.PI/2);                     // spin axis along x, like a wheel
     return g;
   };
+  /* the carcass: rounder in the shoulder than a slick, and stepped out at
+     the sidewall so the tread stands proud of it */
+  const mudCarcass=(r,tw)=>{
+    const h=tw/2, p=[];
+    const at=(rad,ax)=>p.push(new THREE.Vector2(rad,ax));
+    at(r*0.52,-h*0.96);  at(r*0.70,-h*1.00);     // bead, then out to the widest point
+    at(r*0.86,-h*1.00);  at(r*0.93,-h*0.92);     // the sidewall bulge
+    at(r*0.955,-h*0.74); at(r*0.955,-h*0.30);    // shoulder, then the tread band
+    at(r*0.955, h*0.30); at(r*0.955, h*0.74);
+    at(r*0.93, h*0.92);  at(r*0.86, h*1.00);
+    at(r*0.70, h*1.00);  at(r*0.52, h*0.96);
+    const g=new THREE.LatheGeometry(p,22);
+    g.rotateZ(Math.PI/2);
+    return g;
+  };
+  /* one course of lugs, cut as a merged ring so the whole tyre is one mesh */
+  const mudTyre=(r,tw)=>{
+    const parts=[{geo:mudCarcass(r,tw),color:0xFFFFFF,matrix:new THREE.Matrix4()}];
+    const N=16, lw=tw*0.30, lh=r*0.085, ll=r*0.46;
+    for(let i=0;i<N;i++){
+      const a=i/N*TAU;
+      /* out-in-out across the tread, which is what makes the pattern read as
+         a pattern rather than a band of ribs */
+      for(const off of [-1,0,1]){
+        if(off!==0 && i%2) continue;              // the outer rows are staggered
+        const blk=new THREE.BoxGeometry(off===0?lw*1.15:lw, lh*2, ll);
+        const m=new THREE.Matrix4().makeRotationX(a);
+        const pos=new THREE.Vector3(off*tw*0.30, Math.cos(a)*(r*0.94), Math.sin(a)*(r*0.94));
+        m.setPosition(pos);
+        parts.push({geo:blk,color:0xFFFFFF,matrix:m});
+      }
+    }
+    return mergeGeos(parts);
+  };
   const set=(r,tw,race)=>{
-    const rr=r*0.6;
+    const rr=race==="mud"?r*0.58:r*0.6;
+    if(race==="mud"){
+      const cyl=(rad,len,seg)=>{ const g=new THREE.CylinderGeometry(rad,rad,len,seg); g.rotateZ(Math.PI/2); return g; };
+      /* A bead-lock ring on the outer face, which is the one thing every
+         picture of one of these has and nothing else here does. */
+      const lip=new THREE.TorusGeometry(rr*0.92,r*0.045,6,20);
+      lip.rotateY(Math.PI/2);
+      return {
+        tg:mudTyre(r,tw), r, race:true, tw, rr,
+        rg:cyl(rr*0.96,tw*0.72,20),
+        hg:cyl(r*0.150,tw*1.02,12),
+        ng:cyl(r*0.055,tw*1.10,6),
+        lg:lip,
+        sg:new THREE.BoxGeometry(tw*0.74,r*0.075,rr*1.55),
+      };
+    }
     if(race){
       const cyl=(rad,len,seg)=>{ const g=new THREE.CylinderGeometry(rad,rad,len,seg); g.rotateZ(Math.PI/2); return g; };
       const lip=new THREE.TorusGeometry(rr*0.985,0.016,5,22);
@@ -7354,9 +7403,28 @@ function bodyGolfKart(b,M){
    under it.
    3.3 long, 2.85 across the tyres, 2.5 to the roof, on a 1.95 wheelbase. */
 function bodyMonsterTruck(b,M){
+  /* ---- the monster truck ----
+     Rebuilt around one idea: the wheels are the vehicle and the truck is the
+     thing sitting on top of them. What was here before was a single lofted
+     shell — one smooth volume doing duty as bonnet, cab and bed at once —
+     which from any distance read as a blob on stilts. A pickup is three
+     volumes, and it is the steps between them that say pickup: a long flat
+     bonnet, a tall upright cab set back, and an open bed behind it. So it is
+     three volumes now, with a slab of grille across the front and flares
+     standing out over each tyre.
+
+     Everything below the rail — axles, coilovers, links — was already right
+     and is kept.
+
+     House style throughout: a handful of clean shapes, no rivets, no panel
+     lines, and proportions pushed a good way past anything real. */
+
   const FR=0.780, RR=0.780;                 // the tyres are the whole point
-  const FZ=1.00,  RZ=-0.95;
+  const FZ=1.180, RZ=-1.140;                // pushed apart, to sit under the ends
   const FX=1.050, RX=1.050;
+  const RAIL=1.640;                         // top of the chassis rail
+  const FLOOR=1.700;                        // the body sits on it
+
   const frameM =new THREE.MeshStandardMaterial({color:SRGB(0x16181A),roughness:0.42,metalness:0.62});
   const axleM  =new THREE.MeshStandardMaterial({color:SRGB(0x0E0F10),roughness:0.48,metalness:0.55});
   const shockM =new THREE.MeshStandardMaterial({color:SRGB(0x101214),roughness:0.35,metalness:0.60});
@@ -7365,95 +7433,198 @@ function bodyMonsterTruck(b,M){
   const coilM  =new THREE.MeshStandardMaterial({color:SRGB(0xC21E2E),roughness:0.34,metalness:0.58});
   const linkM  =new THREE.MeshStandardMaterial({color:SRGB(0xC9A227),roughness:0.30,metalness:0.85});
   const bumperM=new THREE.MeshStandardMaterial({color:SRGB(0x15171A),roughness:0.55,metalness:0.20});
+  const darkM  =new THREE.MeshStandardMaterial({color:SRGB(0x101315),roughness:0.62,metalness:0.28});
+  const chromeM=new THREE.MeshStandardMaterial({color:SRGB(0xD6DCE2),roughness:0.14,metalness:0.96});
   const lampM  =new THREE.MeshStandardMaterial({
     color:SRGB(0xFFF6E2),emissive:SRGB(0xFFEBC4),emissiveIntensity:0.9,roughness:0.14,metalness:0.1});
   const T=(a,c,r,mat,seg)=>tubeTo(b,a,c,r,mat,seg);
 
-  /* a short cab-and-bed shell, its floor riding above the tyres rather than
-     between them — the whole point of the redesign below: a real one's
-     body sits on top of what carries it, not nested down inside the arc
-     of its own wheels */
-  const shell=new THREE.Mesh(loft([
-    {z: 1.55,w:0.360,y0:1.750,y1:1.900,n:2.4},   // blunt, rounded nose
-    {z: 1.25,w:0.680,y0:1.690,y1:2.010,n:3.2},   // hood widening out
-    {z: 0.90,w:0.760,y0:1.660,y1:2.060,n:3.6},   // cowl
-    {z: 0.50,w:0.750,y0:1.650,y1:2.080,n:3.6},   // cab, front doors
-    {z: 0.05,w:0.730,y0:1.650,y1:2.080,n:3.6},   // cab, rear doors
-    {z:-0.40,w:0.710,y0:1.680,y1:1.960,n:3.2},   // behind the cab, into the bed
-    {z:-0.85,w:0.740,y0:1.660,y1:1.900,n:3.2},   // bed sides
-    {z:-1.25,w:0.480,y0:1.660,y1:1.860,n:2.2}    // tailgate, rounded off
-  ],24),M.paint);
-  shell.castShadow=true; b.add(shell);
+  /* ---- the body, in layers ----
+     The first go made the cab one solid volume with the glass buried inside
+     it, so it came out a windowless crate; and the flares were so big they
+     became the widest thing on the truck, which left the bonnet and the bed
+     reading as one long slab with a box on it.
 
-  /* the greenhouse, glazed the same way the GT's own cabin is: one lofted
-     surface doubling as windscreen, side glass and rear glass at once */
+     A pickup reads in layers, so it is built in layers: a waist line that
+     runs the length of it, a bonnet below that line, glass and a roof above
+     it over the cab only, and bed walls above it at the back. The step down
+     from cab to bonnet and the open gap over the bed are the two things that
+     say pickup, and both of them live at that one height. */
+  const WAIST=FLOOR+0.520;                  // the line everything is hung off
+
+  /* the bonnet: long, flat, square-shouldered — a lid, not a nose */
+  const bonnet=new THREE.Mesh(loft([
+    {z: 1.990,w:0.800,y0:FLOOR+0.035,y1:WAIST-0.090,n:5.4},
+    {z: 1.760,w:0.840,y0:FLOOR+0.020,y1:WAIST-0.045,n:5.8},
+    {z: 1.300,w:0.855,y0:FLOOR+0.015,y1:WAIST-0.020,n:6.0},
+    {z: 0.880,w:0.855,y0:FLOOR+0.015,y1:WAIST-0.015,n:6.0},
+    {z: 0.700,w:0.850,y0:FLOOR+0.020,y1:WAIST-0.025,n:5.6}
+  ],20),M.paint);
+  bonnet.castShadow=true; b.add(bonnet);
+
+  /* the cab's lower half — doors, up to the waist */
+  const cabBody=new THREE.Mesh(loft([
+    {z: 0.720,w:0.855,y0:FLOOR+0.020,y1:WAIST+0.010,n:5.6},
+    {z: 0.560,w:0.870,y0:FLOOR+0.015,y1:WAIST+0.020,n:6.0},
+    {z: 0.060,w:0.875,y0:FLOOR+0.015,y1:WAIST+0.020,n:6.0},
+    {z:-0.360,w:0.870,y0:FLOOR+0.015,y1:WAIST+0.015,n:6.0},
+    {z:-0.510,w:0.850,y0:FLOOR+0.020,y1:WAIST-0.010,n:5.6}
+  ],20),M.paint);
+  cabBody.castShadow=true; b.add(cabBody);
+
+  /* the greenhouse, standing on the waist where it can be seen: a big
+     upright screen, side glass, and a back window */
   const cabin=new THREE.Mesh(loft([
-    {z: 0.85,w:0.520,y0:2.060,y1:2.120,n:3.0},
-    {z: 0.55,w:0.660,y0:2.080,y1:2.400,n:3.4},
-    {z: 0.10,w:0.700,y0:2.080,y1:2.460,n:3.6},
-    {z:-0.30,w:0.660,y0:2.060,y1:2.380,n:3.2},
-    {z:-0.55,w:0.500,y0:2.040,y1:2.200,n:2.6}
-  ],20),M.glass);
+    {z: 0.505,w:0.700,y0:WAIST+0.015,y1:WAIST+0.510,n:4.2},
+    {z: 0.320,w:0.755,y0:WAIST+0.015,y1:WAIST+0.585,n:4.6},
+    {z:-0.095,w:0.760,y0:WAIST+0.015,y1:WAIST+0.590,n:4.8},
+    {z:-0.350,w:0.725,y0:WAIST+0.015,y1:WAIST+0.540,n:4.4}
+  ],18),M.glass);
   cabin.castShadow=true; b.add(cabin);
 
+  /* and a roof capping it, in body colour so the glass has an edge */
+  /* a proper lid: thick enough to be a roof rather than a spoiler, and
+     wider than the glass so the pillars have something to end against */
   const roof=new THREE.Mesh(loft([
-    {z: 0.50,w:0.660,y0:2.420,y1:2.500,n:4.0},
-    {z:-0.05,w:0.680,y0:2.410,y1:2.520,n:4.2},
-    {z:-0.35,w:0.620,y0:2.400,y1:2.460,n:3.4}
+    {z: 0.520,w:0.790,y0:WAIST+0.490,y1:WAIST+0.635,n:5.2},
+    {z: 0.060,w:0.845,y0:WAIST+0.560,y1:WAIST+0.700,n:5.6},
+    {z:-0.375,w:0.810,y0:WAIST+0.505,y1:WAIST+0.655,n:5.2}
   ],16),M.paint);
   roof.castShadow=true; b.add(roof);
 
-  /* the chassis rail each side runs the whole length at cab-floor height,
-     inboard of the tyre's own face — at the old, wider mark it would now
-     run straight through rubber that thick */
-  for(const sx of [-1,1]) T([sx*0.640,1.670,1.60],[sx*0.640,1.630,-1.55],0.048,frameM,10);
-  for(const z of [1.20,0.30,-0.65,-1.35]) T([-0.640,1.65,z],[0.640,1.65,z],0.040,frameM,8);
+  /* the bed: a floor at the waist and walls standing on it, open between */
+  const bedFloor=new THREE.Mesh(new THREE.BoxGeometry(1.700,0.080,1.300),M.paint);
+  bedFloor.position.set(0,WAIST-0.030,-1.180); b.add(bedFloor);
+  for(const sx of [-1,1]){
+    const side=new THREE.Mesh(loft([
+      {z:-0.540,w:0.075,y0:FLOOR+0.030,y1:WAIST+0.225,n:5.4},
+      {z:-1.180,w:0.082,y0:FLOOR+0.025,y1:WAIST+0.245,n:5.8},
+      {z:-1.810,w:0.075,y0:FLOOR+0.035,y1:WAIST+0.210,n:5.4}
+    ],14),M.paint);
+    side.position.x=sx*0.800; side.castShadow=true; b.add(side);
+  }
+  const tailgate=new THREE.Mesh(new THREE.BoxGeometry(1.680,0.280,0.085),M.paint);
+  tailgate.position.set(0,WAIST+0.105,-1.830); tailgate.castShadow=true; b.add(tailgate);
+  /* the rear wall of the bed, so you are not looking through into the cab */
+  const bulk=new THREE.Mesh(new THREE.BoxGeometry(1.680,0.260,0.080),M.paint);
+  bulk.position.set(0,WAIST+0.115,-0.540); b.add(bulk);
 
-  /* the roll cage, rising off that rail and through the glass — the part
-     of the truck a driver is actually sitting inside of */
-  for(const z of [0.55,-0.15]) for(const sx of [-1,1])
-    T([sx*0.640,1.660,z],[sx*0.350,2.460,z],0.034,frameM,8);
-  T([-0.350,2.460,0.55],[0.350,2.460,0.55],0.030,frameM,8);
-  T([-0.350,2.460,-0.15],[0.350,2.460,-0.15],0.030,frameM,8);
-  T([-0.350,2.460,0.55],[-0.350,2.460,-0.15],0.030,frameM,8);
-  T([ 0.350,2.460,0.55],[ 0.350,2.460,-0.15],0.030,frameM,8);
-  /* an A-pillar tube down to the nose of the rail, ahead of the glass */
-  for(const sx of [-1,1]) T([sx*0.350,2.420,0.85],[sx*0.640,1.670,1.35],0.028,frameM,8);
+  /* ---- the face ----
+     A slab of grille standing in the end of the bonnet with bars you can
+     count, the lamps in it rather than perched above it. */
+  const grille=new THREE.Mesh(new THREE.BoxGeometry(1.480,0.300,0.110),darkM);
+  grille.position.set(0,FLOOR+0.245,2.020); grille.castShadow=true; b.add(grille);
+  for(let i=-3;i<=3;i++){
+    const bar=new THREE.Mesh(new THREE.BoxGeometry(0.086,0.250,0.070),chromeM);
+    bar.position.set(i*0.190,FLOOR+0.245,2.052); b.add(bar);
+  }
+  for(const sx of [-1,1]){
+    const l=new THREE.Mesh(lens(0.235,0.150,0.07),lampM);
+    l.position.set(sx*0.585,FLOOR+0.255,2.062); b.add(l);
+  }
+  /* the scoop, because there is a very large engine under there */
+  const scoop=new THREE.Mesh(loft([
+    {z:1.640,w:0.245,y0:WAIST-0.110,y1:WAIST+0.115,n:5.0},
+    {z:1.360,w:0.275,y0:WAIST-0.100,y1:WAIST+0.170,n:5.4},
+    {z:1.090,w:0.245,y0:WAIST-0.090,y1:WAIST+0.135,n:5.0}
+  ],14),darkM);
+  scoop.castShadow=true; b.add(scoop);
+  const mouth=new THREE.Mesh(new THREE.BoxGeometry(0.420,0.120,0.070),chromeM);
+  mouth.position.set(0,WAIST+0.095,1.650); mouth.rotation.x=0.20; b.add(mouth);
 
-  /* the front bumper, high on the rail the way everything else here is */
-  const bumper=new THREE.Mesh(lens(0.860,0.140,0.10),bumperM);
-  bumper.position.set(0,1.680,1.640); bumper.rotation.x=Math.PI/2; bumper.castShadow=true; b.add(bumper);
-  for(const sx of [-0.720,0.720]) T([sx,1.920,1.640],[sx,1.680,1.640],0.026,bumperM,8);
-  for(const sx of [-0.560,0.560]){
-    const l=new THREE.Mesh(lens(0.190,0.160,0.06),lampM);
-    l.position.set(sx,1.840,1.680); b.add(l);
+  /* ---- the sides ----
+     Not arches. The floor of this thing sits above the top of its own
+     tyres, so there is no arc of rubber to cover and nothing for an arch to
+     do — four of them went on as separate pods and read as orange torpedoes
+     bolted to the flanks, hiding the bonnet and the bed behind them.
+
+     What the body actually wants is width. One flare each side, running the
+     whole length and swelling over each axle, so the shoulders reach out
+     towards the track the wheels set and the truck stops looking perched on
+     something far wider than itself. */
+  for(const sx of [-1,1]){
+    const flank=new THREE.Mesh(loft([
+      {z: 2.000,w:0.070,y0:FLOOR+0.070,y1:WAIST-0.060,n:4.6},
+      {z: FZ+0.420,w:0.135,y0:FLOOR+0.045,y1:WAIST+0.020,n:4.8},
+      {z: FZ,      w:0.175,y0:FLOOR+0.030,y1:WAIST+0.045,n:5.0},
+      {z: FZ-0.420,w:0.140,y0:FLOOR+0.040,y1:WAIST+0.025,n:4.8},
+      {z: 0.100,   w:0.105,y0:FLOOR+0.050,y1:WAIST+0.010,n:4.6},
+      {z: RZ+0.420,w:0.140,y0:FLOOR+0.040,y1:WAIST+0.025,n:4.8},
+      {z: RZ,      w:0.175,y0:FLOOR+0.030,y1:WAIST+0.045,n:5.0},
+      {z: RZ-0.420,w:0.135,y0:FLOOR+0.045,y1:WAIST+0.020,n:4.8},
+      {z:-1.840,   w:0.070,y0:FLOOR+0.070,y1:WAIST-0.060,n:4.6}
+    ],16),M.paint);
+    flank.position.x=sx*0.880; flank.castShadow=true; b.add(flank);
   }
 
-  /* straight axles: one solid tube each end, hung well under the chassis
-     rail, with the differential a fatter bulge at its centre — everything
-     from here down is suspension, not body */
+  /* ---- the chassis rail ----
+     Runs the whole length at cab-floor height, inboard of the tyre faces. */
+  for(const sx of [-1,1]) T([sx*0.600,RAIL,2.020],[sx*0.600,RAIL-0.040,-1.860],0.050,frameM,10);
+  for(const z of [1.760,0.760,-0.480,-1.620]) T([-0.600,RAIL-0.010,z],[0.600,RAIL-0.010,z],0.042,frameM,8);
+
+  /* the roll cage, over the bed and through the cab roof */
+  for(const z of [0.480,-0.240]) for(const sx of [-1,1])
+    T([sx*0.640,RAIL,z],[sx*0.400,WAIST+0.735,z],0.034,frameM,8);
+  T([-0.400,WAIST+0.735,0.480],[0.400,WAIST+0.735,0.480],0.030,frameM,8);
+  T([-0.400,WAIST+0.735,-0.240],[0.400,WAIST+0.735,-0.240],0.030,frameM,8);
+  T([-0.400,WAIST+0.735,0.480],[-0.400,WAIST+0.735,-0.240],0.030,frameM,8);
+  T([ 0.400,WAIST+0.735,0.480],[ 0.400,WAIST+0.735,-0.240],0.030,frameM,8);
+  /* a light bar across it, which is pure silhouette */
+  for(let i=-2;i<=2;i++){
+    const pod=new THREE.Mesh(new THREE.BoxGeometry(0.180,0.135,0.070),lampM);
+    pod.position.set(i*0.185,WAIST+0.805,0.480); b.add(pod);
+  }
+
+  /* stacks behind the cab, leaning back */
+  for(const sx of [-1,1]){
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(0.062,0.072,0.860,10),chromeM);
+    st.position.set(sx*0.720,FLOOR+0.540,-0.530); st.rotation.x=-0.07;
+    st.castShadow=true; b.add(st);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(0.076,0.066,0.100,10),darkM);
+    cap.position.set(sx*0.720,FLOOR+0.985,-0.560); b.add(cap);
+  }
+
+  /* the front bumper, high on the rail the way everything else here is */
+  const bumper=new THREE.Mesh(lens(1.360,0.150,0.11),bumperM);
+  bumper.position.set(0,FLOOR-0.005,2.060); bumper.rotation.x=Math.PI/2;
+  bumper.castShadow=true; b.add(bumper);
+  for(const sx of [-0.560,0.560]) T([sx,FLOOR+0.130,2.060],[sx,FLOOR-0.010,2.060],0.026,bumperM,8);
+  /* and a step under each door, which says how far up the cab is */
+  for(const sx of [-1,1]){
+    const step=new THREE.Mesh(new THREE.BoxGeometry(0.110,0.060,0.860),frameM);
+    step.position.set(sx*0.760,RAIL-0.330,0.090); b.add(step);
+    for(const z of [0.300,-0.300])
+      T([sx*0.640,RAIL-0.060,z],[sx*0.760,RAIL-0.300,z],0.022,frameM,6);
+  }
+
+  /* ---- everything from here down is suspension, not body ----
+     straight axles, one solid tube each end, with the differential a fatter
+     bulge at its centre */
   for(const [z,R] of [[FZ,FR],[RZ,RR]]){
     T([-FX*0.90,R,z],[FX*0.90,R,z],0.050,axleM,12);
     const diff=new THREE.Mesh(new THREE.CylinderGeometry(0.115,0.115,0.220,14),axleM);
     diff.rotation.z=Math.PI/2; diff.position.set(0,R,z-Math.sign(z||1)*0.02); diff.castShadow=true; b.add(diff);
   }
 
-  /* one coilover per corner, angled in from the rail to the axle end,
-     wound in the one colour every one of these actually wears — and a
-     pair of links alongside it doing the locating a spring can't. Long
-     travel now: the rail sits well clear of the tyre, so the spring
-     genuinely spans from the axle up to it rather than stopping short. */
+  /* one coilover per corner, angled in from the rail to the axle end, wound
+     in the one colour every one of these actually wears — and a pair of
+     links alongside doing the locating a spring cannot */
   for(const [sx,z,R] of [[-1,FZ,FR],[1,FZ,FR],[-1,RZ,RR],[1,RZ,RR]]){
     const topX=sx*0.600, botX=sx*0.960;
-    T([topX,2.240,z],[botX,R*1.05,z],0.038,shockM,10);
-    coilSpring(b,(topX+botX)/2,z,R*1.02,2.180,0.095,9,0.014,coilM,64);
-    T([sx*0.640,1.660,z*0.55],[sx*FX*0.85,R,z],0.026,linkM,8);      // upper link
-    T([sx*0.640,1.580,z*0.55],[sx*FX*0.92,R*0.85,z],0.024,linkM,8); // lower link
+    T([topX,RAIL+0.520,z],[botX,R*1.05,z],0.038,shockM,10);
+    coilSpring(b,(topX+botX)/2,z,R*1.02,RAIL+0.460,0.095,9,0.014,coilM,64);
+    T([sx*0.620,RAIL-0.010,z*0.55],[sx*FX*0.85,R,z],0.026,linkM,8);      // upper link
+    T([sx*0.620,RAIL-0.090,z*0.55],[sx*FX*0.92,R*0.85,z],0.024,linkM,8); // lower link
   }
 
-  const tailMats=addLamps(b,null,{w:0.170,h:0.065,y:1.800,z:-1.640,x:[-0.420,0.420]});
+  const tailMats=addLamps(b,null,{w:0.190,h:0.075,y:FLOOR+0.300,z:-1.830,x:[-0.560,0.560]});
   return {tailMats,
-    wheels:{race:true,
+    /* Tall and heavy, and a long way up: it takes more to roll than a car
+       does, and rather more to stop once it has started. */
+    tippy:1.5,
+    /* the tread is what says monster truck from a distance — a big smooth
+       tyre only ever reads as a big wheel */
+    wheels:{race:"mud",
             r:FR,tw:0.700, rR:RR,twR:0.700,
             pos:[[-FX,FZ],[FX,FZ],[-RX,RZ],[RX,RZ]]}};
 }
