@@ -753,7 +753,6 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
 .pass-card .lv{font-family:var(--mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em}
 .pass-card .rar{font-style:normal;font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--rar,var(--faint))}
 .pass-card b{font-size:13px;color:var(--ink);line-height:1.25}
-.pass-card .mystery{color:var(--faint);letter-spacing:.06em}
 .pass-card button{margin-top:auto;padding:7px 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
   border:1px solid var(--rar,var(--amber));background:var(--rarGlow,var(--amber-glow));color:var(--rar,var(--amber));
   border-radius:2px;font-weight:700}
@@ -7611,8 +7610,12 @@ function bodyMonsterTruck(b,M){
      links alongside doing the locating a spring cannot */
   for(const [sx,z,R] of [[-1,FZ,FR],[1,FZ,FR],[-1,RZ,RR],[1,RZ,RR]]){
     const topX=sx*0.600, botX=sx*0.960;
-    T([topX,RAIL+0.520,z],[botX,R*1.05,z],0.038,shockM,10);
-    coilSpring(b,(topX+botX)/2,z,R*1.02,RAIL+0.460,0.095,9,0.014,coilM,64);
+    /* Both ends of the coilover live under the arch line. They used to
+       reach half a metre above the rail, which put a red spring standing
+       proud of the bodywork at each corner — suspension is meant to be seen
+       under this truck, not over it. */
+    T([topX,RAIL+0.040,z],[botX,R*1.05,z],0.038,shockM,10);
+    coilSpring(b,(topX+botX)/2,z,R*1.02,RAIL-0.010,0.095,9,0.014,coilM,64);
     T([sx*0.620,RAIL-0.010,z*0.55],[sx*FX*0.85,R,z],0.026,linkM,8);      // upper link
     T([sx*0.620,RAIL-0.090,z*0.55],[sx*FX*0.92,R*0.85,z],0.024,linkM,8); // lower link
   }
@@ -10749,7 +10752,10 @@ const APEX_PASS_FREE=[
   {level:47, kind:"item",  slot:"title", id:"king"},
   {level:48, kind:"item",  slot:"glow",  id:"platinum"},
   {level:49, kind:"item",  slot:"badge", id:"champion"},
-  {level:50, kind:"mystery-car", major:true}
+  /* The truck itself, which is what the level everyone is climbing to
+     ought to hand over. It was a "mystery car" that granted nothing at
+     all — the relay's branch for it returned an empty result. */
+  {level:50, kind:"item",  slot:"car",   id:"monster", major:true}
 ];
 /* Season 1, the only one there is yet — premium is null rather than
    missing, so the screen has somewhere to say "coming soon" from data
@@ -10781,14 +10787,13 @@ function passLevel(xp){ return Math.min(50,Math.floor(Math.max(0,xp|0)/1000)+1);
 function passReward(entry){
   if(entry.kind==="coins") return {label:entry.amount.toLocaleString()+" Apex Coins",rarity:null};
   if(entry.kind==="pack"){ const R=RARITY[entry.packType]; return {label:(R?R.label:entry.packType)+" Pack",rarity:entry.packType}; }
-  if(entry.kind==="mystery-car") return {label:"??? Legendary Car",rarity:"legendary",mystery:true};
   if(entry.slot==="car"){ const m=CAR_MODELS.find(x=>x.id===entry.id); return {label:m?m.label:entry.id,rarity:m?m.rarity:"epic"}; }
   const it=kitItem(entry.slot,entry.id);
   return {label:it?it.label:entry.id,rarity:it?it.rarity:"rare"};
 }
 /* Whether a level's reward is worth a picture, and which kind — coins, a
-   title and a horn have nothing to look at, and the mystery car stays a
-   mystery on purpose, so those five carry on with words alone. */
+   title, a badge and a horn have nothing to look at, so those carry on with
+   words alone. */
 function passHasPicture(entry){
   return entry.kind==="pack"||entry.kind==="coins"
     || (entry.kind==="item"&&["car","paint","rims","glow"].indexOf(entry.slot)>=0);
@@ -10819,15 +10824,9 @@ function passBuild(){
       '<span class="lv"></span><em class="rar"></em><b></b><span class="got" hidden>Claimed</span><button>Claim</button>';
     if(pic){ try{ passRewardPicture(entry,b.querySelector(".pass-pic")); }catch(e){ console.error(e); } }
     b.querySelector(".lv").textContent="LEVEL "+entry.level;
-    b.querySelector(".rar").textContent=r.mystery?"":(R?R.label:"");
-    b.querySelector("b").textContent=r.mystery?"???":r.label;
-    if(r.mystery){
-      const sub=document.createElement("span"); sub.className="mystery"; sub.textContent="Legendary car — yet to be announced";
-      b.insertBefore(sub,b.querySelector("button"));
-      b.querySelector("button").remove();
-    }else{
-      b.querySelector("button").addEventListener("click",()=>passClaim(entry.level));
-    }
+    b.querySelector(".rar").textContent=R?R.label:"";
+    b.querySelector("b").textContent=r.label;
+    b.querySelector("button").addEventListener("click",()=>passClaim(entry.level));
     track.appendChild(b);
   }
 }
@@ -10925,8 +10924,6 @@ async function passClaim(level){
     const rr=passReward(entry);
     if(r.result&&r.result.kind==="duplicate")
       showFlash("Duplicate!","#E8453C","+"+r.result.amount+" Apex Coins");
-    else if(rr.mystery)
-      showFlash("Level "+level,"#E8B32A","Legendary car — yet to be announced");
     else
       showFlash("Level "+level+" claimed","#B24FE8",rr.label);
   }catch(e){

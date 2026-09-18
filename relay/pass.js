@@ -152,7 +152,7 @@ const FREE_PASS = {
   47: { kind: "item", slot: "title", id: "king" },
   48: { kind: "item", slot: "glow", id: "platinum" },
   49: { kind: "item", slot: "badge", id: "champion" },
-  50: { kind: "mystery-car" },
+  50: { kind: "item", slot: "car", id: "monster" },
 };
 
 function bearer(req) {
@@ -174,9 +174,6 @@ function makePass(store, userFor, dailyMod, quests) {
     if (reward.kind === "pack") {
       const pack = await store.addPack(userId, reward.packType, "pass:" + SEASON);
       return { kind: "pack", pack };
-    }
-    if (reward.kind === "mystery-car") {
-      return { kind: "mystery-car" };
     }
     if (reward.kind === "item") {
       return grantItem(userId, reward.slot, reward.id);
