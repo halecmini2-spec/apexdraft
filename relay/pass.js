@@ -76,6 +76,17 @@ const PACK_ODDS = {
   mythic:    [["mythic", 1.00]],
 };
 
+/* What a pack costs, the two ways of paying for one. Mythic is absent on
+   purpose: it is not for sale at any price, only ever won. The client
+   shows these same numbers on the shelf, but this is the copy that is
+   actually charged — see relay/checkout.js, which reads the pence out of
+   here rather than keeping a second set. */
+const PACK_PRICE = {
+  rare:      { name: "Rare Pack",      pence: 10, coins: 1000 },
+  epic:      { name: "Epic Pack",      pence: 25, coins: 3000 },
+  legendary: { name: "Legendary Pack", pence: 50, coins: 6000 },
+};
+
 function rollRarity(packType) {
   const table = PACK_ODDS[packType] || PACK_ODDS.rare;
   let r = Math.random(), acc = 0;
@@ -248,7 +259,7 @@ function makePass(store, userFor, dailyMod, quests) {
         level: passLevel(user.pass_xp),
         season: SEASON,
         claimed, owned, packs,
-        packOdds: PACK_ODDS,
+        packOdds: PACK_ODDS, packPrice: PACK_PRICE,
       }), true;
     }
 
@@ -288,6 +299,23 @@ function makePass(store, userFor, dailyMod, quests) {
       }
       title = await store.setEquippedTitle(user.id, title);
       return json(res, 200, { title }), true;
+    }
+
+    /* Buying a pack with coins. The price is read here and nowhere else,
+       and spendCoins refuses outright rather than clamping, so a balance
+       that will not cover it buys nothing at all. The pack lands on the
+       same shelf a pass level's pack lands on and is opened by the same
+       route below — there is one way to open a pack, and one place an
+       item is handed over, whatever paid for it. */
+    if (url.pathname === "/api/pass/packs/buy" && req.method === "POST") {
+      if (overRate("pb:" + user.id, 40, 10 * 60_000)) return json(res, 429, { error: "Slow down a moment." }), true;
+      const packType = String(body.packType || "");
+      const price = PACK_PRICE[packType];
+      if (!price) return json(res, 400, { error: "That isn't a pack the shop sells." }), true;
+      const coins = await store.spendCoins(user.id, price.coins);
+      if (coins === null) return json(res, 402, { error: "Not enough Apex Coins for that one." }), true;
+      const pack = await store.addPack(user.id, packType, "coins");
+      return json(res, 200, { pack, coins }), true;
     }
 
     if (url.pathname === "/api/pass/packs/open") {
@@ -401,7 +429,7 @@ function makePass(store, userFor, dailyMod, quests) {
     return json(res, 404, { error: "No such endpoint." }), true;
   }
 
-  return { route, rolloverDaily, isPassTester, RARITY_COINS, PACK_ODDS, FREE_PASS };
+  return { route, rolloverDaily, isPassTester, RARITY_COINS, PACK_ODDS, PACK_PRICE, FREE_PASS };
 }
 
-module.exports = { makePass, isPassTester, PASS_ACCOUNT };
+module.exports = { makePass, isPassTester, PASS_ACCOUNT, PACK_PRICE };

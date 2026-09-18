@@ -136,6 +136,20 @@ function fileStore(file) {
       await save();
       return u.coins;
     },
+    /* Paying for something, which is not the same as a negative grant: a
+       negative delta through addCoins clamps at zero and reports success,
+       and for a price that is exactly backwards — short of the money,
+       nothing should be taken and nothing should be sold. Null means the
+       balance would not cover it and nothing was touched. */
+    async spendCoins(id, amount) {
+      const u = db.users.find((x) => x.id === id);
+      if (!u) return null;
+      const n = Math.max(0, amount | 0);
+      if ((u.coins | 0) < n) return null;
+      u.coins = (u.coins | 0) - n;
+      await save();
+      return u.coins;
+    },
     /* The title worn on the account itself — see the equipped_title
        migration above for why this exists apart from a lap's own title. */
     async setEquippedTitle(id, title) {
@@ -278,11 +292,20 @@ function fileStore(file) {
       return { claimed: true };
     },
     /* ---- packs: won, not yet opened ---- */
-    async addPack(id, packType, source) {
-      const p = { id: crypto.randomUUID(), user_id: id, pack_type: packType, source: source || null, created: Date.now() };
+    /* packId is how a purchase makes itself safe to settle twice: a pack
+       is not a car, there is no "already owned" to fall back on, and both
+       of Stripe's settlement paths can land on the same payment. Filed
+       under an id derived from the payment, the second one finds the
+       first already there. fresh says which of those two happened. */
+    async addPack(id, packType, source, packId) {
+      if (packId) {
+        const had = db.packs.find((p) => p.id === packId);
+        if (had) return Object.assign({}, had, { fresh: false });
+      }
+      const p = { id: packId || crypto.randomUUID(), user_id: id, pack_type: packType, source: source || null, created: Date.now() };
       db.packs.push(p);
       await save();
-      return p;
+      return Object.assign({}, p, { fresh: true });
     },
     async packsFor(id) {
       return db.packs.filter((p) => p.user_id === id).sort((a, b) => a.created - b.created);
@@ -852,6 +875,15 @@ function pgStore(url) {
       const r = await one(`UPDATE users SET coins=GREATEST(0,coins+$2) WHERE id=$1 RETURNING coins`, [id, delta | 0]);
       return r ? Number(r.coins) : null;
     },
+    /* Paying for something. The balance check is in the statement rather
+       than around it, so two purchases racing each other can never both
+       find the same coins there — one of them updates no row and is told
+       so, instead of both succeeding and the balance clamping at zero. */
+    async spendCoins(id, amount) {
+      const n = Math.max(0, amount | 0);
+      const r = await one(`UPDATE users SET coins=coins-$2 WHERE id=$1 AND coins>=$2 RETURNING coins`, [id, n]);
+      return r ? Number(r.coins) : null;
+    },
     /* The title worn on the account itself — see the equipped_title
        migration above for why this exists apart from a lap's own title. */
     async setEquippedTitle(id, title) {
@@ -987,13 +1019,18 @@ function pgStore(url) {
       return { claimed: r.rowCount > 0 };
     },
     /* ---- packs: won, not yet opened ---- */
-    async addPack(id, packType, source) {
-      const pid = crypto.randomUUID();
-      await pool.query(
-        `INSERT INTO packs (id,user_id,pack_type,source,created) VALUES ($1,$2,$3,$4,$5)`,
+    /* See the json store's copy for what packId is for. The primary key
+       on the table is what actually makes the second settlement a no-op;
+       ON CONFLICT is only how it is asked politely. */
+    async addPack(id, packType, source, packId) {
+      const pid = packId || crypto.randomUUID();
+      const r = await pool.query(
+        `INSERT INTO packs (id,user_id,pack_type,source,created) VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (id) DO NOTHING`,
         [pid, id, packType, source || null, Date.now()]
       );
-      return { id: pid, user_id: id, pack_type: packType, source: source || null, created: Date.now() };
+      return { id: pid, user_id: id, pack_type: packType, source: source || null,
+               created: Date.now(), fresh: r.rowCount > 0 };
     },
     async packsFor(id) {
       return (await pool.query(`SELECT * FROM packs WHERE user_id=$1 ORDER BY created ASC`, [id])).rows;

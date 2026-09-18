@@ -733,6 +733,15 @@ body:not([data-app="multi"]) .lb-party{display:none!important}
   border:1px solid var(--rar,var(--amber));background:var(--rarGlow,var(--amber-glow));
   color:var(--rar,var(--amber));font-weight:700}
 .sh-buy .go:hover{filter:brightness(1.25)}
+/* The second way of paying for a pack, under the first: the same row
+   again, quieter, because money is the headline price and coins are what
+   somebody already playing will actually reach for. */
+.sh-buy.alt{margin-top:0;padding-top:5px;border-top:1px solid var(--line)}
+.sh-buy.alt i{font-size:12.5px;color:var(--dim)}
+.sh-buy.alt button{width:auto;flex:0 0 auto;padding:6px 14px;font-size:11px;letter-spacing:.10em;
+  border:1px solid var(--line);background:transparent;color:var(--dim);font-weight:700}
+.sh-buy.alt button:hover:not(:disabled){border-color:var(--rar,var(--amber));color:var(--rar,var(--amber))}
+.sh-buy.alt button:disabled{opacity:.42;cursor:default}
 @media (max-width:760px){
   .sh-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
   .sh-grid.sh-coins{grid-template-columns:repeat(auto-fill,minmax(108px,1fr))}
@@ -2040,20 +2049,21 @@ body.daily .gar-arrow{display:none}
       <div class="tk-head">
         <div>
           <h1 class="auth-brand">The <span>shop</span></h1>
-          <p class="auth-sub">Cars, for real money now.</p>
+          <p class="auth-sub">Cars and packs — real money, or the coins you have already won.</p>
         </div>
         <div class="chips">
           <span class="pass-coins" id="shCoinBal" hidden><i>🪙</i><b>0</b></span>
           <button class="chip" id="shBack">Back</button>
         </div>
       </div>
-      <p class="sh-note">A car is yours for good once it's bought — sign in
-        first, so there's an account for it to belong to.</p>
+      <p class="sh-note">A car is yours for good once it's bought, and a pack goes
+        straight onto the Packs shelf to be opened there — sign in first, so
+        there's an account for either to belong to.</p>
       <h2 class="sh-h">Cars <span>Yours for good, once bought</span></h2>
       <div class="sh-grid" id="shCars"></div>
+      <h2 class="sh-h">Packs <span>One item each, of the pack's rarity or better</span></h2>
+      <div class="sh-grid" id="shPacks"></div>
       <div id="shTestSection" hidden>
-        <h2 class="sh-h">Packs <span>Test mode — open as many as you like, free</span></h2>
-        <div class="sh-grid" id="shPacks"></div>
         <div class="sh-pack-test">
           <button class="chip" id="shPackTest">Simulate 500 openings</button>
           <span id="shPackTally"></span>
@@ -2168,7 +2178,6 @@ body.daily .gar-arrow{display:none}
       <b id="pcName"></b>
       <span id="pcSub"></span>
       <div class="pack-card-btns">
-        <button class="chip" id="pcAgain">Open another</button>
         <button class="chip go" id="pcClose">Nice</button>
       </div>
     </div>
@@ -11213,10 +11222,18 @@ const SHOP_CARS=[
    which is what actually charges and grants it; this is only the shelf. */
 const SHOP_BUNDLE={id:"bundle3", price:2.89, cars:["bike","trike","v12"],
   blurb:"Superbike X, Rocket Trike and V12 Monster, together — cheaper than buying them one at a time."};
+/* The three packs on sale, each payable either way. These numbers are
+   only what a driver reads before deciding — relay/pass.js's PACK_PRICE
+   is what is actually charged, in coins and in pence both, and it is the
+   copy to change.
+
+   There is no Mythic Pack and there is not going to be one: mythic is the
+   thing a Legendary Pack can turn into if the roll is kind, and selling
+   it outright would leave nothing at the top of the table to hope for. */
 const SHOP_PACKS=[
-  {name:"Starter pack",  blurb:"A car, a handful of coins and a colour or two."},
-  {name:"Racer pack",    blurb:"More of the same, and something that isn't sold on its own."},
-  {name:"Collector pack",blurb:"The rare end of the shelf."}
+  {type:"rare",      price:0.10, coins:1000},
+  {type:"epic",      price:0.25, coins:3000},
+  {type:"legendary", price:0.50, coins:6000}
 ];
 const SHOP_COINS=[{n:"500"},{n:"1,200"},{n:"3,000"},{n:"8,000"}];
 /* British money reads as pence below a pound and as pounds above it */
@@ -11406,10 +11423,17 @@ function shopCarsUI(){
 /* Real money, so the price charged is never what this request claims one
    is — the relay prices it again from its own table. This only starts the
    checkout and hands the tab to Stripe; nothing here marks a car bought. */
+/* Cars, the bundle, and packs: one route to Stripe for all of them, since
+   the only thing that differs is what the relay hands over afterwards.
+   The "already yours" check is a car's, though — buying a second pack is
+   the entire point of a pack. */
 async function buyCar(carId,btn){
-  if(carId===SHOP_BUNDLE.id){
-    if(SHOP_BUNDLE.cars.every(c=>myCars().indexOf(c)>=0))return;
-  } else if(myCars().indexOf(carId)>=0)return;
+  const isPack=SHOP_PACKS.some(p=>p.type===carId);
+  if(!isPack){
+    if(carId===SHOP_BUNDLE.id){
+      if(SHOP_BUNDLE.cars.every(c=>myCars().indexOf(c)>=0))return;
+    } else if(myCars().indexOf(carId)>=0)return;
+  }
   if(!acctIn()){ shopSay("Sign in first, then come back and buy it."); AU_MODE="in"; showAuth(true); return; }
   /* Real money, no way back to the account if it's forgotten — an email
      is asked for before this, not after. */
@@ -11462,22 +11486,41 @@ function shopBuild(){
     cars.appendChild(bb);
   }
   shopCarsUI();
-  /* packs and coins stay behind the same gate the rest of what's still
-     being tried out sits behind — built once, for the one account that
-     will ever see them */
-  $("shTestSection").hidden=!isTester();
-  if(isTester()&&!$("shPacks").dataset.built){
+  /* The packs, for anybody: real money or the coins the pass pays out,
+     whichever a driver would rather spend. What a pack cannot do is open
+     itself — buying one puts it on the Packs shelf, and that is the only
+     place a pack is ever opened, so there is exactly one way in and it
+     costs something every time. */
+  if(!$("shPacks").dataset.built){
     $("shPacks").dataset.built="1";
     for(const p of SHOP_PACKS){
+      const R=RARITY[p.type];
       const b=document.createElement("div");
-      b.className="sh-card";
-      b.innerHTML='<em class="rar">Pack</em><b></b><span></span>'+
-        '<div class="sh-buy"><i>Test — free</i><button class="chip go">Open</button></div>';
-      b.querySelector("b").textContent=p.name;
-      b.querySelector("span").textContent=p.blurb;
-      b.querySelector("button").addEventListener("click",()=>openPack());
+      b.className="sh-card"; b.dataset.pack=p.type;
+      if(R){ b.style.setProperty("--rar",R.colour);
+             b.style.setProperty("--rarDim",R.dim);
+             b.style.setProperty("--rarGlow",R.glow); }
+      b.innerHTML='<canvas width="360" height="220"></canvas>'+
+        '<em class="rar">'+(R?R.label:p.type)+'</em><b></b><span></span>'+
+        '<div class="sh-buy"><i></i><button class="chip go">Buy</button></div>'+
+        '<div class="sh-buy alt"><i></i><button class="chip">Buy</button></div>';
+      try{ packArt(b.querySelector("canvas"),p.type); }catch(e){ console.error(e); }
+      b.querySelector("b").textContent=(R?R.label:p.type)+" Pack";
+      b.querySelectorAll(".sh-buy i")[0].textContent=money(p.price);
+      b.querySelectorAll(".sh-buy i")[1].textContent=p.coins.toLocaleString()+" coins";
+      b.querySelectorAll(".sh-buy button")[0]
+        .addEventListener("click",(e)=>buyCar(p.type,e.currentTarget));
+      b.querySelectorAll(".sh-buy button")[1]
+        .addEventListener("click",(e)=>buyPackWithCoins(p,e.currentTarget));
       $("shPacks").appendChild(b);
     }
+  }
+  shopPacksUI();
+  /* the odds simulator and the coin bundles nobody has priced yet stay
+     behind the gate the rest of what is still being tried out sits behind */
+  $("shTestSection").hidden=!isTester();
+  if(isTester()&&!$("shCoins").dataset.built){
+    $("shCoins").dataset.built="1";
     for(const c of SHOP_COINS){
       const b=document.createElement("div");
       b.className="sh-card soon coin";
@@ -11487,6 +11530,42 @@ function shopBuild(){
       $("shCoins").appendChild(b);
     }
   }
+}
+/* The chances, off the relay's own table rather than a second copy here,
+   and whether there are the coins for it. The odds arrive with the pass
+   state, so before that has ever answered a card simply says what the
+   pack floors at, which is true whatever the table turns out to be. */
+function shopPacksUI(){
+  for(const b of document.querySelectorAll("#shPacks .sh-card")){
+    const type=b.dataset.pack, p=SHOP_PACKS.find(x=>x.type===type);
+    if(!p)continue;
+    const odds=(PASS.packOdds&&PASS.packOdds[type])||[];
+    b.querySelector("span").textContent=odds.length
+      ? "Chances: "+odds.map(([r,ch])=>(RARITY[r]?RARITY[r].label:r)+" "+Math.round(ch*100)+"%").join(" · ")
+      : "One item, "+(RARITY[type]?RARITY[type].label.toLowerCase():type)+" or better.";
+    const coinBtn=b.querySelectorAll(".sh-buy button")[1];
+    const canAfford=acctIn()&&PASS.coins>=p.coins;
+    coinBtn.disabled=!canAfford;
+    coinBtn.textContent=canAfford?"Buy":(acctIn()?"Not enough":"Buy");
+  }
+}
+/* Coins rather than money. The relay checks the balance and takes the
+   coins in one statement, so there is no window where a second click
+   spends the same coins twice; this only asks and then repaints. */
+async function buyPackWithCoins(p,btn){
+  if(!acctIn()){ shopSay("Sign in first — coins live on the account."); AU_MODE="in"; showAuth(true); return; }
+  const was=btn.textContent; btn.disabled=true; btn.textContent="…";
+  try{
+    const r=await api("/api/pass/packs/buy",{method:"POST",token:ACCT.token,body:{packType:p.type}});
+    PASS.coins=r.coins;
+    await passRefresh();                 // the shelf, the badge and the balance
+    const label=(RARITY[p.type]?RARITY[p.type].label:p.type)+" Pack";
+    shopSay(label+" bought. It's waiting on the Packs shelf — open it there.");
+    showFlash(label+" bought","#2ED47A","Open it from Packs");
+  }catch(e){
+    shopSay(e&&e.message||"Couldn't buy that just now.");
+  }
+  btn.textContent=was; shopPacksUI();
 }
 /* the pictures, drawn the once the shop is first opened */
 function shopPictures(){
@@ -11767,17 +11846,13 @@ function packReveal(reward){
   card.hidden=false;
   PACK_BUSY=false;
 }
-/* Which kind of reveal is on screen: null for the test free-roll, or the
-   real pack (from the pass's own shelf) this one actually was — "Open
-   another" reads this rather than always repeating the free-roll, which
-   is what let it show a fabricated reward after a real pack, whatever
-   was actually earned. */
+/* Which real pack the reveal on screen was of, kept only so the odds
+   simulator has something to name. There used to be an "Open another"
+   under every reveal, and with packs now costing coins or money it was a
+   free one: one purchase, as many openings as the button was pressed.
+   Opening happens in one place, off the Packs shelf, and each one there
+   had to be paid for. */
 let PACK_LAST=null;
-function openPack(){
-  if(PACK_BUSY)return;
-  PACK_LAST=null;
-  packRoll(rollPack());
-}
 function packOverlayClose(){
   $("packOverlay").hidden=true;
   PACK_BUSY=false;
@@ -11803,9 +11878,12 @@ function packSimulate(n){
 function shopUI(){
   const card=$("hmShop"); if(!card)return;
   card.classList.remove("grey"); card.classList.add("gold");
-  card.querySelector("span").textContent="Three cars, for real money.";
+  card.querySelector("span").textContent="Three cars and three packs.";
+  /* the balance is on the shelf for everyone now — there is something on
+     it that coins actually buy */
   const bal=$("shCoinBal");
-  if(bal){ bal.hidden=!isTester(); if(isTester()) bal.querySelector("b").textContent=PASS.coins.toLocaleString(); }
+  if(bal){ bal.hidden=!acctIn(); if(acctIn()) bal.querySelector("b").textContent=PASS.coins.toLocaleString(); }
+  shopPacksUI();
 }
 function showShop(on){
   if(on){ shopBuild(); }
@@ -11861,31 +11939,6 @@ for(const b of document.querySelectorAll("#passTestPacks button[data-rarity]"))
   b.addEventListener("click",()=>passTestPack(b.dataset.rarity,b));
 $("packX").addEventListener("click",packOverlayClose);
 $("pcClose").addEventListener("click",packOverlayClose);
-$("pcAgain").addEventListener("click",async()=>{
-  if(PACK_LAST){
-    /* the real pack this reveal was of is already spent — another of the
-       SAME rarity, if one is sat on the shelf, rather than whichever
-       happens to be first there regardless of what it actually is */
-    const type=PACK_LAST.pack_type;
-    const next=(PASS.packs||[]).find(p=>p.pack_type===type);
-    if(next){ passOpenPack(next); return; }
-    /* cosmo38 only: nothing of that rarity left owned, but the point of
-       the test row is trying the odds over and over, so this grants one
-       more the same way pressing its own button would rather than making
-       every repeat a separate click */
-    if(isTester()){
-      try{
-        await api("/api/pass/test/pack",{method:"POST",token:ACCT.token,body:{rarity:type}});
-        await passRefresh();
-        const fresh=(PASS.packs||[]).find(p=>p.pack_type===type);
-        if(fresh){ passOpenPack(fresh); return; }
-      }catch(e){}
-    }
-    packOverlayClose();
-    return;
-  }
-  openPack();
-});
 $("shPackTest").addEventListener("click",()=>packSimulate(500));
 $("hmAccount").addEventListener("click",()=>{ AU_MODE="in"; showAuth(true); });
 $("hmSignUp").addEventListener("click",()=>{ AU_MODE="up"; showAuth(true); });
@@ -12338,7 +12391,12 @@ async function checkoutReturn(){
       await acctVerify(true);
       ownedCarsUI();
       closeScreens(); setApp("home"); $("home").hidden=true; $("editor").hidden=true; showShop(true);
-      shopSay("That one's yours now — it's in the garage.");
+      if(r.pack){
+        await passRefresh();
+        shopSay("Bought. It's waiting on the Packs shelf — open it there.");
+      } else {
+        shopSay("That one's yours now — it's in the garage.");
+      }
     }
   }catch(e){}
 }
@@ -14172,16 +14230,28 @@ const BLUR={rt:null,scene:null,cam:null,mat:null,w:0,h:0,size:new THREE.Vector2(
 function blurInit(){
   if(BLUR.scene)return;
   BLUR.mat=new THREE.ShaderMaterial({
-    uniforms:{tDiffuse:{value:null},uCenter:{value:new THREE.Vector2(0.5,0.54)},uAmount:{value:0}},
+    uniforms:{tDiffuse:{value:null},uCenter:{value:new THREE.Vector2(0.5,0.54)},
+              uAmount:{value:0},uCar:{value:new THREE.Vector2(0.5,0.4)},
+              uCarR:{value:0},uAspect:{value:1}},
     depthTest:false, depthWrite:false,
     vertexShader:
       "varying vec2 vUv;"+
       "void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }",
     fragmentShader:
       "uniform sampler2D tDiffuse; uniform vec2 uCenter; uniform float uAmount;"+
+      "uniform vec2 uCar; uniform float uCarR; uniform float uAspect;"+
       "varying vec2 vUv;"+
       "void main(){"+
-      "  vec2 d=vUv-uCenter;"+
+      /* The one thing that must not smear is the car being driven. It is
+         not at the vanishing point — in the chase view it sits well below
+         it — so the blur was reaching it, and a soft car is the one thing
+         that reads as a bug rather than as speed. Circular in screen
+         terms, which is why the x is corrected by the aspect first: an
+         uncorrected mask is an ellipse, and on a wide monitor it would
+         leave the front and back of the car sharp and blur its sides. */
+      "  vec2 q=vec2((vUv.x-uCar.x)*uAspect, vUv.y-uCar.y);"+
+      "  float keep=smoothstep(uCarR, uCarR*2.3, length(q));"+
+      "  vec2 d=(vUv-uCenter)*keep;"+
       "  vec4 sum=vec4(0.0); float wsum=0.0;"+
       /* the sharp sample carries the most weight, so the image stays
          legible instead of dissolving */
@@ -14196,6 +14266,23 @@ function blurInit(){
   BLUR.scene=new THREE.Scene();
   BLUR.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),BLUR.mat));
   BLUR.cam=new THREE.Camera();
+}
+/* How big the car is on screen, and where — measured rather than assumed,
+   by projecting two points two metres apart on it through the same camera
+   and seeing how far apart they land. A kart close behind and a V12 seen
+   down a straight need very different masks, and this is the only way to
+   get both without a table of numbers per car. */
+const blurCarA=new THREE.Vector3(), blurCarB=new THREE.Vector3();
+function blurCarMask(){
+  /* nothing to keep sharp from inside the cockpit */
+  if(G.camMode===2) return 0;
+  blurCarA.set(CAR.x,CAR.y+0.55,CAR.z).project(G.camera);
+  blurCarB.set(CAR.x,CAR.y+2.55,CAR.z).project(G.camera);
+  if(!isFinite(blurCarA.x)||blurCarA.z>1) return 0;
+  BLUR.mat.uniforms.uCar.value.set(blurCarA.x*0.5+0.5, blurCarA.y*0.5+0.5);
+  /* the two metres, in the same units the mask measures in, and a little
+     over because a car is wider than it is tall and the mask is round */
+  return Math.min(0.42, Math.abs(blurCarB.y-blurCarA.y)*0.5*1.30);
 }
 function blurTarget(w,h){
   if(BLUR.rt&&BLUR.w===w&&BLUR.h===h)return BLUR.rt;
@@ -14231,6 +14318,8 @@ function rushRender(){
   G.renderer.setRenderTarget(null);
   BLUR.mat.uniforms.tDiffuse.value=rt.texture;
   BLUR.mat.uniforms.uCenter.value.set(rushVX,rushVY);
+  BLUR.mat.uniforms.uAspect.value=w/h;
+  BLUR.mat.uniforms.uCarR.value=blurCarMask();
   /* bent rather than squared: squaring held almost all of it back until
      the last third, which left the middle of the range — where most cars
      spend their time — looking untouched */

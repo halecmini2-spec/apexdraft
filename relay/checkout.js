@@ -12,6 +12,9 @@
  * ever adds, so calling it twice for the same purchase costs nothing.
  */
 const { json, cors, overRate, clientIp } = require("./auth");
+/* The pack prices live with the packs, in pass.js, for the same reason the
+   car prices live here: one copy, in the file that owns the thing. */
+const { PACK_PRICE } = require("./pass");
 
 /* Every price a pack or a shop card already shows, kept once. Changing a
    price here is the only place it needs to change — the client's own copy
@@ -29,6 +32,11 @@ const CARS = {
    car, just against a list of them instead of one — fulfil() and the
    session route below both read either table off the same id, the id
    just tells them which kind of thing it is. */
+/* A pack is bought here and opened over in pass.js. Nothing about it is
+   owned, so none of the "already yours" checks below apply to one — the
+   whole point is buying another. */
+const PACKS = PACK_PRICE;
+
 const BUNDLES = {
   bundle3: { name: "Superbike X, Rocket Trike and V12 Monster — bundle", pence: 289, cars: ["bike", "trike", "v12"] },
 };
@@ -76,7 +84,23 @@ function makeCheckout(store, userFor) {
      against what the account already owns before addCar runs, not
      after, so the settlement that lost the race sees it as already
      theirs and logs nothing. */
-  async function fulfil(userId, itemId) {
+  /* A pack filed under the payment that bought it. Both settlement paths
+     can reach the same payment, and unlike a car there is no "already
+     owned" to make that harmless — so the id is the session's, and the
+     primary key on the packs table turns the loser of the race into a
+     no-op. */
+  async function fulfilPack(userId, packType, sessionId) {
+    const pack = await store.addPack(userId, packType, "shop", "cs:" + sessionId);
+    if (pack && pack.fresh) {
+      const user = await store.userById(userId);
+      try { await store.logPurchase(userId, (user && user.name) || "?", packType + "-pack", PACKS[packType].pence); }
+      catch (e) { console.error("logPurchase:", e && e.message); }
+    }
+    return true;
+  }
+
+  async function fulfil(userId, itemId, sessionId) {
+    if (PACKS[itemId]) return fulfilPack(userId, itemId, sessionId);
     const bundle = BUNDLES[itemId];
     const cars = bundle ? bundle.cars : (CARS[itemId] ? [itemId] : null);
     if (!cars) return false;
@@ -111,7 +135,7 @@ function makeCheckout(store, userFor) {
       if (event.type === "checkout.session.completed") {
         const s = event.data.object;
         if (s.payment_status === "paid" && s.metadata && s.metadata.userId && s.metadata.carId)
-          await fulfil(s.metadata.userId, s.metadata.carId);
+          await fulfil(s.metadata.userId, s.metadata.carId, s.id);
       }
       return json(res, 200, { received: true }), true;
     }
@@ -131,13 +155,18 @@ function makeCheckout(store, userFor) {
         body = buf.length ? JSON.parse(buf.toString("utf8")) : {};
       } catch (e) { return json(res, 400, { error: "That request didn't make sense." }), true; }
 
+      /* Still called carId in the request and in Stripe's metadata, which
+         is what it was when a car was the only thing the shop sold. It is
+         an item id now — a car, the bundle, or a pack. */
       const carId = String(body.carId || "");
       const bundle = BUNDLES[carId];
-      const item = bundle || CARS[carId];
+      const item = bundle || CARS[carId] || PACKS[carId];
       if (!item) return json(res, 400, { error: "That isn't something the shop sells." }), true;
 
       const owned = String(user.cars || "").split(",").map((s) => s.trim());
-      if (bundle) {
+      if (PACKS[carId]) {
+        /* nothing to check: buying a second one is the entire point */
+      } else if (bundle) {
         if (bundle.cars.every((c) => owned.includes(c)))
           return json(res, 409, { error: "You already own all three." }), true;
         /* Paying the bundle price again for cars already had, however they
@@ -190,8 +219,9 @@ function makeCheckout(store, userFor) {
         if (session.payment_status !== "paid" || !session.metadata
             || session.metadata.userId !== user.id)
           return json(res, 200, { ok: false }), true;
-        await fulfil(session.metadata.userId, session.metadata.carId);
-        return json(res, 200, { ok: true, carId: session.metadata.carId }), true;
+        await fulfil(session.metadata.userId, session.metadata.carId, session.id);
+        return json(res, 200, { ok: true, carId: session.metadata.carId,
+                                pack: !!PACKS[session.metadata.carId] }), true;
       } catch (e) {
         return json(res, 502, { error: "Couldn't check that with Stripe just now." }), true;
       }
