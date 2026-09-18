@@ -601,6 +601,16 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:0;border-radiu
 .home-card.purple i{background:var(--purple)} .home-card.purple:hover{border-color:var(--purple);background:rgba(178,79,232,.12)}
 .home-card.green i{background:var(--green)} .home-card.green:hover{border-color:var(--green);background:rgba(46,212,122,.12)}
 .home-card.gold i{background:#E8B32A} .home-card.gold:hover{border-color:#E8B32A;background:rgba(232,179,42,.12)}
+/* A count in the corner of a card, for the one thing a card can say that
+   is worth crossing the home screen for: that something is sitting there
+   waiting. It is hidden whenever the number is nothing, so seeing it
+   always means there is something to go and get. */
+.home-card .hm-badge{position:absolute;top:10px;right:10px;font-style:normal;
+  font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;color:#08110C;background:var(--faint);
+  box-shadow:0 0 0 1px rgba(0,0,0,.4);pointer-events:none}
+.home-card.purple .hm-badge{background:var(--purple);color:#fff}
+.home-card.green .hm-badge{background:var(--green);color:#06210F}
 .home-card.grey{cursor:default;opacity:.6} .home-card.grey:hover{transform:none;border-color:var(--line)}
 .home-card.static{cursor:default} .home-card.static:hover{transform:none}
 .home-links{justify-content:center}
@@ -1670,6 +1680,7 @@ body.daily .gar-arrow{display:none}
      sitting small above a band of nothing */
   .home-cards{flex:1 1 auto;min-height:0;grid-auto-rows:1fr;gap:10px}
   .home-card{min-height:0;padding:10px 14px 10px 17px;gap:4px;justify-content:center}
+  .home-card .hm-badge{top:7px;right:8px;font-size:10px;padding:2px 7px}
   .home-card b{font-size:15px}
   .home-card span{font-size:12px;line-height:1.4}
   .home-wrap{gap:10px}
@@ -1982,8 +1993,8 @@ body.daily .gar-arrow{display:none}
         <!-- Hidden signed out — nothing here means anything without an
              account to hold the level, coins and claims — shown for any
              signed-in account otherwise. -->
-        <button class="home-card purple" id="hmPass" hidden><i></i><b>Apex Pass</b><span id="hmPassSub">Season 1 — Free track.</span></button>
-        <button class="home-card green" id="hmQuests" hidden><i></i><b>Quests</b><span id="hmQuestsSub">Daily, weekly and seasonal challenges.</span></button>
+        <button class="home-card purple" id="hmPass" hidden><i></i><em class="hm-badge" id="hmPassBadge" hidden></em><b>Apex Pass</b><span id="hmPassSub">Season 1 — Free track.</span></button>
+        <button class="home-card green" id="hmQuests" hidden><i></i><em class="hm-badge" id="hmQuestsBadge" hidden></em><b>Quests</b><span id="hmQuestsSub">Daily, weekly and seasonal challenges.</span></button>
         <button class="home-card gold" id="hmPacks" hidden><i></i><b>Packs</b><span id="hmPacksSub">Nothing unopened right now.</span></button>
       </div>
       <!-- The account, sold rather than mentioned: it is free and takes a
@@ -7451,23 +7462,80 @@ function bodyMonsterTruck(b,M){
      say pickup, and both of them live at that one height. */
   const WAIST=FLOOR+0.520;                  // the line everything is hung off
 
+  /* ---- the arches ----
+     Cut into the bodywork, not drawn on it. A lip over each wheel was the
+     previous answer and it only ever traced an arch onto a flank that was
+     solid behind it — there was no daylight for the shape to show against,
+     because the body ran straight down to the chassis whatever the flare
+     did. So the body's own lower edge lifts over each wheel now, and what
+     is under the arch is the tyre and the frame, seen through it.
+
+     One curve, used by everything: the bonnet, the doors, the bed sides and
+     the flare are all cut from archFloor(), so nothing can drift out of line
+     with anything else. */
+  const REACH=0.700;                    // how far along the body an arch runs
+  const SILL=WAIST-0.465;               // where the body's lower edge sits between them
+  const RISE=0.295;                     // how far it lifts over a wheel
+  /* An ellipse, not a cosine. A cosine leaves the sill so gently that two of
+     them a wheelbase apart are just one long wave down the side of the truck
+     — which is what the first cut looked like. An ellipse comes off the sill
+     almost vertically, so each arch has corners, and between them there is a
+     flat rocker instead of a trough. */
+  const archFloor=(z)=>{
+    let lift=0;
+    for(const z0 of [FZ,RZ]){
+      const t=Math.abs(z-z0)/REACH;
+      if(t>=1) continue;
+      lift=Math.max(lift,RISE*Math.pow(1-t*t,0.42));
+    }
+    return SILL+lift;
+  };
+  /* The loft runs straight lines between stations, so the curve is only ever
+     as good as its sampling — and an ellipse spends most of its shape in the
+     last tenth at either end, which is where the stations bunch up. */
+  const along=(zs)=>{
+    const out=[];
+    for(const z of zs) out.push(z);
+    for(const z0 of [FZ,RZ])
+      for(const t of [-1,-0.985,-0.95,-0.88,-0.76,-0.58,-0.34,0,
+                       0.34,0.58,0.76,0.88,0.95,0.985,1])
+        out.push(z0+t*REACH);
+    return [...new Set(out)].sort((a,c)=>c-a);
+  };
+  /* the widths and tops are a straight blend between the ends of a panel;
+     only the floor follows the arch */
+  const panelAt=(z,a,c)=>{
+    const t=(z-a.z)/(c.z-a.z||1), u=Math.max(0,Math.min(1,t));
+    return {z, w:a.w+(c.w-a.w)*u, y0:archFloor(z), y1:a.y1+(c.y1-a.y1)*u,
+            n:a.n+(c.n-a.n)*u};
+  };
+  /* one panel, from a handful of corner stations, arch-aware */
+  const panelLoft=(ends,seg)=>{
+    const zs=along(ends.map(e=>e.z)).filter(z=>z<=ends[0].z&&z>=ends[ends.length-1].z);
+    return loft(zs.map(z=>{
+      let a=ends[0], c=ends[ends.length-1];
+      for(let i=0;i<ends.length-1;i++) if(z<=ends[i].z&&z>=ends[i+1].z){ a=ends[i]; c=ends[i+1]; break; }
+      return panelAt(z,a,c);
+    }),seg);
+  };
+
   /* the bonnet: long, flat, square-shouldered — a lid, not a nose */
-  const bonnet=new THREE.Mesh(loft([
-    {z: 1.990,w:0.800,y0:FLOOR+0.035,y1:WAIST-0.090,n:5.4},
-    {z: 1.760,w:0.840,y0:FLOOR+0.020,y1:WAIST-0.045,n:5.8},
-    {z: 1.300,w:0.855,y0:FLOOR+0.015,y1:WAIST-0.020,n:6.0},
-    {z: 0.880,w:0.855,y0:FLOOR+0.015,y1:WAIST-0.015,n:6.0},
-    {z: 0.700,w:0.850,y0:FLOOR+0.020,y1:WAIST-0.025,n:5.6}
+  const bonnet=new THREE.Mesh(panelLoft([
+    {z: 1.990,w:0.800,y1:WAIST-0.090,n:5.4},
+    {z: 1.760,w:0.840,y1:WAIST-0.045,n:5.8},
+    {z: 1.300,w:0.855,y1:WAIST-0.020,n:6.0},
+    {z: 0.880,w:0.855,y1:WAIST-0.015,n:6.0},
+    {z: 0.700,w:0.850,y1:WAIST-0.025,n:5.6}
   ],20),M.paint);
   bonnet.castShadow=true; b.add(bonnet);
 
   /* the cab's lower half — doors, up to the waist */
-  const cabBody=new THREE.Mesh(loft([
-    {z: 0.720,w:0.855,y0:FLOOR+0.020,y1:WAIST+0.010,n:5.6},
-    {z: 0.560,w:0.870,y0:FLOOR+0.015,y1:WAIST+0.020,n:6.0},
-    {z: 0.060,w:0.875,y0:FLOOR+0.015,y1:WAIST+0.020,n:6.0},
-    {z:-0.360,w:0.870,y0:FLOOR+0.015,y1:WAIST+0.015,n:6.0},
-    {z:-0.510,w:0.850,y0:FLOOR+0.020,y1:WAIST-0.010,n:5.6}
+  const cabBody=new THREE.Mesh(panelLoft([
+    {z: 0.720,w:0.855,y1:WAIST+0.010,n:5.6},
+    {z: 0.560,w:0.870,y1:WAIST+0.020,n:6.0},
+    {z: 0.060,w:0.875,y1:WAIST+0.020,n:6.0},
+    {z:-0.360,w:0.870,y1:WAIST+0.015,n:6.0},
+    {z:-0.510,w:0.850,y1:WAIST-0.010,n:5.6}
   ],20),M.paint);
   cabBody.castShadow=true; b.add(cabBody);
 
@@ -7495,11 +7563,11 @@ function bodyMonsterTruck(b,M){
   const bedFloor=new THREE.Mesh(new THREE.BoxGeometry(1.700,0.080,1.300),M.paint);
   bedFloor.position.set(0,WAIST-0.030,-1.180); b.add(bedFloor);
   for(const sx of [-1,1]){
-    const side=new THREE.Mesh(loft([
-      {z:-0.540,w:0.075,y0:FLOOR+0.030,y1:WAIST+0.225,n:5.4},
-      {z:-1.180,w:0.082,y0:FLOOR+0.025,y1:WAIST+0.245,n:5.8},
-      {z:-1.810,w:0.075,y0:FLOOR+0.035,y1:WAIST+0.210,n:5.4}
-    ],14),M.paint);
+    const side=new THREE.Mesh(panelLoft([
+      {z:-0.540,w:0.075,y1:WAIST+0.225,n:5.4},
+      {z:-1.180,w:0.082,y1:WAIST+0.245,n:5.8},
+      {z:-1.810,w:0.075,y1:WAIST+0.210,n:5.4}
+    ],16),M.paint);
     side.position.x=sx*0.800; side.castShadow=true; b.add(side);
   }
   const tailgate=new THREE.Mesh(new THREE.BoxGeometry(1.680,0.280,0.085),M.paint);
@@ -7531,55 +7599,22 @@ function bodyMonsterTruck(b,M){
   const mouth=new THREE.Mesh(new THREE.BoxGeometry(0.420,0.120,0.070),chromeM);
   mouth.position.set(0,WAIST+0.095,1.650); mouth.rotation.x=0.20; b.add(mouth);
 
-  /* ---- the sides, and the arches in them ----
-     One flare each side running the whole length, which is what stops the
-     truck looking perched on a track far wider than itself. Its lower edge
-     arcs up over each wheel and drops away between them: an arch is lowest
-     ahead of and behind the tyre and highest directly over it, and the
-     first go had that exactly the wrong way round.
-
-     Two things were learned getting this to read. Three stations to an arch
-     and the loft runs straight lines between them, which came out as a
-     chevron down the side of the truck — so the curve is worked out on a
-     cosine and sampled seven times instead of placed by hand. And an arch
-     cannot be read in silhouette here at all, because the body behind it is
-     solid all the way down to the chassis: there is no daylight for the
-     shape to show against. What draws it is the lip — a thick dark band
-     straddling the flare's lower edge, standing proud of it, cut from the
-     same curve so it cannot drift off the arch it is drawing. */
-  const REACH=0.640;                     // how far along the body an arch runs
-  const TS=[-1,-0.72,-0.42,0,0.42,0.72,1];
-  /* t is -1 at the front of the arch, 0 over the wheel, 1 at the back; the
-     cosine is 1 over the wheel and 0 at either end */
-  const archU=(t)=>Math.cos(t*Math.PI/2);
-  const archLow=(t,lo,hi)=>lo+(hi-lo)*Math.pow(archU(t),0.72);
-  const arch=(z0,lo,hi,wLo,wHi,tLo,tHi)=>TS.map(t=>({
-    z:z0+t*REACH, w:wLo+(wHi-wLo)*archU(t),
-    y0:archLow(t,lo,hi), y1:tLo+(tHi-tLo)*archU(t), n:4.8}));
-  /* the band, hung off that same lower edge */
-  const archBand=(z0,lo,hi,wLo,wHi,drop,rise)=>TS.map(t=>{
-    const base=archLow(t,lo,hi);
-    return {z:z0+t*REACH, w:wLo+(wHi-wLo)*archU(t), y0:base-drop, y1:base+rise, n:4.6};
-  });
-
-  const ALO=WAIST-0.505, AHI=WAIST-0.185;      // the arch curve both are cut from
+  /* ---- the flare down each side ----
+     What stops the truck looking perched on a track far wider than itself.
+     Its lower edge is the same archFloor() the bodywork is cut to, dropped a
+     little so the flare hangs just below the arch it is wrapping — which is
+     what a flared arch does, and what makes the cut read as a cut rather
+     than as a hole somebody forgot to fill. */
   for(const sx of [-1,1]){
-    const flank=new THREE.Mesh(loft([
-      {z: 2.000,w:0.065,y0:WAIST-0.335,y1:WAIST-0.040,n:4.6},
-      ...arch(FZ, ALO,AHI, 0.088,0.205, WAIST-0.010,WAIST+0.095),
-      {z: 0.120,w:0.082,y0:WAIST-0.530,y1:WAIST-0.015,n:4.6},
-      ...arch(RZ, ALO,AHI, 0.088,0.205, WAIST-0.010,WAIST+0.095),
-      {z:-1.840,w:0.065,y0:WAIST-0.335,y1:WAIST-0.040,n:4.6}
-    ],20),M.paint);
+    const zs=along([2.000,-1.840]).filter(z=>z<=2.000&&z>=-1.840);
+    const flank=new THREE.Mesh(loft(zs.map(z=>{
+      /* widest and tallest over a wheel, slim between */
+      const u=Math.max(0,(archFloor(z)-SILL)/RISE);
+      return {z, w:0.072+0.150*u,
+              y0:archFloor(z)-0.055,
+              y1:WAIST-0.020+0.115*u, n:4.8};
+    }),20),M.paint);
     flank.position.x=sx*0.880; flank.castShadow=true; b.add(flank);
-  }
-  for(const sx of [-1,1]) for(const z0 of [FZ,RZ]){
-    const lip=new THREE.Mesh(loft(
-      /* hung mostly below the flare edge rather than straddling it: what
-         hangs below is the only part of the band anything can be seen
-         against, and at ninety millimetres it was a pencil line */
-      archBand(z0, ALO,AHI, 0.165,0.285, 0.235,0.065),18),bumperM);
-    lip.position.x=sx*0.880; lip.castShadow=true; b.add(lip);
   }
 
   /* ---- the chassis rail ----
@@ -7594,12 +7629,6 @@ function bodyMonsterTruck(b,M){
   T([-0.400,WAIST+0.735,-0.240],[0.400,WAIST+0.735,-0.240],0.030,frameM,8);
   T([-0.400,WAIST+0.735,0.480],[-0.400,WAIST+0.735,-0.240],0.030,frameM,8);
   T([ 0.400,WAIST+0.735,0.480],[ 0.400,WAIST+0.735,-0.240],0.030,frameM,8);
-  /* a light bar across it, which is pure silhouette */
-  for(let i=-2;i<=2;i++){
-    const pod=new THREE.Mesh(new THREE.BoxGeometry(0.180,0.135,0.070),lampM);
-    pod.position.set(i*0.185,WAIST+0.805,0.480); b.add(pod);
-  }
-
   /* stacks behind the cab, leaning back */
   for(const sx of [-1,1]){
     const st=new THREE.Mesh(new THREE.CylinderGeometry(0.062,0.072,0.860,10),chromeM);
@@ -10913,6 +10942,12 @@ function passUI(){
   kitUI();
   shopUI();
   $("hmPassSub").textContent="Season 1 — Level "+PASS.level+" / 50, "+PASS.coins.toLocaleString()+" coins";
+  /* Every level you have reached and not yet claimed. Worth saying on the
+     home screen rather than only inside the pass, because the rewards sit
+     there indefinitely and nothing else ever mentions them. */
+  const owed=APEX_PASS_FREE.filter(e=>e.level<=PASS.level&&PASS.claimed.indexOf(e.level)<0).length;
+  const pb=$("hmPassBadge");
+  if(pb){ pb.hidden=!owed; pb.textContent=owed+" to claim"; }
   const packN=(PASS.packs||[]).length;
   $("hmPacksSub").textContent=packN?(packN+(packN===1?" pack":" packs")+" waiting to be opened"):"Nothing unopened right now.";
 }
@@ -11086,6 +11121,23 @@ function questsUI(){
     }
     box.appendChild(b);
   }
+  questsBadge();
+}
+/* How many of the nine are done, across all three tabs rather than just the
+   one being looked at — and, when any of those are still unclaimed, that
+   number instead, because a quest you can cash in is the better reason to
+   open the screen. */
+function questsBadge(){
+  const all=[].concat(QUESTS.tabs.daily||[],QUESTS.tabs.weekly||[],QUESTS.tabs.seasonal||[]);
+  const done=all.filter(q=>q.count>=q.target);
+  const owed=done.filter(q=>!q.claimed).length;
+  const b=$("hmQuestsBadge");
+  if(b){ b.hidden=!(owed||done.length);
+         b.textContent=owed?owed+" to claim":done.length+" completed"; }
+  const sub=$("hmQuestsSub");
+  if(sub) sub.textContent=all.length
+    ? done.length+" of "+all.length+" completed — daily, weekly and seasonal."
+    : "Daily, weekly and seasonal challenges.";
 }
 async function questsRefresh(){
   if(!acctIn()){ QUESTS.loaded=false; questsUI(); return; }
