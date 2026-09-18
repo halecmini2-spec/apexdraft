@@ -950,10 +950,15 @@ body.aiok .chips .chip.test{display:inline-flex}
 /* ============ drive ============ */
 #drive{position:relative;background:#05080A}
 #view{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums}
+.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums;
+  /* how far the mirror pushes the rest of the top of the screen down. On a
+     wide one it sits in the clear air between the timing tower and the
+     speed and pushes nothing; on a narrow one there is no clear air up
+     there at all, and everything else moves down by exactly its height. */
+  --mirh:0px}
 .hud > *{pointer-events:none}
 
-.tower{position:absolute;left:calc(16px + var(--sal));top:calc(16px + var(--sat));min-width:186px}
+.tower{position:absolute;left:calc(16px + var(--sal));top:calc(16px + var(--sat) + var(--mirh));min-width:186px}
 .tower .row{
   display:flex;justify-content:space-between;align-items:baseline;gap:14px;
   background:rgba(9,14,15,.82);border-left:2px solid var(--line);
@@ -978,7 +983,7 @@ body.aiok .chips .chip.test{display:inline-flex}
 
 /* Top right on every screen, with the map directly under it: one corner to
    glance at for the two numbers you glance at, whichever device it is. */
-.speedo{position:absolute;right:calc(18px + var(--sar));top:calc(16px + var(--sat));bottom:auto;text-align:right}
+.speedo{position:absolute;right:calc(18px + var(--sar));top:calc(16px + var(--sat) + var(--mirh));bottom:auto;text-align:right}
 .speedo .n{
   font-family:var(--mono);font-size:62px;font-weight:600;line-height:.86;letter-spacing:-.04em;
   color:var(--ink);text-shadow:0 2px 18px rgba(0,0,0,.6)}
@@ -990,7 +995,7 @@ body.aiok .chips .chip.test{display:inline-flex}
 
 /* Under the speed, on everything. The same square in the same corner, so
    the glance is the same movement whichever screen it is. */
-.mapbox{position:absolute;right:calc(16px + var(--sar));top:calc(114px + var(--sat));bottom:auto;background:rgba(9,14,15,.78);
+.mapbox{position:absolute;right:calc(16px + var(--sar));top:calc(114px + var(--sat) + var(--mirh));bottom:auto;background:rgba(9,14,15,.78);
   border:1px solid var(--line);padding:7px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #minimap{display:block;width:150px;height:150px}
 
@@ -1035,7 +1040,9 @@ body.aiok .chips .chip.test{display:inline-flex}
 #tLeft,#tRight,#tBrake,#tGas{bottom:calc(24px + var(--sab));width:98px;height:98px;border-radius:50%;font-size:24px}
 #tLeft{left:calc(20px + var(--sal))}  #tRight{left:calc(130px + var(--sal))}
 #tBrake{right:calc(130px + var(--sar));font-size:13px} #tGas{right:calc(20px + var(--sar));font-size:13px}
-#tMenu{left:50%;transform:translateX(-50%);top:calc(10px + var(--sat));width:52px;height:34px;
+/* the one touch control that lives up here, and the mirror took its
+   corner — so it drops with everything else */
+#tMenu{left:50%;transform:translateX(-50%);top:calc(10px + var(--sat) + var(--mirh));width:52px;height:34px;
   border-radius:8px;font-size:15px}
 /* above the brake, out of the way of the thumbs that are busy */
 #tHorn{right:calc(134px + var(--sar));bottom:calc(132px + var(--sab));width:62px;height:44px;
@@ -1044,10 +1051,10 @@ body.aiok .chips .chip.test{display:inline-flex}
 body.touchmode .touch{display:block}
 body.touchmode .keys{display:none}
 /* clear the bottom of the screen for thumbs — HUD moves to the top */
-body.touchmode .speedo{bottom:auto;top:calc(12px + var(--sat));right:calc(14px + var(--sar))}
+body.touchmode .speedo{bottom:auto;top:calc(12px + var(--sat) + var(--mirh));right:calc(14px + var(--sar))}
 body.touchmode .speedo .n{font-size:44px}
 /* below the speedo, clear of the pedals in the bottom corners */
-body.touchmode .mapbox{top:calc(100px + var(--sat));bottom:auto;left:auto;right:calc(14px + var(--sar));padding:5px}
+body.touchmode .mapbox{top:calc(100px + var(--sat) + var(--mirh));bottom:auto;left:auto;right:calc(14px + var(--sar));padding:5px}
 body.touchmode #minimap{width:118px;height:118px}
 body.touchmode .tower{transform:scale(.86);transform-origin:top left}
 @media (max-height:430px){
@@ -1058,7 +1065,7 @@ body.touchmode .tower{transform:scale(.86);transform-origin:top left}
   #tBrake{right:calc(106px + var(--sar))} #tGas{right:calc(14px + var(--sar))}
   /* small, not gone: knowing the next corner matters more on the screen
      with the least room for it */
-  body.touchmode .mapbox{top:calc(86px + var(--sat));bottom:auto;right:calc(12px + var(--sar));padding:4px}
+  body.touchmode .mapbox{top:calc(86px + var(--sat) + var(--mirh));bottom:auto;right:calc(12px + var(--sar));padding:4px}
   body.touchmode #minimap{width:92px;height:92px}
 }
 .touchonly2{display:none}
@@ -1242,6 +1249,27 @@ body.admining #lobbybar{display:none}
 .ast span{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 /* the flag: the winner over the line, seen from beside the track */
 #fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+/* The mirror. Nothing is drawn in here — the scene itself is rendered
+   into exactly this rectangle on the canvas underneath, which is why the
+   element is transparent and why its size is read off the page rather
+   than written down anywhere: move it in the stylesheet and the render
+   follows it. */
+#mirror{position:absolute;left:50%;transform:translateX(-50%);
+  top:calc(10px + var(--sat));width:min(30vw,340px);aspect-ratio:34/10;
+  border:1px solid rgba(220,236,240,.34);border-radius:3px;
+  box-shadow:0 2px 14px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.5);
+  pointer-events:none}
+/* Narrow screens have the timing tower on one side and the speed on the
+   other, and there is not 30vw of clear air between them — so it steps
+   down rather than sitting on top of either. */
+@media (max-width:900px){
+  .hud{--mirh:60px}
+  #mirror{width:min(46vw,200px);top:calc(5px + var(--sat))}
+}
+@media (max-width:560px){
+  .hud{--mirh:56px}
+  #mirror{width:min(54vw,190px);top:calc(4px + var(--sat));border-radius:2px}
+}
 
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 /* A word left on an account by an admin. It is the one thing on the page
@@ -1829,7 +1857,7 @@ body.daily .gar-arrow{display:none}
      over the pedals rather than over the start lights */
   body.touchmode .tower{transform:scale(.72)}
   body.touchmode .speedo .n{font-size:36px}
-  body.touchmode .mapbox{top:calc(80px + var(--sat));padding:4px}
+  body.touchmode .mapbox{top:calc(80px + var(--sat) + var(--mirh));padding:4px}
   body.touchmode #minimap{width:96px;height:96px}
   #tMenu{width:46px;height:32px;font-size:14px}
   .lights{top:30%}
@@ -2547,6 +2575,7 @@ body.daily .gar-arrow{display:none}
            elements being moved every frame. -->
       <canvas class="tagcv" id="tagcv"></canvas>
       <canvas id="fx"></canvas>
+      <div id="mirror" hidden></div>
       <div class="keys">
         <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</div>
         <div><span id="hintHorn" hidden><kbd>H</kbd> horn · </span>hold <kbd>S</kbd> to lock the rear · <kbd>R</kbd> recover · <kbd>R</kbd><kbd>R</kbd> restart</div>
@@ -14374,10 +14403,125 @@ function blurTarget(w,h){
   BLUR.w=w; BLUR.h=h;
   return BLUR.rt;
 }
+/* ---- the mirror ----
+   A second view of the same scene, pointed the other way, drawn into a
+   strip at the top of the screen.
+
+   Where it looks from is worked out from the car rather than written down
+   per car: just behind its own tail so you are not looking through your
+   own bodywork, and at about two thirds of its height. A kart's mirror
+   ends up low and close and the monster truck's high and well back,
+   which is what each of them needs, and neither needed a number.
+
+   How wide it sees is the one thing that is not derived. A mirror showing
+   the width of the road is worth having and one showing a single car
+   filling it is not, so it starts wide and goes wider on the truck, which
+   is tall and long enough to be almost on top of whatever is behind it. */
+const MIRROR_WIDE={monster:1.36, formula:0.94, lmp1:0.94};
+const MIRROR={rt:null,scene:null,cam:null,mat:null,eye:null,w:0,h:0,
+              size:new THREE.Vector2(), css:new THREE.Vector2()};
+function mirrorInit(){
+  if(MIRROR.scene)return;
+  /* Flipped left to right on the way out, because that is the whole
+     difference between a mirror and a camera facing backwards: a car
+     coming past on your left has to appear on the left. Done here, in the
+     one place the pixels are copied, rather than by negating the camera —
+     negating it turns every face in the scene inside out. */
+  MIRROR.mat=new THREE.ShaderMaterial({
+    uniforms:{tDiffuse:{value:null}},
+    depthTest:false, depthWrite:false,
+    vertexShader:"varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.0,1.0); }",
+    fragmentShader:"uniform sampler2D tDiffuse; varying vec2 vUv;"+
+      "void main(){ gl_FragColor=texture2D(tDiffuse,vec2(1.0-vUv.x,vUv.y)); }"
+  });
+  MIRROR.scene=new THREE.Scene();
+  MIRROR.scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),MIRROR.mat));
+  MIRROR.cam=new THREE.Camera();
+  /* The same near and far as the camera you drive with. Anything shorter
+     and the sky itself falls outside it: the backdrop sits further away
+     than a mirror-sized far plane reaches, and what that leaves is a
+     black dome over the top half of the mirror. */
+  MIRROR.eye=new THREE.PerspectiveCamera(62,3.4,G.camera?G.camera.near:0.4,G.camera?G.camera.far:5200);
+}
+/* Where the element actually is. Read every frame: the page reflows,
+   phones rotate, and a mirror drawn anywhere but inside its own frame
+   looks like a bug rather than a mirror.
+
+   Two sets of numbers, and keeping them apart is the whole of it.
+   setViewport and setScissor are in CSS pixels — three multiplies them by
+   the pixel ratio itself, and handing it real pixels puts the strip off
+   the side of the screen, which is exactly where the first version of
+   this drew it. A render target is sized in real ones, because that is
+   how many there are to fill. */
+function mirrorRect(){
+  const el=$("mirror"), cv=G.renderer&&G.renderer.domElement;
+  if(!el||!cv||el.hidden)return null;
+  const r=el.getBoundingClientRect(), c=cv.getBoundingClientRect();
+  if(r.width<8||r.height<8||c.width<8||c.height<8)return null;
+  const w=Math.max(2,Math.round(r.width)), h=Math.max(2,Math.round(r.height));
+  const x=Math.round(r.left-c.left);
+  const y=Math.round(c.height-(r.bottom-c.top));   // WebGL counts up from the bottom
+  if(x<-w||y<-h||x>c.width||y>c.height)return null;
+  G.renderer.getDrawingBufferSize(MIRROR.size);
+  const dpr=MIRROR.size.y/Math.max(1,c.height);
+  return {x,y,w,h, bw:Math.max(2,Math.round(w*dpr)), bh:Math.max(2,Math.round(h*dpr))};
+}
+function mirrorTarget(w,h){
+  if(MIRROR.rt&&MIRROR.w===w&&MIRROR.h===h)return MIRROR.rt;
+  if(MIRROR.rt)MIRROR.rt.dispose();
+  MIRROR.rt=new THREE.WebGLRenderTarget(w,h,{
+    minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,
+    format:THREE.RGBAFormat,encoding:THREE.sRGBEncoding,stencilBuffer:false});
+  MIRROR.w=w; MIRROR.h=h;
+  return MIRROR.rt;
+}
+function mirrorRender(){
+  /* An empty frame is worse than no frame: on the grid, and while the
+     lap is being celebrated, there is nothing to put in it, so it goes
+     away rather than sitting there as a hole in the sky. */
+  const on=!!(G.T&&G.car&&CAR.state!=="count"&&WIN.t<=0);
+  const el=$("mirror");
+  if(el&&el.hidden!==!on) el.hidden=!on;
+  if(!on)return;
+  const rect=mirrorRect(); if(!rect)return;
+  mirrorInit();
+  const kind=ED.opts.car||"gt", H=hitbox(kind);
+  const fx=Math.sin(CAR.yaw), fz=Math.cos(CAR.yaw);
+  const eye=MIRROR.eye;
+  eye.fov=62*(MIRROR_WIDE[kind]||1);
+  eye.aspect=rect.w/rect.h;
+  eye.updateProjectionMatrix();
+  eye.position.set(CAR.x-fx*(H.hl+0.35), CAR.y+H.hh*0.62+0.30, CAR.z-fz*(H.hl+0.35));
+  /* a little above the horizontal, the way a mirror is angled */
+  eye.lookAt(CAR.x-fx*90, CAR.y+H.hh*0.62+3.2, CAR.z-fz*90);
+
+  /* The shadow maps were rebuilt by the main render a moment ago and are
+     still good; left to itself three would build them again for this one,
+     which is the whole cost of the mirror twice over for no difference at
+     all on screen. */
+  const shadows=G.renderer.shadowMap.autoUpdate;
+  G.renderer.shadowMap.autoUpdate=false;
+  const rt=mirrorTarget(rect.bw,rect.bh);
+  G.renderer.setRenderTarget(rt);
+  G.renderer.render(G.scene,eye);
+  G.renderer.setRenderTarget(null);
+  G.renderer.shadowMap.autoUpdate=shadows;
+
+  /* into its own corner of the canvas, and nowhere else: the scissor is
+     what keeps the clear inside the frame instead of wiping the road */
+  MIRROR.mat.uniforms.tDiffuse.value=rt.texture;
+  G.renderer.setScissorTest(true);
+  G.renderer.setScissor(rect.x,rect.y,rect.w,rect.h);
+  G.renderer.setViewport(rect.x,rect.y,rect.w,rect.h);
+  G.renderer.render(MIRROR.scene,MIRROR.cam);
+  G.renderer.setScissorTest(false);
+  G.renderer.getSize(MIRROR.css);
+  G.renderer.setViewport(0,0,MIRROR.css.x,MIRROR.css.y);
+}
 function rushRender(){
   rushVanish();
   const amt=blurAmount();
-  if(amt<0.04||WIN.t>0){ G.renderer.render(G.scene,G.camera); return; }
+  if(amt<0.04||WIN.t>0){ G.renderer.render(G.scene,G.camera); mirrorRender(); return; }
   blurInit();
   G.renderer.getDrawingBufferSize(BLUR.size);
   const w=Math.max(2,Math.round(BLUR.size.x)), h=Math.max(2,Math.round(BLUR.size.y));
@@ -14394,6 +14538,7 @@ function rushRender(){
      spend their time — looking untouched */
   BLUR.mat.uniforms.uAmount.value=Math.pow(amt,1.6)*0.046;
   G.renderer.render(BLUR.scene,BLUR.cam);
+  mirrorRender();
 }
 function fxTick(dt){
   const cv=$("fx"); if(!cv)return;
