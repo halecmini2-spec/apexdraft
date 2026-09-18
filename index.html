@@ -14476,10 +14476,13 @@ function mirrorTarget(w,h){
   return MIRROR.rt;
 }
 function mirrorRender(){
-  /* An empty frame is worse than no frame: on the grid, and while the
-     lap is being celebrated, there is nothing to put in it, so it goes
-     away rather than sitting there as a hole in the sky. */
-  const on=!!(G.T&&G.car&&CAR.state!=="count"&&WIN.t<=0);
+  /* It is there from the moment you are on track, start lights included —
+     sitting on the grid with a field behind you is exactly when a mirror
+     is worth having, and a mirror that only appears once you are moving
+     reads as one that is not there at all. The celebration lap is the one
+     time it goes away: the camera is off flying round the car by then and
+     there is nothing behind it to see. */
+  const on=!!(G.T&&G.car&&WIN.t<=0);
   const el=$("mirror");
   if(el&&el.hidden!==!on) el.hidden=!on;
   if(!on)return;
