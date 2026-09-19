@@ -950,7 +950,20 @@ body.aiok .chips .chip.test{display:inline-flex}
 /* ============ drive ============ */
 #drive{position:relative;background:#05080A}
 #view{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums}
+.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums;
+  /* Where the mirror is and how wide, kept here because the menu button
+     is placed off them too — it sits a fixed gap to the right of the
+     mirror, so the two can never drift into each other whatever the
+     window is doing. Redefining these per breakpoint moves both. */
+  --mirw:min(24vw,320px);
+  /* max() takes whichever is further right: bare clearance past the
+     timing tower, or where it would rather sit relative to the middle.
+     Wide, the second wins and it sits right of centre; as the window
+     narrows the second slides left until the first takes over and holds
+     it off the tower. Anchored to the middle alone it crossed the tower
+     at around a thousand pixels, which is a window width people have. */
+  --mirl:max(calc(212px + var(--sal)), calc(50% + 44px - var(--mirw)));
+  --menul:calc(var(--mirl) + var(--mirw) + 12px)}
 .hud > *{pointer-events:none}
 
 .tower{position:absolute;left:calc(16px + var(--sal));top:calc(16px + var(--sat));min-width:186px}
@@ -1037,8 +1050,8 @@ body.aiok .chips .chip.test{display:inline-flex}
 #tBrake{right:calc(130px + var(--sar));font-size:13px} #tGas{right:calc(20px + var(--sar));font-size:13px}
 /* the one touch control that lives up here, and the mirror took its
    corner — so it drops with everything else */
-/* the matching gap on the other side of the middle, level with the mirror */
-#tMenu{left:calc(50% + 14px);top:calc(10px + var(--sat));width:52px;height:34px;
+/* a fixed gap to the right of the mirror, wherever the mirror ended up */
+#tMenu{left:var(--menul);top:calc(10px + var(--sat));width:52px;height:34px;
   border-radius:8px;font-size:15px}
 /* above the brake, out of the way of the thumbs that are busy */
 #tHorn{right:calc(134px + var(--sar));bottom:calc(132px + var(--sab));width:62px;height:44px;
@@ -1250,26 +1263,27 @@ body.admining #lobbybar{display:none}
    element is transparent and why its size is read off the page rather
    than written down anywhere: move it in the stylesheet and the render
    follows it. */
-/* Hung off the middle of the screen rather than centred on it: its right
-   edge sits just left of centre, so it grows leftwards into the gap
-   between the timing tower and the middle, and the menu button takes the
-   matching gap on the other side. Anchoring both to the centre rather
-   than to the edges is what keeps them off the tower and the speed at
-   every width without a number per breakpoint — and it means nothing else
-   on the screen has to move over for either of them. */
-#mirror{position:absolute;right:calc(50% + 14px);
-  top:calc(10px + var(--sat));width:min(28vw,320px);aspect-ratio:34/10;
+#mirror{position:absolute;left:var(--mirl);right:auto;
+  top:calc(10px + var(--sat));width:var(--mirw);aspect-ratio:34/10;
   border:1px solid rgba(220,236,240,.34);border-radius:3px;
   box-shadow:0 2px 14px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.5);
   pointer-events:none}
-@media (max-width:900px){ #mirror{width:min(26vw,210px);top:calc(8px + var(--sat));right:calc(50% + 10px)} }
-@media (max-width:560px){ #mirror{width:min(38vw,150px);top:calc(4px + var(--sat));right:calc(50% + 6px);border-radius:2px} }
-/* Upright on a phone there is no clear air up there at all — the timing
-   tower and the speed already meet in the middle without any help — and a
-   phone held upright is being asked to turn sideways before it will drive
-   anything. So the mirror waits for that rather than being stacked on top
-   of two things that are already on top of each other. */
-@media (max-width:560px) and (orientation:portrait){ #mirror{display:none} }
+@media (max-width:900px){
+  .hud{--mirw:min(26vw,210px);
+       --mirl:max(calc(212px + var(--sal)), calc(50% + 20px - var(--mirw)))}
+  #mirror{top:calc(8px + var(--sat))}
+}
+/* Under about seven hundred pixels the arithmetic simply runs out: the
+   timing tower and the speed between them want four hundred of it, and
+   what is left will not hold a mirror worth looking at and a menu button
+   as well. So the mirror waits — a phone held upright is in this bracket,
+   and it is being asked to turn sideways before it will drive anything
+   anyway — and the menu button goes back to the middle it had before the
+   mirror was ever there to make room for. */
+@media (max-width:700px){
+  .hud{--menul:calc(50% - 26px)}
+  #mirror{display:none}
+}
 
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 /* A word left on an account by an admin. It is the one thing on the page
