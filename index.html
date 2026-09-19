@@ -950,15 +950,10 @@ body.aiok .chips .chip.test{display:inline-flex}
 /* ============ drive ============ */
 #drive{position:relative;background:#05080A}
 #view{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums;
-  /* how far the mirror pushes the rest of the top of the screen down. On a
-     wide one it sits in the clear air between the timing tower and the
-     speed and pushes nothing; on a narrow one there is no clear air up
-     there at all, and everything else moves down by exactly its height. */
-  --mirh:0px}
+.hud{position:absolute;inset:0;pointer-events:none;font-variant-numeric:tabular-nums}
 .hud > *{pointer-events:none}
 
-.tower{position:absolute;left:calc(16px + var(--sal));top:calc(16px + var(--sat) + var(--mirh));min-width:186px}
+.tower{position:absolute;left:calc(16px + var(--sal));top:calc(16px + var(--sat));min-width:186px}
 .tower .row{
   display:flex;justify-content:space-between;align-items:baseline;gap:14px;
   background:rgba(9,14,15,.82);border-left:2px solid var(--line);
@@ -983,7 +978,7 @@ body.aiok .chips .chip.test{display:inline-flex}
 
 /* Top right on every screen, with the map directly under it: one corner to
    glance at for the two numbers you glance at, whichever device it is. */
-.speedo{position:absolute;right:calc(18px + var(--sar));top:calc(16px + var(--sat) + var(--mirh));bottom:auto;text-align:right}
+.speedo{position:absolute;right:calc(18px + var(--sar));top:calc(16px + var(--sat));bottom:auto;text-align:right}
 .speedo .n{
   font-family:var(--mono);font-size:62px;font-weight:600;line-height:.86;letter-spacing:-.04em;
   color:var(--ink);text-shadow:0 2px 18px rgba(0,0,0,.6)}
@@ -995,7 +990,7 @@ body.aiok .chips .chip.test{display:inline-flex}
 
 /* Under the speed, on everything. The same square in the same corner, so
    the glance is the same movement whichever screen it is. */
-.mapbox{position:absolute;right:calc(16px + var(--sar));top:calc(114px + var(--sat) + var(--mirh));bottom:auto;background:rgba(9,14,15,.78);
+.mapbox{position:absolute;right:calc(16px + var(--sar));top:calc(114px + var(--sat));bottom:auto;background:rgba(9,14,15,.78);
   border:1px solid var(--line);padding:7px;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 #minimap{display:block;width:150px;height:150px}
 
@@ -1042,7 +1037,8 @@ body.aiok .chips .chip.test{display:inline-flex}
 #tBrake{right:calc(130px + var(--sar));font-size:13px} #tGas{right:calc(20px + var(--sar));font-size:13px}
 /* the one touch control that lives up here, and the mirror took its
    corner — so it drops with everything else */
-#tMenu{left:50%;transform:translateX(-50%);top:calc(10px + var(--sat) + var(--mirh));width:52px;height:34px;
+/* the matching gap on the other side of the middle, level with the mirror */
+#tMenu{left:calc(50% + 14px);top:calc(10px + var(--sat));width:52px;height:34px;
   border-radius:8px;font-size:15px}
 /* above the brake, out of the way of the thumbs that are busy */
 #tHorn{right:calc(134px + var(--sar));bottom:calc(132px + var(--sab));width:62px;height:44px;
@@ -1051,10 +1047,10 @@ body.aiok .chips .chip.test{display:inline-flex}
 body.touchmode .touch{display:block}
 body.touchmode .keys{display:none}
 /* clear the bottom of the screen for thumbs — HUD moves to the top */
-body.touchmode .speedo{bottom:auto;top:calc(12px + var(--sat) + var(--mirh));right:calc(14px + var(--sar))}
+body.touchmode .speedo{bottom:auto;top:calc(12px + var(--sat));right:calc(14px + var(--sar))}
 body.touchmode .speedo .n{font-size:44px}
 /* below the speedo, clear of the pedals in the bottom corners */
-body.touchmode .mapbox{top:calc(100px + var(--sat) + var(--mirh));bottom:auto;left:auto;right:calc(14px + var(--sar));padding:5px}
+body.touchmode .mapbox{top:calc(100px + var(--sat));bottom:auto;left:auto;right:calc(14px + var(--sar));padding:5px}
 body.touchmode #minimap{width:118px;height:118px}
 body.touchmode .tower{transform:scale(.86);transform-origin:top left}
 @media (max-height:430px){
@@ -1065,7 +1061,7 @@ body.touchmode .tower{transform:scale(.86);transform-origin:top left}
   #tBrake{right:calc(106px + var(--sar))} #tGas{right:calc(14px + var(--sar))}
   /* small, not gone: knowing the next corner matters more on the screen
      with the least room for it */
-  body.touchmode .mapbox{top:calc(86px + var(--sat) + var(--mirh));bottom:auto;right:calc(12px + var(--sar));padding:4px}
+  body.touchmode .mapbox{top:calc(86px + var(--sat));bottom:auto;right:calc(12px + var(--sar));padding:4px}
   body.touchmode #minimap{width:92px;height:92px}
 }
 .touchonly2{display:none}
@@ -1254,22 +1250,26 @@ body.admining #lobbybar{display:none}
    element is transparent and why its size is read off the page rather
    than written down anywhere: move it in the stylesheet and the render
    follows it. */
-#mirror{position:absolute;left:50%;transform:translateX(-50%);
-  top:calc(10px + var(--sat));width:min(30vw,340px);aspect-ratio:34/10;
+/* Hung off the middle of the screen rather than centred on it: its right
+   edge sits just left of centre, so it grows leftwards into the gap
+   between the timing tower and the middle, and the menu button takes the
+   matching gap on the other side. Anchoring both to the centre rather
+   than to the edges is what keeps them off the tower and the speed at
+   every width without a number per breakpoint — and it means nothing else
+   on the screen has to move over for either of them. */
+#mirror{position:absolute;right:calc(50% + 14px);
+  top:calc(10px + var(--sat));width:min(28vw,320px);aspect-ratio:34/10;
   border:1px solid rgba(220,236,240,.34);border-radius:3px;
   box-shadow:0 2px 14px rgba(0,0,0,.55),inset 0 0 0 1px rgba(0,0,0,.5);
   pointer-events:none}
-/* Narrow screens have the timing tower on one side and the speed on the
-   other, and there is not 30vw of clear air between them — so it steps
-   down rather than sitting on top of either. */
-@media (max-width:900px){
-  .hud{--mirh:60px}
-  #mirror{width:min(46vw,200px);top:calc(5px + var(--sat))}
-}
-@media (max-width:560px){
-  .hud{--mirh:56px}
-  #mirror{width:min(54vw,190px);top:calc(4px + var(--sat));border-radius:2px}
-}
+@media (max-width:900px){ #mirror{width:min(26vw,210px);top:calc(8px + var(--sat));right:calc(50% + 10px)} }
+@media (max-width:560px){ #mirror{width:min(38vw,150px);top:calc(4px + var(--sat));right:calc(50% + 6px);border-radius:2px} }
+/* Upright on a phone there is no clear air up there at all — the timing
+   tower and the speed already meet in the middle without any help — and a
+   phone held upright is being asked to turn sideways before it will drive
+   anything. So the mirror waits for that rather than being stacked on top
+   of two things that are already on top of each other. */
+@media (max-width:560px) and (orientation:portrait){ #mirror{display:none} }
 
 .aback{width:100%;margin-top:16px;padding:9px 10px}
 /* A word left on an account by an admin. It is the one thing on the page
@@ -1857,7 +1857,7 @@ body.daily .gar-arrow{display:none}
      over the pedals rather than over the start lights */
   body.touchmode .tower{transform:scale(.72)}
   body.touchmode .speedo .n{font-size:36px}
-  body.touchmode .mapbox{top:calc(80px + var(--sat) + var(--mirh));padding:4px}
+  body.touchmode .mapbox{top:calc(80px + var(--sat));padding:4px}
   body.touchmode #minimap{width:96px;height:96px}
   #tMenu{width:46px;height:32px;font-size:14px}
   .lights{top:30%}
