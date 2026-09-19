@@ -13973,6 +13973,33 @@ function aiTick(dt){
       c.dv-=c.dv*Math.min(1,dt*(c.crashT>0?1.05:4.2));
       if(Math.abs(c.dv)<0.02)c.dv=0;
     }
+    /* ---- the rail ----
+       The same barrier that stops the player, and until a knock could put
+       a machine sideways nothing needed it: the steer back onto the line
+       kept them inside the road on its own, so there was never anything
+       out there for them to reach. Now there is, and without this they go
+       through the armco and off into the scenery.
+
+       Their own width, not their centre, is what meets it — and it
+       absorbs rather than bounces, exactly as it does for the player: the
+       harder it is hit the less comes back, and leaning on it scrubs
+       speed off the way dragging down a barrier does. */
+    const RAIL=(T.barrierOff||T.halfW+8.5)-0.05-hitbox(c.kind).hw;
+    if(Math.abs(c.d)>RAIL){
+      const sgn=c.d<0?-1:1;
+      const into=c.dv*sgn;                 // how hard it is going into the rail
+      c.d=sgn*RAIL;
+      if(into>0){
+        const e=clamp(0.40-into/60,0.06,0.40);
+        c.dv=-c.dv*e;
+        c.v=Math.max(0,c.v-Math.min(c.v*0.30,into*0.45));
+        c.crashT=Math.max(c.crashT,AI_CRASH_T*clamp(into/9,0,1));
+        /* and it brings the nose round, the way a corner into a barrier
+           does — away from the rail, so it comes off it rather than
+           ploughing along */
+        c.spinV=clamp(c.spinV-sgn*SPIN_PER*into*0.55,-SPIN_MAX,SPIN_MAX);
+      } else if(c.dv*sgn>0) c.dv=0;
+    }
     c.dMax=Math.max(c.dMax||0,Math.abs(c.d));
     /* along the lap; a lap is a lap */
     const sPrev=c.s; c.s+=c.v*dt;
