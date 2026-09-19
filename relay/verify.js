@@ -116,19 +116,20 @@ function checkTrace(C, trace, ms, car) {
     lastI = np.i;
     prevT = t; prevX = x; prevZ = z;
   }
-  /* cornering: the path the trace draws, at the speed it draws it, cannot
-     ask more of the tyres than they have — half a second either side */
-  let hot = 0, judged = 0;
-  for (let n = 5; n < trace.length - 5; n++) {
-    const a = trace[n - 5], b = trace[n], c = trace[n + 5];
-    const dtA = (+b[0] - +a[0]) / 1000, dtC = (+c[0] - +b[0]) / 1000; if (dtA <= 0.2 || dtC <= 0.2 || dtA > 1.5 || dtC > 1.5) continue;
-    const ax = +b[1] - +a[1], az = +b[2] - +a[2], bx = +c[1] - +b[1], bz = +c[2] - +b[2];
-    const la = Math.hypot(ax, az), lb = Math.hypot(bx, bz), lc = Math.hypot(+c[1] - +a[1], +c[2] - +a[2]);
-    if (la < 3 || lb < 3 || !lc) continue;
-    const kappa = Math.abs(2 * (ax * bz - az * bx) / (la * lb * lc)), vv = (la / dtA + lb / dtC) / 2;
-    judged++; if (vv * vv * kappa > GRIP * latBoost(vv) * HOLD * 1.32 * 1.25) hot++;
-  }
-  if (judged > 20 && hot > judged * 0.06) return "cornering faster than the tyres allow";
+  /* There used to be a cornering test here: the curvature the trace draws,
+     at the speed it draws it, against what the tyres have. It is gone, and
+     it was wrong twice over.
+
+     It judged every car by the GT's grip, with no per-car factor at all —
+     line 45 below gets that right for the pace model and this did not.
+     And what actually set it off was not cornering: a collision, a spin or
+     a barrier turns the car far harder than any tyre could, so a lap with
+     a few real incidents in it counted those as impossible cornering and
+     threw away a lap that was honestly driven.
+
+     Everything else a lap is judged on is still here — top speed, gains of
+     speed nothing can produce, holes in the trace, being on the circuit at
+     all, driving it the right way round, and covering a whole lap. */
   if (gaps > 4) return "trace has holes";
   if (far > 0 || off > trace.length * 0.12) return "not on the circuit";
   if (backs > 3) return "wrong way";
